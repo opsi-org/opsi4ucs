@@ -209,9 +209,7 @@ case "$1" in
 	chown -R pcpatch:pcpatch /opt/pcbin/install
 	chmod 2770 /opt/pcbin/install
 	
-	univention-baseconfig commit /etc/ldap/slapd.conf
 	$VERBOSE && echo "Restarting services"
-	/etc/init.d/slapd restart || true
 	/etc/init.d/dhcp3-server restart || true
 	/etc/init.d/opsiconfd restart || true
 	/etc/init.d/opsipxeconfd restart || true

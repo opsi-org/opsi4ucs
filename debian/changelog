@@ -1,3 +1,9 @@
+opsi4ucs (1.0-3) stable; urgency=low
+
+  * splitted package into opsi4ucs and opsi4ucs-ldap-schema
+
+ -- Jan Schneider <j.schneider@uib.de>  Mon, 10 Mar 2008 11:00:17 +0100
+
 opsi4ucs (1.0-2) stable; urgency=low
 
   * Adapted for ucs 2.0
