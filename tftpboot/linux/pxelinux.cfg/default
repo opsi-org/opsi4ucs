@@ -1,0 +1,4 @@
+default hdboot
+
+label hdboot
+  localboot 0

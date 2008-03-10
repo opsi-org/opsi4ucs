@@ -1,0 +1,15 @@
+Template: opsi/pcpatch_password1
+Type: password
+Description: pcpatch password:
+ Please enter the password for user pcpatch.
+
+Template: opsi/pcpatch_password2
+Type: password
+Description: Confirm password:
+ Please reenter the password for user pcpatch.
+
+Template: opsi/password_mismatch
+Type: note
+Description: Password mismatch.
+ The supplied passwords do not match.
+

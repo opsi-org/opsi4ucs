@@ -1,0 +1,11 @@
+@!@
+if baseConfig['ldap/server/type']=="master":
+	print 'include /usr/share/univention-ldap/schema/opsi.schema'
+@!@
+access to attrs=opsiHostKey,opsiPcpatchPassword
+   by dn.base="cn=admin,@%@ldap/base@%@" write
+   by dn.regex="[^,]+,cn=dc,cn=computers,@%@ldap/base@%@" read
+   by dn.base="uid=root,cn=users,@%@ldap/base@%@" write
+   by self write
+   by * none
+

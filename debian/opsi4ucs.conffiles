@@ -1,0 +1,3 @@
+/etc/univention/templates/files/etc/ldap/slapd.conf.d/60opsi
+/etc/univention/templates/files/var/www/ucs-overview/en.html.d/40opsi-en.html
+/etc/univention/templates/files/var/www/ucs-overview/de.html.d/40opsi-de.html

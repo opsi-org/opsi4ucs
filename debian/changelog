@@ -1,0 +1,11 @@
+opsi4ucs (1.0-2) stable; urgency=low
+
+  * Adapted for ucs 2.0
+
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 11 Dec 2007 17:27:56 +0100
+
+opsi4ucs (1.0-1) stable; urgency=low
+
+  * Debian package created
+
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 18 Apr 2007 10:10:21 +0200
