@@ -1,5 +1,4 @@
 etc/opsi/backendManager.d
-usr/share/univention-ldap/schema
 var/lib/univention-client-boot
 usr/lib/univention-directory-listener/system
 /var/www/icon/opsi
