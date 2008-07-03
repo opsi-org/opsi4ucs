@@ -46,7 +46,8 @@ install: build
 	install -m 0755 opsi_reinstall_listener.py debian/opsi4ucs/usr/lib/univention-directory-listener/system/
 	install -m 0644 files/40_opsi4ucs.conf debian/opsi4ucs/etc/opsi/backendManager.d/
 	cp -R opt debian/opsi4ucs/
-	cp -R tftpboot debian/opsi4ucs/
+	cp -R var debian/opsi4ucs/
+	cp -R home debian/opsi4ucs/
 	install -m 0644 files/configed.png debian/opsi4ucs/var/www/icon/opsi/
 	find debian/opsi4ucs -name '.svn' -exec rm -rf '{}' \; 2>/dev/null || true
 	install -m 0644 files/opsi.schema debian/opsi4ucs-ldap-schema/usr/share/univention-ldap/schema/

@@ -194,6 +194,31 @@ case "$1" in
 			--set sambaLevel2Oplocks=0
 	fi
 	
+	# opsi_workbench samba share
+	set +e
+	univention-admin shares/share list --filter "(name=opsi_workbench)" | grep '^DN:' 1>/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		$VERBOSE && echo "Adding samba share opsi_workbench"
+		univention-admin shares/share create \
+			--position="cn=$FQDN,cn=shares,$ROOT_DN" \
+			--set name=opsi_workbench \
+			--set host=$FQDN \
+			--set path=/home/opsiproducts \
+			--set owner=992 \
+			--set group=992 \
+			--set directorymode=0755 \
+			--set sambaName=opsi_workbench \
+			--set sambaWriteable=1 \
+			--set sambaBrowseable=1 \
+			--set sambaPublic=0 \
+			--set sambaCreateMode=0774 \
+			--set sambaDirectoryMode=0775 \
+			--set sambaSecurityMode=0777 \
+			--set sambaDirectorySecurityMode=0777
+	fi
+	
 	# Patching univention backend configuration
 	$VERBOSE && echo "Patching univention backend configuration"
 	cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
