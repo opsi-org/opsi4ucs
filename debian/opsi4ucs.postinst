@@ -1,4 +1,11 @@
-#! /bin/bash
+#! /bin/bash -e
+
+# = = = = = = = = = = = = = = = = = = = = = = =
+# =  Copyright (C) 2006, 2007, 2008 uib GmbH  =
+# =           http://www.uib.de               =
+# =          All rights reserved.             =
+# = = = = = = = = = = = = = = = = = = = = = = =
+
 # postinst script for opsi4ucs
 #
 # see: dh_installdeb(1)
@@ -29,16 +36,24 @@ case "$1" in
 	LDAP_USER="cn=admin,$ROOT_DN"
 	LDAP_SECRET=`cat /etc/ldap.secret`
 	
-	IPADDRESS=""
+	HOSTNAME=`uname -n`
+	DOMAIN=`hostname -d`
+	FQDN=`hostname --fqdn`
+	IPADDRESS=`getent hosts $FQDN | cut -d' ' -f1`
 	
 	for iface in `ifconfig -a | grep "^[[:alnum:]]" | cut -d " " -f 1`; do
-	    IPADDRESS=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
+	    ip=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
 	    NETMASK=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $7}'`
 	    GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
-	    if [ "$IPADDRESS" != "" ]; then
-		break
+	    if [ "$ip" != "" ]; then
+	        if [ "$IPADDRESS" = "" ]; then
+		    IPADDRESS="$ip"
+		fi
+		[ "$IPADDRESS" = "$ip" ] && break
 	    fi
 	done
+	
+	[ "$NETMASK" = "" ] && NETMASK="255.255.225.0"
 	
 	if [ "$IPADDRESS" != "" ]; then
 	    for part in 1 2 3 4; do
@@ -55,12 +70,9 @@ case "$1" in
 	    BROADCAST="${B[1]}.${B[2]}.${B[3]}.${B[4]}"
 	fi
 	
-	HOSTNAME=`uname -n`
-	DOMAIN=`hostname -d`
-	FQDN=`hostname --fqdn`
 	WINDOMAIN=`grep -i ^[[:space:]]*workgroup /etc/samba/smb.conf | cut -d'=' -f 2 | sed s'/ //g'`
 	
-	$VERBOSE && echo "System information"
+	$VERBOSE && echo -e "\nSystem information"
 	$VERBOSE && echo "  -> IP-Address: $IPADDRESS"
 	$VERBOSE && echo "  -> Broadcast: $BROADCAST"
 	$VERBOSE && echo "  -> Netmask: $NETMASK"
@@ -72,7 +84,7 @@ case "$1" in
 	$VERBOSE && echo "  -> Windomain: $WINDOMAIN"
 	
 	if [ `echo $FQDN | sed 's/\./ /g' | wc -w` -le 2 ]; then
-		echo "The hostname $FQDN returned by 'hostname --fqdn' is not a fully qualified domain name"
+		echo -e "\nThe hostname $FQDN returned by 'hostname --fqdn' is not a fully qualified domain name"
 		echo "Opsi needs a fully qualified domain name in the form of <hostname>.<domain>.<tld>"
 		exit 1
 	fi
@@ -197,17 +209,34 @@ case "$1" in
 	#rm /tmp/opsipxeconfd.conf
 	
 	# file permissions
-	$VERBOSE && echo "Setting permissions..."
-	chown -R pcpatch:pcpatch /etc/opsi/backendManager.d
-	chmod 660 /etc/opsi/backendManager.d/*
-	chown -R pcpatch:pcpatch /opt/pcbin/pcpatch
+	$VERBOSE && echo -e "\nSetting permissions..."
+	chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
+	chmod 0660 /etc/opsi/backendManager.d/*
+	chown -R opsiconfd:pcpatch /opt/pcbin/pcpatch
 	chmod 2770 /opt/pcbin/pcpatch
-	chown -R pcpatch:pcpatch /opt/pcbin/pcpatch/pclog
+	chown -R opsiconfd:pcpatch /opt/pcbin/pcpatch/pclog
 	chmod 2770 /opt/pcbin/pcpatch/pclog
-	chown -R pcpatch:pcpatch /opt/pcbin/utils
+	chown -R opsiconfd:pcpatch /opt/pcbin/utils
 	chmod 2770 /opt/pcbin/utils
-	chown -R pcpatch:pcpatch /opt/pcbin/install
+	chown -R opsiconfd:pcpatch /opt/pcbin/install
 	chmod 2770 /opt/pcbin/install
+	chown -R opsiconfd:pcpatch /tftpboot/linux
+	chmod 2775 /tftpboot/linux
+	chmod 2775 /tftpboot/linux/pxelinux.cfg
+	find /tftpboot/linux -type f -exec chmod 664 {} \;
+	chown -R opsiconfd:pcpatch /var/lib/opsi
+	chmod 2750 /var/lib/opsi
+	# for ssh public key authentification to work rights on /var/lib/opsi have to be pcatch:pcpatch 750
+	chown pcpatch /var/lib/opsi
+	chmod 2770 /var/lib/opsi/products
+	chmod 0660 /var/lib/opsi/products/* >/dev/null 2>/dev/null || true
+	chmod 2770 /var/lib/opsi/audit
+	chmod 0660 /var/lib/opsi/audit/* >/dev/null 2>/dev/null || true
+	chown opsiconfd:pcpatch /var/log/opsi
+	chmod 2770 /var/log/opsi
+	chown pcpatch:pcpatch /home/opsiproducts
+	chmod 2770 /home/opsiproducts
+	
 	
 	$VERBOSE && echo "Restarting services"
 	/etc/init.d/dhcp3-server restart || true
