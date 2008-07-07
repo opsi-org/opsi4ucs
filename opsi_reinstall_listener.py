@@ -10,7 +10,7 @@
    @license: GNU GPL, see COPYING for details.
 """
 
-__version__ = 0.9
+__version__ = "0.9.1"
 
 name='opsi_reinstall_listener'
 description='Reinstallation listener for opsi'
@@ -18,7 +18,6 @@ filter='(objectClass=univentionWindows)'
 attributes=['univentionWindowsReinstall']
 
 BOOTIMAGE = 'install'
-PCPATCH_UID = 992
 
 import listener
 import os, re, ldap, string, univention.debug
@@ -39,14 +38,7 @@ def handler(dn, new, old):
 	if not reinst:
 		return
 	
-	#macAddress = None
-	#if new.get('macAddress'):
-	#	macAddress = new.get('macAddress', [])[0]
-	
-	#logger.debug('new: %s' % new)
-	
 	listener.setuid(0)
-	listener.setuid(PCPATCH_UID)
 	
 	bm = None
 	try:
@@ -60,16 +52,21 @@ def handler(dn, new, old):
 		hostId = bm.getHostId(dn)
 		logger.info('DN: %s, hostId: %s' % (dn, hostId))
 	except Exception, e:
-		logger.error('Failed to get hostId: %s' % e)
-		bm.exit()
-		return
-	
-	try:
-		bm.getHost_hash(hostId)
-	except Exception, e:
-		logger.warning('Opsi-Client %s not found, creating...' % e)
-		bm.createClient( hostId.split('.')[0], '.'.join( hostId.split('.')[1:] ) )
-	
+		logger.error('Failed to get hostId: %s, trying to create host' % e)
+		hostName = ''
+		domain = ''
+		parts = dn.split(',')
+		for i in range(len(parts)):
+			(att, val) = parts[i].strip().split('=', 1)
+			if (i==0):
+				hostName = val
+			elif(att.lower() == 'dn'):
+				if domain: domain += '.'
+				domain += val
+			
+		hostId = bm.createClient( hostName, domain )
+		logger.notice("Host '%s' created (dn=%s)" % (hostId, dn))
+		
 	netbootProducts = bm.getInstallableNetBootProductIds_list(hostId)
 	productIds = []
 	try:
@@ -94,12 +91,12 @@ def handler(dn, new, old):
 				logger.warning("Failed to unset product action request for client '%s', product '%s': %s'" % (hostId, productId, e))
 	
 	elif ( reinst[0] == '1'):
-		try:
-			bm.createClient( hostId.split('.')[0], '.'.join( hostId.split('.')[1:] ) )
-		except Exception, e:
-			e = str(e)
-			if (e.find("already exists") == -1):
-				logger.error("Failed to create client '%s': %s'" % (hostId, e))
+		#try:
+		#	bm.createClient( hostId.split('.')[0], '.'.join( hostId.split('.')[1:] ) )
+		#except Exception, e:
+		#	e = str(e)
+		#	if (e.find("already exists") == -1):
+		#		logger.error("Failed to create client '%s': %s'" % (hostId, e))
 		
 		productId = ''
 		if productIds:
@@ -124,7 +121,10 @@ def handler(dn, new, old):
 			
 		if not productId:
 			# Get default netboot product
-			productId = bm.getDefaultNetBootProductId(hostId)
+			try:
+				productId = bm.getDefaultNetBootProductId(hostId)
+			except Exception, e:
+				logger.warning(e)
 			
 		if not productId:
 			logger.error("Failed to set PXE boot configuration for host '%s': failed to get default netboot product" % hostId)

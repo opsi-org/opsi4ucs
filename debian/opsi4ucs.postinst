@@ -137,6 +137,8 @@ case "$1" in
 			--set overridePWLength=1
 	fi
 	
+	univention-admin groups/group modify --dn "cn=opsiadmin,cn=groups,$ROOT_DN" --append users="cn=Administrator,cn=users,$ROOT_DN"
+	
 	# correcting tftp entry for inetd
 	update-inetd --remove tftp
 	TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
@@ -237,10 +239,6 @@ case "$1" in
 	$VERBOSE && echo -e "\nSetting permissions..."
 	chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
 	chmod 0660 /etc/opsi/backendManager.d/*
-	chown -R opsiconfd:pcpatch /opt/pcbin/pcpatch
-	chmod 2770 /opt/pcbin/pcpatch
-	chown -R opsiconfd:pcpatch /opt/pcbin/pcpatch/pclog
-	chmod 2770 /opt/pcbin/pcpatch/pclog
 	chown -R opsiconfd:pcpatch /opt/pcbin/utils
 	chmod 2770 /opt/pcbin/utils
 	chown -R opsiconfd:pcpatch /opt/pcbin/install
@@ -263,11 +261,6 @@ case "$1" in
 	chmod 2770 /home/opsiproducts
 	
 	
-	$VERBOSE && echo "Restarting services"
-	/etc/init.d/dhcp3-server restart || true
-	/etc/init.d/opsiconfd restart || true
-	/etc/init.d/opsipxeconfd restart || true
-	
 	# Create opsi base
 	set +e
 	ldapsearch -x -L -s base -b "cn=opsi,$ROOT_DN" 1>/dev/null 2>/dev/null
@@ -280,20 +273,28 @@ case "$1" in
 		
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createServer "$HOSTNAME" "$DOMAIN" >/dev/null
 		
+		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createDepot \
+				"$HOSTNAME" "$DOMAIN" \
+				"file:///opt/pcbin/install" \
+				"smb://${HOSTNAME}/opt_pcbin/install" \
+				"file:///var/lib/opsi/products" \
+				"webdavs://${FQDN}:4447/products" \
+				"${SUBNET}/${NETMASK}" >/dev/null
+		
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setGeneralConfig "{ \
 				\"pcptchBitmap1\" : \"winst1.bmp\", \
 				\"pcptchBitmap2\" : \"winst2.bmp\", \
 				\"pcptchLabel1\" : \"opsi\", \
 				\"pcptchLabel2\" : \"uib gmbh\" }"
+		
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setNetworkConfig "{ \
-				\"depotUrl\" : \"smb://${HOSTNAME}/opt_pcbin/install\", \
-				\"depotDrive\" : \"P:\", \
-				\"utilsUrl\" : \"smb://${HOSTNAME}/opt_pcbin/utils\", \
-				\"utilsDrive\" : \"P:\", \
-				\"configUrl\" : \"smb://${HOSTNAME}/opt_pcbin/pcpatch\", \
-				\"configDrive\" : \"P:\", \
 				\"opsiServer\" : \"${FQDN}\", \
-				\"winDomain\" : \"${WINDOMAIN}\" }"
+				\"depotId\" : \"${FQDN}\", \
+				\"depotDrive\" : \"P:\", \
+				\"utilsDrive\" : \"P:\", \
+				\"configDrive\" : \"P:\", \
+				\"winDomain\" : \"${WINDOMAIN}\", \
+				\"nextBootServiceURL\" : \"https://${IPADDRESS}:4447\" }"
 	fi
 	
 	set +e
@@ -305,10 +306,17 @@ case "$1" in
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d task setPcpatchPassword $RET
 	fi
 	
+	/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method getPcpatchRSAPrivateKey >/dev/null 2>/dev/null || true
+	
 	univention-directory-listener-ctrl resync opsi_reinstall_listener
 	
 	univention-baseconfig commit /var/www/ucs-overview/de.html
 	univention-baseconfig commit /var/www/ucs-overview/en.html
+	
+	$VERBOSE && echo "Restarting services"
+	/etc/init.d/dhcp3-server restart || true
+	/etc/init.d/opsiconfd restart || true
+	/etc/init.d/opsipxeconfd restart || true
 	
 	$VERBOSE && echo "Done"
     ;;
