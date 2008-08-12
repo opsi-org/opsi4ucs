@@ -157,7 +157,6 @@ case "$1" in
 		ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
 	fi
 	
-	
 	# dhcpd config
 	set +e
 	ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null

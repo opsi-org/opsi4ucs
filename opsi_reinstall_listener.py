@@ -10,7 +10,7 @@
    @license: GNU GPL, see COPYING for details.
 """
 
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 
 name='opsi_reinstall_listener'
 description='Reinstallation listener for opsi'
@@ -107,7 +107,7 @@ def handler(dn, new, old):
 			for installationStatus in bm.getProductInstallationStatus_listOfHashes(hostId):
 				if installationStatus.get('productId') not in netbootProducts:
 					continue
-				if installationStatus.get('actionRequest') not in ['installed']:
+				if installationStatus.get('installationStatus') not in ['installed']:
 					continue
 				productIds.append(installationStatus.get('productId'))
 			
@@ -117,7 +117,7 @@ def handler(dn, new, old):
 							% (', '.join(productIds), hostId, productIds[0]) )
 				productId = productIds[0]
 			else:
-				logger.info("Installation status 'installed' not set for any netboot product, client '%s'" % hostId)
+				logger.notice("Installation status 'installed' not set for any netboot product, client '%s'" % hostId)
 			
 		if not productId:
 			# Get default netboot product
