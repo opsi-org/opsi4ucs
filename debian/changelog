@@ -1,3 +1,9 @@
+opsi4ucs (3.3-2) stable; urgency=low
+
+  * Modified preinst / posinst scripts
+
+ -- Jan Schneider <j.schneider@uib.de>  Fri, 12 Sep 2008 14:47:57 +0200
+
 opsi4ucs (3.3-1) stable; urgency=low
 
   * Adapted to opsi3.3
