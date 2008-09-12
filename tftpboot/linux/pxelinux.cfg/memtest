@@ -1,6 +1,0 @@
-default memtest
-
-label memtest
-  kernel memtest.30
-  ipappend 1
-
