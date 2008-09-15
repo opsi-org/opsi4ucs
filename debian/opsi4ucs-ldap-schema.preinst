@@ -17,7 +17,11 @@
 
 SERVER_ROLE=`univention-baseconfig get server/role`
 if   [ "$SERVER_ROLE" != "domaincontroller_master" ]; then
+	echo "" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
 	echo "Refusing install of opsi4ucs-ldap-schema on $SERVER_ROLE, please install on UCS Master" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo "" 1>&2
 	exit 1
 fi
 exit 0

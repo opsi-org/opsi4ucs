@@ -46,7 +46,11 @@ case "$1" in
 		LDAP_USER="cn=backup,$ROOT_DN"
 		LDAP_SECRET=`cat /etc/ldap-backup.secret`
 	else
-		echo "Cannot install on $SERVER_ROLE" 1>&2
+		echo "" 1>&2
+		echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+		echo "Refusing install of opsi4ucs on $SERVER_ROLE, please install on UCS Master/Slave/Backup" 1>&2
+		echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+		echo "" 1>&2
 		exit 1
 	fi
 	
