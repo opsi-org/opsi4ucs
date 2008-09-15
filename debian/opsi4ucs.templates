@@ -13,3 +13,8 @@ Type: note
 Description: Password mismatch.
  The supplied passwords do not match.
 
+Template: opsi/opsi4ucs_bindpw
+Type: password
+Description: ldap admin password:
+ Please enter the password for ldap admin user (/etc/ldap.secret on master).
+

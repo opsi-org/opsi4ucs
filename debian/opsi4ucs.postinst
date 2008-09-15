@@ -24,33 +24,46 @@ VERBOSE=true
 case "$1" in
     configure)
 	TFTPROOT="/var/lib/univention-client-boot"
-	LDAPCONF="/etc/ldap/ldap.conf"
 	SERVER_ROLE=`univention-baseconfig get server/role`
 	ROOT_DN=`univention-baseconfig get ldap/base`
 	LDAP_MASTER=`univention-baseconfig get ldap/master`
+	LDAP_USER="cn=admin,$ROOT_DN"
 	HOSTNAME=`uname -n`
 	DOMAIN=`hostname -d`
 	FQDN=`hostname --fqdn`
 	IPADDRESS=`getent hosts $FQDN | cut -d' ' -f1`
 	
+	db_get opsi/opsi4ucs_bindpw
+	LDAP_SECRET="$RET"
 	if   [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 		$VERBOSE && echo -e "\nRunning on UCS Master"
-		LDAP_USER="cn=admin,$ROOT_DN"
 		LDAP_SECRET=`cat /etc/ldap.secret`
 	elif [ "$SERVER_ROLE" = "domaincontroller_slave" ]; then
 		$VERBOSE && echo -e "\nRunning on UCS Slave"
-		LDAP_USER="cn=backup,$ROOT_DN"
-		LDAP_SECRET=`cat /etc/ldap-backup.secret`
 	elif [ "$SERVER_ROLE" = "domaincontroller_backup" ]; then
 		$VERBOSE && echo -e "\nRunning on UCS Backup"
-		LDAP_USER="cn=backup,$ROOT_DN"
-		LDAP_SECRET=`cat /etc/ldap-backup.secret`
 	else
 		echo "" 1>&2
 		echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
 		echo "Refusing install of opsi4ucs on $SERVER_ROLE, please install on UCS Master/Slave/Backup" 1>&2
 		echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
 		echo "" 1>&2
+		exit 1
+	fi
+	
+	$VERBOSE && echo -e "\nTesting ldap connection to $LDAP_MASTER"
+	set +e
+	ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		echo "" 1>&2
+		echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+		echo "Admin connect to ldap master $LDAP_MASTER as $LDAP_USER failed" 1>&2
+		echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+		echo "" 1>&2
+		db_fset opsi/opsi4ucs_bindpw seen false
+		db_stop
 		exit 1
 	fi
 	
@@ -128,7 +141,7 @@ case "$1" in
 	if [ $ret != 0 ]; then
 		$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
 		echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-		| ldapmodify -x -D "$LDAP_USER" -w $LDAP_SECRET >/dev/null
+		| ldapmodify -x -h "$LDAP_MASTER" -D "$LDAP_USER" -w $LDAP_SECRET >/dev/null
 	fi
 	
 	# opt_pcbin samba share
@@ -139,6 +152,8 @@ case "$1" in
 	if [ $ret != 0 ]; then
 		$VERBOSE && echo "Adding samba share opt_pcbin"
 		univention-admin shares/share create \
+			--binddn="$LDAP_USER" \
+			--bindpw="$LDAP_SECRET" \
 			--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 			--set name=opt_pcbin \
 			--set host=$FQDN \
@@ -166,6 +181,8 @@ case "$1" in
 	if [ $ret != 0 ]; then
 		$VERBOSE && echo "Adding samba share opsi_workbench"
 		univention-admin shares/share create \
+			--binddn="$LDAP_USER" \
+			--bindpw="$LDAP_SECRET" \
 			--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 			--set name=opsi_workbench \
 			--set host=$FQDN \

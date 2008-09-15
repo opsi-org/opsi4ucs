@@ -15,10 +15,49 @@
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+. /usr/share/debconf/confmodule
+
 VERBOSE=true
 
-LDAPCONF="/etc/ldap/ldap.conf"
-ROOT_DN=`grep BASE $LDAPCONF | awk {'print $2'}`
+SERVER_ROLE=`univention-baseconfig get server/role`
+ROOT_DN=`univention-baseconfig get ldap/base`
+LDAP_MASTER=`univention-baseconfig get ldap/master`
+LDAP_USER="cn=admin,$ROOT_DN"
+
+db_get opsi/opsi4ucs_bindpw
+LDAP_SECRET="$RET"
+
+if   [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
+	$VERBOSE && echo -e "\nRunning on UCS Master"
+	LDAP_SECRET=`cat /etc/ldap.secret`
+elif [ "$SERVER_ROLE" = "domaincontroller_slave" ]; then
+	$VERBOSE && echo -e "\nRunning on UCS Slave"
+elif [ "$SERVER_ROLE" = "domaincontroller_backup" ]; then
+	$VERBOSE && echo -e "\nRunning on UCS Backup"
+else
+	echo "" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo " Refusing ins!tall of opsi4ucs on $SERVER_ROLE, please install on UCS Master/Slave/Backup" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo "" 1>&2
+	exit 1
+fi
+
+$VERBOSE && echo -e "\nTesting ldap connection to $LDAP_MASTER"
+set +e
+ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	echo "" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo " Admin connect to ldap master $LDAP_MASTER as $LDAP_USER failed" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo "" 1>&2
+	db_fset opsi/opsi4ucs_bindpw seen false
+	db_stop
+	exit 1
+fi
 
 $VERBOSE && echo "Adding system users and groups..."
 
@@ -29,6 +68,8 @@ set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group pcpatch"
 	univention-admin groups/group create \
+		--binddn="$LDAP_USER" \
+		--bindpw="$LDAP_SECRET" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="pcpatch" \
 		--set gidNumber="992" \
@@ -42,6 +83,8 @@ set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group opsiadmin"
 	univention-admin groups/group create \
+		--binddn="$LDAP_USER" \
+		--bindpw="$LDAP_SECRET" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="opsiadmin" \
 		--set description="opsi config admin group"
@@ -58,6 +101,8 @@ if [ $ret != 0 ]; then
 	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
 	
 	univention-admin users/user create \
+		--binddn="$LDAP_USER" \
+		--bindpw="$LDAP_SECRET" \
 		--position="cn=users,$ROOT_DN" \
 		--set username="pcpatch" \
 		--set description="opsi-pseudo user" \
@@ -69,7 +114,13 @@ if [ $ret != 0 ]; then
 		--set overridePWLength=1
 fi
 
-univention-admin groups/group modify --dn "cn=opsiadmin,cn=groups,$ROOT_DN" --append users="uid=Administrator,cn=users,$ROOT_DN"
+univention-admin groups/group modify \
+	--binddn="$LDAP_USER" \
+	--bindpw="$LDAP_SECRET" \
+	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
+	--append users="uid=Administrator,cn=users,$ROOT_DN"
+
+db_stop
 
 case "$1" in
     install)
