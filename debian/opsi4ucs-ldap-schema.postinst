@@ -1,9 +1,10 @@
-#! /bin/bash
-# postinst script for opsi4ucs-ldap-schema
-#
-# see: dh_installdeb(1)
+#! /bin/bash -e
 
-set -e
+# = = = = = = = = = = = = = = = = = = = = = = =
+# =  Copyright (C) 2006, 2007, 2008 uib GmbH  =
+# =           http://www.uib.de               =
+# =          All rights reserved.             =
+# = = = = = = = = = = = = = = = = = = = = = = =
 
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
@@ -15,30 +16,25 @@ set -e
 #          <conflicting-package> <version>
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
-#
-
-. /usr/share/debconf/confmodule
 
 VERBOSE=true
 
 case "$1" in
-    configure)
-    	univention-baseconfig commit /etc/ldap/slapd.conf
-	$VERBOSE && echo "Restarting slapd"
-	/etc/init.d/slapd restart || true
-    ;;
-    
-    abort-upgrade|abort-remove|abort-deconfigure)
-
-    ;;
-
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-    ;;
+	configure)
+		univention-baseconfig commit /etc/ldap/slapd.conf
+		$VERBOSE && echo "Restarting slapd"
+		/etc/init.d/slapd restart || true
+	;;
+	
+	abort-upgrade|abort-remove|abort-deconfigure)
+	
+	;;
+	
+	*)
+		echo "postinst called with unknown argument \`$1'" >&2
+		exit 1
+	;;
 esac
-
-db_stop
 
 exit 0
 

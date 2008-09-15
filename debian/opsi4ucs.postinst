@@ -6,12 +6,6 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-# postinst script for opsi4ucs
-#
-# see: dh_installdeb(1)
-
-set -e
-
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
 #        * <old-postinst> `abort-upgrade' <new version>
@@ -22,7 +16,6 @@ set -e
 #          <conflicting-package> <version>
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
-#
 
 . /usr/share/debconf/confmodule
 
@@ -30,44 +23,60 @@ VERBOSE=true
 
 case "$1" in
     configure)
-    	TFTPROOT="/var/lib/univention-client-boot"
-    	LDAPCONF="/etc/ldap/ldap.conf"
-	ROOT_DN=`grep BASE $LDAPCONF | awk {'print $2'}`
-	LDAP_USER="cn=admin,$ROOT_DN"
-	LDAP_SECRET=`cat /etc/ldap.secret`
-	
+	TFTPROOT="/var/lib/univention-client-boot"
+	LDAPCONF="/etc/ldap/ldap.conf"
+	SERVER_ROLE=`univention-baseconfig get server/role`
+	ROOT_DN=`univention-baseconfig get ldap/base`
+	LDAP_MASTER=`univention-baseconfig get ldap/master`
 	HOSTNAME=`uname -n`
 	DOMAIN=`hostname -d`
 	FQDN=`hostname --fqdn`
 	IPADDRESS=`getent hosts $FQDN | cut -d' ' -f1`
 	
+	if   [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
+		$VERBOSE && echo -e "\nRunning on UCS Master"
+		LDAP_USER="cn=admin,$ROOT_DN"
+		LDAP_SECRET=`cat /etc/ldap.secret`
+	elif [ "$SERVER_ROLE" = "domaincontroller_slave" ]; then
+		$VERBOSE && echo -e "\nRunning on UCS Slave"
+		LDAP_USER="cn=backup,$ROOT_DN"
+		LDAP_SECRET=`cat /etc/ldap-backup.secret`
+	elif [ "$SERVER_ROLE" = "domaincontroller_backup" ]; then
+		$VERBOSE && echo -e "\nRunning on UCS Backup"
+		LDAP_USER="cn=backup,$ROOT_DN"
+		LDAP_SECRET=`cat /etc/ldap-backup.secret`
+	else
+		echo "Cannot install on $SERVER_ROLE" 1>&2
+		exit 1
+	fi
+	
 	for iface in `ifconfig -a | grep "^[[:alnum:]]" | cut -d " " -f 1`; do
-	    ip=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
-	    NETMASK=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $7}'`
-	    GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
-	    if [ "$ip" != "" ]; then
-	        if [ "$IPADDRESS" = "" ]; then
-		    IPADDRESS="$ip"
+		ip=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
+		NETMASK=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $7}'`
+		GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
+		if [ "$ip" != "" ]; then
+			if [ "$IPADDRESS" = "" ]; then
+				IPADDRESS="$ip"
+			fi
+			[ "$IPADDRESS" = "$ip" ] && break
 		fi
-		[ "$IPADDRESS" = "$ip" ] && break
-	    fi
 	done
 	
 	[ "$NETMASK" = "" ] && NETMASK="255.255.225.0"
 	
 	if [ "$IPADDRESS" != "" ]; then
-	    for part in 1 2 3 4; do
-		I[$part]=$(echo $IPADDRESS | cut -d . -f $part)
-		M[$part]=$(echo $NETMASK | cut -d . -f $part)
-	    done
-		    
-	    for part in 1 2 3 4; do
-		N[$part]=$((${I[$part]} & ${M[$part]}))
-	        B[$part]=$((${N[$part]} | $((${M[$part]} ^255))))
-	    done
-	
-	    SUBNET="${N[1]}.${N[2]}.${N[3]}.${N[4]}"
-	    BROADCAST="${B[1]}.${B[2]}.${B[3]}.${B[4]}"
+		for part in 1 2 3 4; do
+			I[$part]=$(echo $IPADDRESS | cut -d . -f $part)
+			M[$part]=$(echo $NETMASK | cut -d . -f $part)
+		done
+		
+		for part in 1 2 3 4; do
+			N[$part]=$((${I[$part]} & ${M[$part]}))
+			B[$part]=$((${N[$part]} | $((${M[$part]} ^255))))
+		done
+		
+		SUBNET="${N[1]}.${N[2]}.${N[3]}.${N[4]}"
+		BROADCAST="${B[1]}.${B[2]}.${B[3]}.${B[4]}"
 	fi
 	
 	WINDOMAIN=`grep -i ^[[:space:]]*workgroup /etc/samba/smb.conf | cut -d'=' -f 2 | sed s'/ //g'`
@@ -173,7 +182,11 @@ case "$1" in
 	# Patching univention backend configuration
 	$VERBOSE && echo "Patching univention backend configuration"
 	cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
-	cat /tmp/40_opsi4ucs.conf | sed "s/<bindPw>/$LDAP_SECRET/" > /etc/opsi/backendManager.d/40_opsi4ucs.conf
+	cat /tmp/40_opsi4ucs.conf \
+		| sed "s/<host>/$LDAP_MASTER/" \
+		| sed "s/<bindDn>/$LDAP_USER/" \
+		| sed "s/<bindPw>/$LDAP_SECRET/" \
+		> /etc/opsi/backendManager.d/40_opsi4ucs.conf
 	rm /tmp/40_opsi4ucs.conf
 	
 	## Patching opsipxeconfd

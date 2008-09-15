@@ -1,0 +1,24 @@
+#! /bin/bash -e
+
+# = = = = = = = = = = = = = = = = = = = = = = =
+# =  Copyright (C) 2006, 2007, 2008 uib GmbH  =
+# =           http://www.uib.de               =
+# =          All rights reserved.             =
+# = = = = = = = = = = = = = = = = = = = = = = =
+
+# summary of how this script can be called:
+#        * <new-preinst> `install'
+#        * <new-preinst> `install' <old-version>
+#        * <new-preinst> `upgrade' <old-version>
+#        * <old-preinst> `abort-upgrade' <new-version>
+#
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+SERVER_ROLE=`univention-baseconfig get server/role`
+if   [ "$SERVER_ROLE" != "domaincontroller_master" ]; then
+	echo "Refusing install of opsi4ucs-ldap-schema on $SERVER_ROLE, please install on UCS Master" 1>&2
+	exit 1
+fi
+exit 0
+
