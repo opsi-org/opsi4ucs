@@ -144,6 +144,13 @@ case "$1" in
 		| ldapmodify -x -h "$LDAP_MASTER" -D "$LDAP_USER" -w $LDAP_SECRET >/dev/null
 	fi
 	
+	# Create shares object for server
+	univention-admin container/cn create \
+		--binddn="$LDAP_USER" \
+		--bindpw="$LDAP_SECRET" \
+		--position="cn=shares,$ROOT_DN" \
+		--set name=$FQDN >/dev/null 2>/dev/null || true
+	
 	# opt_pcbin samba share
 	set +e
 	univention-admin shares/share list --filter "(name=opt_pcbin)" | grep '^DN:' 1>/dev/null
