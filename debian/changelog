@@ -1,6 +1,6 @@
 opsi4ucs (3.3.1-2) stable; urgency=low
 
-  * postinst script now creates shares object for server 
+  * postinst script now creates shares object for server
 
  -- Jan Schneider <j.schneider@uib.de>  Tue, 28 Apr 2009 19:49:17 +0200
 
