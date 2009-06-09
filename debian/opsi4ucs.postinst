@@ -253,23 +253,32 @@ case "$1" in
 	
 	# Create opsi base
 	set +e
-	ldapsearch -x -L -s base -b "cn=opsi,$ROOT_DN" 1>/dev/null 2>/dev/null
+	ldapsearch -x -L -s base -b "cn=opsi,$ROOT_DN" | grep '^dn:' 1>/dev/null 2>/dev/null
 	ret=$?
 	set -e
 	if [ $ret != 0 ]; then
 		$VERBOSE && echo "Creating opsi base"
 		
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createOpsiBase
-		
+	fi
+	
+	# Create Server / Depot
+	set +e
+	ldapsearch -x -L -s sub -b "$ROOT_DN" "(&(objectClass=opsiDepotserver)(opsiHostId=${FQDN}))" | grep '^dn:' 1>/dev/null 2>/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		$VERBOSE && echo "Creating config server ${FQDN}"
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createServer "$HOSTNAME" "$DOMAIN" >/dev/null
 		
+		$VERBOSE && echo "Creating depot server ${FQDN}"
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createDepot \
-				"$HOSTNAME" "$DOMAIN" \
-				"file:///opt/pcbin/install" \
-				"smb://${HOSTNAME}/opt_pcbin/install" \
-				"file:///var/lib/opsi/products" \
-				"webdavs://${FQDN}:4447/products" \
-				"${SUBNET}/${NETMASK}" >/dev/null
+			"$HOSTNAME" "$DOMAIN" \
+			"file:///opt/pcbin/install" \
+			"smb://${HOSTNAME}/opt_pcbin/install" \
+			"file:///var/lib/opsi/products" \
+			"webdavs://${FQDN}:4447/products" \
+			"${SUBNET}/${NETMASK}" >/dev/null
 		
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setGeneralConfig "{ \
 				\"pcptchBitmap1\" : \"winst1.bmp\", \
@@ -287,6 +296,7 @@ case "$1" in
 				\"nextBootServiceURL\" : \"https://${IPADDRESS}:4447\" }"
 	fi
 	
+	# Set pcpatch password
 	set +e
 	opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method getPcpatchPassword $FQDN 1>/dev/null 2>/dev/null
 	ret=$?
