@@ -19,7 +19,7 @@ Description: LDAP Schema fuer das Softwareverteilungssystem OPSI
 Package: opsi4ucs
 Section: opsi
 Architecture: all
-Depends: univention-client-boot-pxe, python-opsi (>=3.4), opsiconfd (>=2.0.0.8), opsipxeconfd (>=0.3.3-2), opsi-utils (>=3.4), opsi-linux-bootimage (>=20090525), opsi-configed (>=1.4), samba, dhcp3-server, sudo, wget
+Depends: univention-client-boot-pxe, python-opsi (>=3.3.0.24), opsiconfd (>=2.0.0.8), opsipxeconfd (>=0.3.3-2), opsi-utils (>=3.3.0.11), opsi-linux-bootimage (>=20080826), opsi-configed, samba, dhcp3-server, sudo, wget
 Description: Das Softwareverteilungssystem OPSI fuer Univention Corporate Server
  opsi4ucs dient als Basis fuer das Softwareverteilungssystem OPSI auf UCS.
  .
