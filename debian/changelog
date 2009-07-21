@@ -1,3 +1,9 @@
+opsi4ucs (3.3.1-5) stable; urgency=low
+
+  * Changed computers container to base dn in config
+
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 21 Jul 2009 10:03:45 +0200
+
 opsi4ucs (3.3.1-4) stable; urgency=low
 
   * Fixed samba share check in postinst
