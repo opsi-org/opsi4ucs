@@ -1,3 +1,10 @@
+opsi4ucs (3.3.1-6) stable; urgency=low
+
+  * Disabled opsi4ucs univention-directory-listener
+  * postinst differentiates between configserver and depotserver installations
+  
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 21 Jul 2009 14:21:03 +0200
+
 opsi4ucs (3.3.1-5) stable; urgency=low
 
   * Changed computers container to base dn in config

@@ -43,7 +43,7 @@ install: build
 	dh_clean -k
 	dh_installdirs
 	./univention-install-baseconfig
-	install -m 0755 opsi_reinstall_listener.py debian/opsi4ucs/usr/lib/univention-directory-listener/system/
+	#install -m 0755 opsi_reinstall_listener.py debian/opsi4ucs/usr/lib/univention-directory-listener/system/
 	install -m 0644 files/40_opsi4ucs.conf debian/opsi4ucs/etc/opsi/backendManager.d/
 	cp -R opt debian/opsi4ucs/
 	cp -R var debian/opsi4ucs/

@@ -25,6 +25,7 @@ case "$1" in
     configure)
 	TFTPROOT="/var/lib/univention-client-boot"
 	SERVER_ROLE=`univention-baseconfig get server/role`
+	OPSI_ROLE="configserver"
 	ROOT_DN=`univention-baseconfig get ldap/base`
 	LDAP_MASTER=`univention-baseconfig get ldap/master`
 	LDAP_USER="cn=admin,$ROOT_DN"
@@ -32,6 +33,7 @@ case "$1" in
 	DOMAIN=`hostname -d`
 	FQDN=`hostname --fqdn`
 	IPADDRESS=`getent hosts $FQDN | head -n1 | cut -d' ' -f1`
+	OPSI_ROLE="configserver"
 	
 	db_get opsi/opsi4ucs_bindpw
 	LDAP_SECRET="$RET"
@@ -262,14 +264,23 @@ case "$1" in
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createOpsiBase
 	fi
 	
+	# Set opsi server role
+	set +e
+	config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
+	set -e
+	[ "$config_server" != "" -a "$config_server" != "$FQDN" ] && OPSI_ROLE="depotserver"
+	$VERBOSE && echo "Opsi server role: $OPSI_ROLE"
+	
 	# Create Server / Depot
 	set +e
 	ldapsearch -x -L -s sub -b "$ROOT_DN" "(&(objectClass=opsiDepotserver)(opsiHostId=${FQDN}))" | grep '^dn:' 1>/dev/null 2>/dev/null
 	ret=$?
 	set -e
 	if [ $ret != 0 ]; then
-		$VERBOSE && echo "Creating config server ${FQDN}"
-		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createServer "$HOSTNAME" "$DOMAIN" >/dev/null
+		if [ "$OPSI_ROLE" = "configserver" ]; then
+			$VERBOSE && echo "Creating config server ${FQDN}"
+			/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createServer "$HOSTNAME" "$DOMAIN" >/dev/null
+		fi
 		
 		$VERBOSE && echo "Creating depot server ${FQDN}"
 		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method createDepot \
@@ -280,35 +291,39 @@ case "$1" in
 			"webdavs://${FQDN}:4447/products" \
 			"${SUBNET}/${NETMASK}" >/dev/null
 		
-		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setGeneralConfig "{ \
-				\"pcptchBitmap1\" : \"winst1.bmp\", \
-				\"pcptchBitmap2\" : \"winst2.bmp\", \
-				\"pcptchLabel1\" : \"opsi\", \
-				\"pcptchLabel2\" : \"uib gmbh\" }"
-		
-		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setNetworkConfig "{ \
-				\"opsiServer\" : \"${FQDN}\", \
-				\"depotId\" : \"${FQDN}\", \
-				\"depotDrive\" : \"P:\", \
-				\"utilsDrive\" : \"P:\", \
-				\"configDrive\" : \"P:\", \
-				\"winDomain\" : \"${WINDOMAIN}\", \
-				\"nextBootServiceURL\" : \"https://${IPADDRESS}:4447\" }"
+		if [ "$OPSI_ROLE" = "configserver" ]; then
+			/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setGeneralConfig "{ \
+					\"pcptchBitmap1\" : \"winst1.bmp\", \
+					\"pcptchBitmap2\" : \"winst2.bmp\", \
+					\"pcptchLabel1\" : \"opsi\", \
+					\"pcptchLabel2\" : \"uib gmbh\" }"
+			
+			/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method setNetworkConfig "{ \
+					\"opsiServer\" : \"${FQDN}\", \
+					\"depotId\" : \"${FQDN}\", \
+					\"depotDrive\" : \"P:\", \
+					\"utilsDrive\" : \"P:\", \
+					\"configDrive\" : \"P:\", \
+					\"winDomain\" : \"${WINDOMAIN}\", \
+					\"nextBootServiceURL\" : \"https://${IPADDRESS}:4447\" }"
+		fi
 	fi
 	
 	# Set pcpatch password
-	set +e
-	opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method getPcpatchPassword $FQDN 1>/dev/null 2>/dev/null
-	ret=$?
-	set -e
-	if [ $ret != 0 ]; then
-		db_get opsi/pcpatch_password1
-		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d task setPcpatchPassword $RET
+	if [ "$OPSI_ROLE" = "configserver" ]; then
+		set +e
+		opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method getPcpatchPassword $FQDN 1>/dev/null 2>/dev/null
+		ret=$?
+		set -e
+		if [ $ret != 0 ]; then
+			db_get opsi/pcpatch_password1
+			/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d task setPcpatchPassword $RET
+		fi
 	fi
 	
 	/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method getPcpatchRSAPrivateKey >/dev/null 2>/dev/null || true
 	
-	univention-directory-listener-ctrl resync opsi_reinstall_listener
+	#univention-directory-listener-ctrl resync opsi_reinstall_listener
 	
 	univention-baseconfig commit /var/www/ucs-overview/de.html
 	univention-baseconfig commit /var/www/ucs-overview/en.html
