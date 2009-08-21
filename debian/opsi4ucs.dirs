@@ -1,3 +1,4 @@
+etc/opsi/backendManager.d
 home/opsiproducts
 opt/pcbin/install
 opt/pcbin/utils
@@ -5,4 +6,5 @@ usr/lib/univention-install
 var/log/opsi
 var/lib/opsi/audit
 var/lib/opsi/products
+var/www/icon/opsi
 
