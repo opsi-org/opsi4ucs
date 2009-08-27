@@ -1,8 +1,40 @@
 opsi4ucs (3.4-1) stable; urgency=low
 
-  * Adapted postinst script to multidepot environments
+  * opsi 3.4
 
- -- Jan Schneider <j.schneider@uib.de>  Tue, 09 Jun 2009 11:03:09 +0200
+ -- Jan Schneider <j.schneider@uib.de>  Thu, 27 Aug 2009 17:14:57 +0200
+
+opsi4ucs (3.3.1-8) stable; urgency=low
+
+  * Fixed bug in join script
+
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 26 Aug 2009 11:41:50 +0200
+
+opsi4ucs (3.3.1-7) stable; urgency=low
+
+  * Added join script
+  * Using machine account for ldap bind
+
+ -- Jan Schneider <j.schneider@uib.de>  Fri, 21 Aug 2009 12:58:10 +0200
+
+opsi4ucs (3.3.1-6) stable; urgency=low
+
+  * Disabled opsi4ucs univention-directory-listener
+  * postinst differentiates between configserver and depotserver installations
+  
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 21 Jul 2009 14:21:03 +0200
+
+opsi4ucs (3.3.1-5) stable; urgency=low
+
+  * Changed computers container to base dn in config
+
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 21 Jul 2009 10:03:45 +0200
+
+opsi4ucs (3.3.1-4) stable; urgency=low
+
+  * Fixed samba share check in postinst
+
+ -- Jan Schneider <j.schneider@uib.de>  Fri, 19 Jun 2009 10:07:12 +0200
 
 opsi4ucs (3.3.1-3) stable; urgency=low
 
