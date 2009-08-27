@@ -1,3 +1,15 @@
+opsi4ucs (3.4-1) stable; urgency=low
+
+  * opsi 3.4
+
+ -- Jan Schneider <j.schneider@uib.de>  Thu, 27 Aug 2009 17:14:57 +0200
+
+opsi4ucs (3.3.1-8) stable; urgency=low
+
+  * Fixed bug in join script
+
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 26 Aug 2009 11:41:50 +0200
+
 opsi4ucs (3.3.1-7) stable; urgency=low
 
   * Added join script
