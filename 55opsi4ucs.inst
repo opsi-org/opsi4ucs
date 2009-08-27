@@ -45,6 +45,7 @@ else
 	$VERBOSE && echo -e "\nRunning on $SERVER_ROLE"
 fi
 
+
 # --- Test ldap connection ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
 set +e
@@ -59,6 +60,7 @@ if [ $ret != 0 ]; then
 	echo "" 1>&2
 	exit 1
 fi
+
 
 # --- Get network config --------------------------------------------------------------------------------------------------------
 for iface in `ifconfig -a | grep "^[[:alnum:]]" | cut -d " " -f 1`; do
@@ -116,14 +118,24 @@ $VERBOSE && echo "     Subnet           : $SUBNET"
 $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
-# --- Create extended attribute -------------------------------------------------------------------------------------------------
-univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
-	--position "cn=custom attributes,cn=univention,$ROOT_DN" \
-	--set "name=opsiHostId" --set "module=computers/windows" \
-	--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
-	--set "CLIName=opsiHostId" --set "tabName=opsi" \
-	--set "default=<name>.$DOMAIN" --set "mayChange=1" \
-	--set "ldapMapping=opsiHostId"
+
+## --- Create extended attribute -------------------------------------------------------------------------------------------------
+#univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
+#	--position "cn=custom attributes,cn=univention,$ROOT_DN" \
+#	--set "name=opsiHostId" --set "module=computers/windows" \
+#	--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
+#	--set "CLIName=opsiHostId" --set "tabName=opsi" \
+#	--set "default=<name>.$DOMAIN" --set "mayChange=1" \
+#	--set "ldapMapping=opsiHostId"
+
+# --- Configure opsi backend ----------------------------------------------------------------------------------------------------
+cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
+cat /tmp/40_opsi4ucs.conf \
+	| sed "s/<host>/$LDAP_MASTER/" \
+	| sed "s/<bindDn>/$LDAP_USER/" \
+	| sed "s/<bindPw>/$LDAP_SECRET/" \
+	> /etc/opsi/backendManager.d/40_opsi4ucs.conf
+rm /tmp/40_opsi4ucs.conf
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
@@ -135,8 +147,6 @@ set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group pcpatch"
 	univention-directory-manager groups/group create \
-		--binddn="$LDAP_USER" \
-		--bindpw="$LDAP_SECRET" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="pcpatch" \
 		--set gidNumber="992" \
@@ -150,8 +160,6 @@ set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group opsiadmin"
 	univention-directory-manager groups/group create \
-		--binddn="$LDAP_USER" \
-		--bindpw="$LDAP_SECRET" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="opsiadmin" \
 		--set description="opsi config admin group"
@@ -168,8 +176,6 @@ if [ $ret != 0 ]; then
 	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
 	
 	univention-directory-manager users/user create \
-		--binddn="$LDAP_USER" \
-		--bindpw="$LDAP_SECRET" \
 		--position="cn=users,$ROOT_DN" \
 		--set username="pcpatch" \
 		--set description="opsi-pseudo user" \
@@ -182,17 +188,14 @@ if [ $ret != 0 ]; then
 fi
 
 univention-directory-manager groups/group modify \
-	--binddn="$LDAP_USER" \
-	--bindpw="$LDAP_SECRET" \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Creating container for samba shares"
 univention-directory-manager container/cn create \
 	--ignore_exists \
-	--binddn="$LDAP_USER" \
-	--bindpw="$LDAP_SECRET" \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
@@ -203,8 +206,6 @@ set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opt_pcbin"
 	univention-directory-manager shares/share create \
-		--binddn="$LDAP_USER" \
-		--bindpw="$LDAP_SECRET" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opt_pcbin \
 		--set host=$FQDN \
@@ -231,8 +232,6 @@ set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opsi_workbench"
 	univention-directory-manager shares/share create \
-		--binddn="$LDAP_USER" \
-		--bindpw="$LDAP_SECRET" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_workbench \
 		--set host=$FQDN \
@@ -250,24 +249,26 @@ if [ $ret != 0 ]; then
 		--set sambaDirectorySecurityMode=0777
 fi
 
-# --- Configure dhcp ------------------------------------------------------------------------------------------------------------
-set +e
-ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
-ret=$?
-set -e
-if [ $ret != 0 ]; then
-	$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
-	echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-		| ldapmodify -x -h "$LDAP_MASTER" -D "$LDAP_USER" -w $LDAP_SECRET >/dev/null
-fi
 
+# --- Configure dhcp ------------------------------------------------------------------------------------------------------------
+if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
+	set +e
+	ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
+		echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+			| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
+	fi
+fi
 
 # --- Configure tftp ------------------------------------------------------------------------------------------------------------
 update-inetd --remove tftp
 TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
 update-inetd --add "${TFTPLINE}"
 /etc/init.d/openbsd-inetd reload
-	
+
 $VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
 rm -r ${TFTPROOT}/opsi 2>/dev/null || true
 ln -sf /tftpboot/opsi ${TFTPROOT}/
@@ -280,18 +281,6 @@ if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
 	rm -R $TFTPROOT/pxelinux.cfg
 	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
 fi
-
-
-# --- Configure opsi backend ----------------------------------------------------------------------------------------------------
-$VERBOSE && echo "Patching univention backend configuration"
-cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
-cat /tmp/40_opsi4ucs.conf \
-	| sed "s/<host>/$LDAP_MASTER/" \
-	| sed "s/<bindDn>/$LDAP_USER/" \
-	| sed "s/<bindPw>/$LDAP_SECRET/" \
-	> /etc/opsi/backendManager.d/40_opsi4ucs.conf
-rm /tmp/40_opsi4ucs.conf
-
 
 # --- Set file permissions ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Setting file permissions"
@@ -326,6 +315,10 @@ ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Creating opsi base"
+	univention-directory-manager container/cn create \
+		--ignore_exists \
+		--position="$ROOT_DN" \
+		--set name=opsi
 	/usr/bin/opsi-admin -d method createOpsiBase
 fi
 
@@ -368,7 +361,7 @@ fi
 
 if [ "$OPSI_ROLE" = "configserver" ]; then
 	set +e
-	opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d method getPcpatchPassword $FQDN 1>/dev/null 2>/dev/null
+	opsi-admin -d method getPcpatchPassword $FQDN 1>/dev/null 2>/dev/null
 	ret=$?
 	set -e
 	if [ $ret != 0 ]; then
@@ -379,6 +372,7 @@ fi
 
 /usr/bin/opsi-admin -d method getPcpatchRSAPrivateKey >/dev/null 2>/dev/null || true
 
+
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
 univention-baseconfig commit /var/www/ucs-overview/de.html
 univention-baseconfig commit /var/www/ucs-overview/en.html
@@ -387,6 +381,7 @@ $VERBOSE && echo "Restarting services"
 /etc/init.d/dhcp3-server restart || true
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
+
 
 # --- Log success ---------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Log join script success"

@@ -24,7 +24,19 @@ fi
 
 case "$1" in
 	configure)
-	
+		# --- Configure opsi backend ----------------------------------------------------------------------------------------------------
+		
+		LDAP_MASTER=`univention-baseconfig get ldap/master`
+		LDAP_USER=`univention-baseconfig get ldap/hostdn`
+		LDAP_SECRET=$(cat /etc/machine.secret)
+		
+		cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
+		cat /tmp/40_opsi4ucs.conf \
+			| sed "s/<host>/$LDAP_MASTER/" \
+			| sed "s/<bindDn>/$LDAP_USER/" \
+			| sed "s/<bindPw>/$LDAP_SECRET/" \
+			> /etc/opsi/backendManager.d/40_opsi4ucs.conf
+		rm /tmp/40_opsi4ucs.conf
 	;;
 	
 	abort-upgrade|abort-remove|abort-deconfigure)
