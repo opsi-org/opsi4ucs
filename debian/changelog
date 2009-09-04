@@ -1,3 +1,9 @@
+opsi4ucs (3.3.1-9) stable; urgency=low
+
+  * Modified join-script to use credentials for udm
+
+ -- Jan Schneider <j.schneider@uib.de>  Fri, 04 Sep 2009 14:49:44 +0200
+
 opsi4ucs (3.3.1-8) stable; urgency=low
 
   * Fixed bug in join script

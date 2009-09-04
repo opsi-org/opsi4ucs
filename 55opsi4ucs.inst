@@ -141,12 +141,12 @@ rm /tmp/40_opsi4ucs.conf
 $VERBOSE && echo "Adding system users and groups..."
 
 set +e
-univention-directory-manager groups/group list --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
+univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group pcpatch"
-	univention-directory-manager groups/group create \
+	univention-directory-manager groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="pcpatch" \
 		--set gidNumber="992" \
@@ -154,19 +154,19 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-univention-directory-manager groups/group list --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
+univention-directory-manager groups/group list $@ --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group opsiadmin"
-	univention-directory-manager groups/group create \
+	univention-directory-manager groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="opsiadmin" \
 		--set description="opsi config admin group"
 fi
 
 set +e
-univention-directory-manager users/user list --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
+univention-directory-manager users/user list $@ --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
@@ -175,7 +175,7 @@ if [ $ret != 0 ]; then
 	
 	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
 	
-	univention-directory-manager users/user create \
+	univention-directory-manager users/user create $@ \
 		--position="cn=users,$ROOT_DN" \
 		--set username="pcpatch" \
 		--set description="opsi-pseudo user" \
@@ -187,25 +187,27 @@ if [ $ret != 0 ]; then
 		--set overridePWLength=1
 fi
 
-univention-directory-manager groups/group modify \
+univention-directory-manager groups/group modify $@ \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
+
+usermod -g 992 opsiconfd || true
 
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Creating container for samba shares"
-univention-directory-manager container/cn create \
+univention-directory-manager container/cn $@ create \
 	--ignore_exists \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
 set +e
-univention-directory-manager shares/share list --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
+univention-directory-manager shares/share list $@ --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opt_pcbin"
-	univention-directory-manager shares/share create \
+	univention-directory-manager shares/share create $@ \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opt_pcbin \
 		--set host=$FQDN \
@@ -226,12 +228,12 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-univention-directory-manager shares/share list --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
+univention-directory-manager shares/share list $@ --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opsi_workbench"
-	univention-directory-manager shares/share create \
+	univention-directory-manager shares/share create $@ \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_workbench \
 		--set host=$FQDN \
@@ -285,6 +287,7 @@ fi
 # --- Set file permissions ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Setting file permissions"
 chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
+chown opsiconfd:opsiadmin /etc/opsi/opsiconfd.pem || true
 chmod 0660 /etc/opsi/backendManager.d/*
 chown -R opsiconfd:pcpatch /opt/pcbin/utils
 chmod 2770 /opt/pcbin/utils
@@ -315,7 +318,7 @@ ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Creating opsi base"
-	univention-directory-manager container/cn create \
+	univention-directory-manager container/cn create $@ \
 		--ignore_exists \
 		--position="$ROOT_DN" \
 		--set name=opsi
