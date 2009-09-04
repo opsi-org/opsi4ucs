@@ -191,7 +191,10 @@ univention-directory-manager groups/group modify $@ \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 
-usermod -g 992 opsiconfd || true
+# Remove users/groups from passwd/group
+userdel pcpatch || true
+groudel pcpatch || true
+groudel opsiadmin || true
 
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
