@@ -1,3 +1,10 @@
+opsi4ucs (3.3.1-10) stable; urgency=low
+
+   * Fixed udm cmdline in join-script
+   * Allow installation of opsi4ucs-ldap-schema on any ucs role
+
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 09 Sep 2009 15:26:33 +0200
+
 opsi4ucs (3.3.1-9) stable; urgency=low
 
   * Modified join-script to use credentials for udm

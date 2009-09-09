@@ -131,9 +131,9 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 # --- Configure opsi backend ----------------------------------------------------------------------------------------------------
 cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
 cat /tmp/40_opsi4ucs.conf \
-	| sed "s/<host>/$LDAP_MASTER/" \
-	| sed "s/<bindDn>/$LDAP_USER/" \
-	| sed "s/<bindPw>/$LDAP_SECRET/" \
+	| sed "s/^host\s*=.*/host = \"${LDAP_MASTER}\"/" \
+	| sed "s/^bindDn\s*=.*/bindDn = \"${LDAP_USER}\"/" \
+	| sed "s/^bindPw\s*=.*/bindPw = \"${LDAP_SECRET}\"/" \
 	> /etc/opsi/backendManager.d/40_opsi4ucs.conf
 rm /tmp/40_opsi4ucs.conf
 
@@ -191,12 +191,16 @@ univention-directory-manager groups/group modify $@ \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 
-usermod -g 992 opsiconfd || true
-
+# Remove users/groups from passwd/group
+userdel pcpatch >/dev/null 2>/dev/null || true
+[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
+cp /etc/group /tmp/.group.tmp.opsi4ucs
+cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' >/etc/group || true
+rm /tmp/.group.tmp.opsi4ucs
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Creating container for samba shares"
-univention-directory-manager container/cn $@ create \
+univention-directory-manager container/cn create $@ \
 	--ignore_exists \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
