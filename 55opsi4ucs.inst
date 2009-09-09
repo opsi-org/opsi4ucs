@@ -192,10 +192,11 @@ univention-directory-manager groups/group modify $@ \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 
 # Remove users/groups from passwd/group
-userdel pcpatch || true
-groudel pcpatch || true
-groudel opsiadmin || true
-
+userdel pcpatch >/dev/null 2>/dev/null || true
+[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
+cp /etc/group /tmp/.group.tmp.opsi4ucs
+cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' >/etc/group || true
+rm /tmp/.group.tmp.opsi4ucs
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Creating container for samba shares"
