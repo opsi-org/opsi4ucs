@@ -38,7 +38,7 @@ access to dn="cn=opsi,@%@ldap/base@%@"
 
 # Children (one) of cn=opsi shall be of objectClass organizationalRole only
 access to dn.one="cn=opsi,@%@ldap/base@%@"
-	attrs="@organizationalRole,entry,children"
+	attrs="@organizationalRole,entry,children,structuralObjectClass,entryCSN,entryUUID,modifyTimestamp,modifiersName,createTimestamp,creatorsName,entryDN,subschemaSubentry,hasSubordinates"
 	filter="(objectClass=organizationalRole)"
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Slave Hosts,cn=groups,@%@ldap/base@%@" write
@@ -48,7 +48,7 @@ access to dn.one="cn=opsi,@%@ldap/base@%@"
 # children of cn=opsi with the following objectClasses might be added and
 # deleted at will
 access to dn.regex="^.*,cn=[^,]+,cn=opsi,@%@ldap/base@%@$"
-	attrs="entry,children,@opsiNetworkConfig,@opsiGeneralConfig,@organizationalRole,@opsiProduct,@opsiServerProduct,@opsiLocalBootProduct,@opsiNetBootProduct,@opsiProductClass,@opsiDependency,@opsiProductDependency,@opsiProductClassDependency,@opsiGroup,@opsiProductState,@opsiProductPropertyDefinition,@opsiProductProperty"
+	attrs="entry,children,@opsiNetworkConfig,@opsiGeneralConfig,@organizationalRole,@opsiProduct,@opsiServerProduct,@opsiLocalBootProduct,@opsiNetBootProduct,@opsiProductClass,@opsiDependency,@opsiProductDependency,@opsiProductClassDependency,@opsiGroup,@opsiProductState,@opsiProductPropertyDefinition,@opsiProductProperty,structuralObjectClass,entryCSN,entryUUID,modifyTimestamp,modifiersName,createTimestamp,creatorsName,entryDN,subschemaSubentry,hasSubordinates"
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Slave Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=OPSI Depot Servers,cn=groups,@%@ldap/base@%@" write
@@ -57,7 +57,7 @@ access to dn.regex="^.*,cn=[^,]+,cn=opsi,@%@ldap/base@%@$"
 # allow write access to Windows Hosts objectClasses opsiHost and opsiClient by
 # all possible OPSI Depot/Config Servers
 access to filter="(objectClass=univentionWindows)"
-	attrs="@opsiHost,@opsiClient"
+	attrs="@opsiHost,@opsiClient,structuralObjectClass,entryCSN,entryUUID,modifyTimestamp,modifiersName,createTimestamp,creatorsName,entryDN,subschemaSubentry,hasSubordinates"
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Slave Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=OPSI Depot Servers,cn=groups,@%@ldap/base@%@" write
@@ -68,6 +68,7 @@ access to filter="(objectClass=univentionHost)"
 	attrs="@opsiHost,@opsiDepotserver,@opsiConfigserver"
 	by self write
 	by * none break
+
 
 
 
