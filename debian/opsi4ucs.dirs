@@ -1,5 +1,10 @@
 etc/opsi/backendManager.d
-var/lib/univention-client-boot
-usr/lib/univention-directory-listener/system
-/var/www/icon/opsi
+home/opsiproducts
+opt/pcbin/install
+opt/pcbin/utils
+usr/lib/univention-install
+var/log/opsi
+var/lib/opsi/audit
+var/lib/opsi/products
+var/www/icon/opsi
 
