@@ -1,3 +1,11 @@
+opsi4ucs (3.4-6) stable; urgency=low
+
+  * Fixed ldap acls
+  * Creating extended attribute
+  * Using find to move pxelinux.cfg/*
+
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 27 Oct 2009 10:27:42 +0100
+
 opsi4ucs (3.4-5) stable; urgency=low
 
   * Fixed ldap acls for replication
