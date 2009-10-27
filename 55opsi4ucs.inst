@@ -1,0 +1,427 @@
+#! /bin/bash -e
+
+# = = = = = = = = = = = = = = = = = = = = = = =
+# =        Copyright (C) 2009 uib GmbH        =
+# =           http://www.uib.de               =
+# =          All rights reserved.             =
+# = = = = = = = = = = = = = = = = = = = = = = =
+
+VERSION=1
+VERBOSE=true
+
+if ! test -e "/usr/share/univention-join/.joined"; then
+	echo "The server has not joined yet"
+	exit 1
+fi
+
+touch /usr/lib/univention-install/.index.txt
+
+test -n "`grep "opsi4ucs v${VERSION} successful" /usr/lib/univention-install/.index.txt`" && exit 1
+
+TFTPROOT="/var/lib/univention-client-boot"
+SERVER_ROLE=`univention-baseconfig get server/role`
+OPSI_ROLE="configserver"
+ROOT_DN=`univention-baseconfig get ldap/base`
+LDAP_MASTER=`univention-baseconfig get ldap/master`
+LDAP_USER=`univention-baseconfig get ldap/hostdn`
+LDAP_SECRET=`cat /etc/machine.secret`
+HOSTNAME=`uname -n`
+DOMAIN=`univention-baseconfig get domainname`
+FQDN=`hostname --fqdn`
+IPADDRESS=`getent hosts $FQDN | head -n1 | cut -d' ' -f1`
+NETMASK=""
+GATEWAY=""
+SUBNET=""
+BROADCAST=""
+WINDOMAIN=`univention-baseconfig get windows/domain`
+UCS_VERSION=`ucr get version/version`
+UCS_PATCHLEVEL=`ucr get version/patchlevel`
+
+if   [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
+	$VERBOSE && echo -e "\nRunning on UCS Master"
+elif [ "$SERVER_ROLE" = "domaincontroller_slave" ]; then
+	$VERBOSE && echo -e "\nRunning on UCS Slave"
+elif [ "$SERVER_ROLE" = "domaincontroller_backup" ]; then
+	$VERBOSE && echo -e "\nRunning on UCS Backup"
+else
+	$VERBOSE && echo -e "\nRunning on $SERVER_ROLE"
+fi
+
+
+# --- Test ldap connection ------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
+set +e
+ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	echo "" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo " Connect to ldap master $LDAP_MASTER as $LDAP_USER failed" 1>&2
+	echo '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' 1>&2
+	echo "" 1>&2
+	exit 1
+fi
+
+
+# --- Get network config --------------------------------------------------------------------------------------------------------
+for iface in `ifconfig -a | grep "^[[:alnum:]]" | cut -d " " -f 1`; do
+	ip=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
+	NETMASK=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $7}'`
+	GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
+	if [ "$ip" != "" ]; then
+		if [ "$IPADDRESS" = "" ]; then
+			IPADDRESS="$ip"
+		fi
+		[ "$IPADDRESS" = "$ip" ] && break
+	fi
+done
+
+[ "$NETMASK" = "" ] && NETMASK="255.255.255.0"
+
+if [ "$IPADDRESS" != "" ]; then
+	for part in 1 2 3 4; do
+		I[$part]=$(echo $IPADDRESS | cut -d . -f $part)
+		M[$part]=$(echo $NETMASK | cut -d . -f $part)
+	done
+	
+	for part in 1 2 3 4; do
+		N[$part]=$((${I[$part]} & ${M[$part]}))
+		B[$part]=$((${N[$part]} | $((${M[$part]} ^255))))
+	done
+	
+	SUBNET="${N[1]}.${N[2]}.${N[3]}.${N[4]}"
+	BROADCAST="${B[1]}.${B[2]}.${B[3]}.${B[4]}"
+fi
+
+
+# --- Determine opsi role -------------------------------------------------------------------------------------------------------
+set +e
+config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
+set -e
+[ "$config_server" != "" -a "$config_server" != "$FQDN" ] && OPSI_ROLE="depotserver"
+
+
+# --- Show system information ---------------------------------------------------------------------------------------------------
+$VERBOSE && echo -e "\nSystem information"
+$VERBOSE && echo "     UCS version      : $UCS_VERSION"
+$VERBOSE && echo "     UCS patchlevel   : $UCS_PATCHLEVEL"
+$VERBOSE && echo "     TFTP root        : $TFTPROOT"
+$VERBOSE && echo "     UCS role         : $SERVER_ROLE"
+$VERBOSE && echo "     Opsi server role : $OPSI_ROLE"
+$VERBOSE && echo "     Root dn          : $ROOT_DN"
+$VERBOSE && echo "     LDAP master      : $LDAP_MASTER"
+$VERBOSE && echo "     LDAP user        : $LDAP_USER"
+$VERBOSE && echo "     Hostname         : $HOSTNAME"
+$VERBOSE && echo "     Windomain        : $DOMAIN"
+$VERBOSE && echo "     FQDN             : $FQDN"
+$VERBOSE && echo "     IP-Address       : $IPADDRESS"
+$VERBOSE && echo "     Netmask          : $NETMASK"
+$VERBOSE && echo "     Gateway          : $GATEWAY"
+$VERBOSE && echo "     Subnet           : $SUBNET"
+$VERBOSE && echo "     Broadcast        : $BROADCAST"
+$VERBOSE && echo "     Windomain        : $WINDOMAIN"
+
+# --- Create extended attribute -------------------------------------------------------------------------------------------------
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.2-1"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
+		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
+		--set "name=opsiHostId" --set "module=computers/windows" \
+		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
+		--set "CLIName=opsiHostId" --set "tabName=opsi" \
+		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
+		--set "ldapMapping=opsiHostId"
+fi
+
+# --- Configure opsi backend ----------------------------------------------------------------------------------------------------
+cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
+cat /tmp/40_opsi4ucs.conf \
+	| sed "s/^host\s*=.*/host = \"${LDAP_MASTER}\"/" \
+	| sed "s/^bindDn\s*=.*/bindDn = \"${LDAP_USER}\"/" \
+	| sed "s/^bindPw\s*=.*/bindPw = \"${LDAP_SECRET}\"/" \
+	> /etc/opsi/backendManager.d/40_opsi4ucs.conf
+rm /tmp/40_opsi4ucs.conf
+
+# --- Add users and groups ------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Adding system users and groups..."
+
+set +e
+univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding group pcpatch"
+	univention-directory-manager groups/group create $@ \
+		--position="cn=groups,$ROOT_DN" \
+		--set name="pcpatch" \
+		--set gidNumber="992" \
+		--set description="opsi file admin group"
+fi
+
+set +e
+univention-directory-manager groups/group list $@ --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding group opsiadmin"
+	univention-directory-manager groups/group create $@ \
+		--position="cn=groups,$ROOT_DN" \
+		--set name="opsiadmin" \
+		--set description="opsi config admin group"
+fi
+
+set +e
+univention-directory-manager users/user list $@ --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	# User pcpatch does not exist in ldap
+	$VERBOSE && echo "Adding user pcpatch"
+	
+	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+	
+	univention-directory-manager users/user create $@ \
+		--position="cn=users,$ROOT_DN" \
+		--set username="pcpatch" \
+		--set description="opsi-pseudo user" \
+		--set unixhome="/var/lib/opsi" \
+		--set primaryGroup="cn=pcpatch,cn=groups,$ROOT_DN" \
+		--set uidNumber="992" \
+		--set lastname="pcpatch" \
+		--set password="${pass}" \
+		--set overridePWLength=1
+fi
+
+univention-directory-manager groups/group modify $@ \
+	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
+	--append users="uid=Administrator,cn=users,$ROOT_DN"
+
+# Remove users/groups from passwd/group
+userdel pcpatch >/dev/null 2>/dev/null || true
+[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
+cp /etc/group /tmp/.group.tmp.opsi4ucs
+cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' >/etc/group || true
+rm /tmp/.group.tmp.opsi4ucs
+
+# --- Add samba shares ----------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Creating container for samba shares"
+univention-directory-manager container/cn create $@ \
+	--ignore_exists \
+	--position="cn=shares,$ROOT_DN" \
+	--set name=$FQDN
+
+set +e
+univention-directory-manager shares/share list $@ --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding samba share opt_pcbin"
+	univention-directory-manager shares/share create $@ \
+		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
+		--set name=opt_pcbin \
+		--set host=$FQDN \
+		--set path=/opt/pcbin \
+		--set owner=992 \
+		--set group=992 \
+		--set directorymode=0755 \
+		--set sambaName=opt_pcbin \
+		--set sambaWriteable=1 \
+		--set sambaBrowseable=1 \
+		--set sambaPublic=0 \
+		--set sambaCreateMode=0774 \
+		--set sambaDirectoryMode=0775 \
+		--set sambaSecurityMode=0777 \
+		--set sambaDirectorySecurityMode=0777 \
+		--set sambaOplocks=0 \
+		--set sambaLevel2Oplocks=0
+fi
+
+set +e
+univention-directory-manager shares/share list $@ --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding samba share opsi_workbench"
+	univention-directory-manager shares/share create $@ \
+		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
+		--set name=opsi_workbench \
+		--set host=$FQDN \
+		--set path=/home/opsiproducts \
+		--set owner=992 \
+		--set group=992 \
+		--set directorymode=0755 \
+		--set sambaName=opsi_workbench \
+		--set sambaWriteable=1 \
+		--set sambaBrowseable=1 \
+		--set sambaPublic=0 \
+		--set sambaCreateMode=0774 \
+		--set sambaDirectoryMode=0775 \
+		--set sambaSecurityMode=0777 \
+		--set sambaDirectorySecurityMode=0777
+fi
+
+
+# --- Configure dhcp ------------------------------------------------------------------------------------------------------------
+if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
+	set +e
+	ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
+		echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+			| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
+	fi
+fi
+
+# --- Configure tftp ------------------------------------------------------------------------------------------------------------
+update-inetd --remove tftp
+TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
+update-inetd --add "${TFTPLINE}"
+/etc/init.d/openbsd-inetd reload
+
+$VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
+rm -r ${TFTPROOT}/opsi 2>/dev/null || true
+ln -sf /tftpboot/opsi ${TFTPROOT}/
+ln -sf /tftpboot/linux/install $TFTPROOT/
+ln -sf /tftpboot/linux/memtest.30 $TFTPROOT/
+ln -sf /tftpboot/linux/miniroot.gz $TFTPROOT/
+ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
+if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
+	find "$TFTPROOT/pxelinux.cfg" -mindepth 1 -maxdepth 1 -exec mv "{}" "/tftpboot/linux/pxelinux.cfg/" \;
+	rmdir $TFTPROOT/pxelinux.cfg
+	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
+fi
+
+# --- Set file permissions ------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Setting file permissions"
+chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
+chown opsiconfd:opsiadmin /etc/opsi/opsiconfd.pem || true
+chmod 0660 /etc/opsi/backendManager.d/*
+chown -R opsiconfd:pcpatch /opt/pcbin/utils
+chmod 2770 /opt/pcbin/utils
+chown -R opsiconfd:pcpatch /opt/pcbin/install
+chmod 2770 /opt/pcbin/install
+chown -R opsiconfd:pcpatch /tftpboot/linux
+chmod 2775 /tftpboot/linux
+chmod 2775 /tftpboot/linux/pxelinux.cfg
+find /tftpboot/linux -type f -exec chmod 664 {} \;
+chown -R opsiconfd:pcpatch /var/lib/opsi
+chmod 2750 /var/lib/opsi
+# for ssh public key authentification to work rights on /var/lib/opsi have to be pcatch:pcpatch 750
+chown pcpatch /var/lib/opsi
+chmod 2770 /var/lib/opsi/products
+chmod 0660 /var/lib/opsi/products/* >/dev/null 2>/dev/null || true
+chmod 2770 /var/lib/opsi/audit
+chmod 0660 /var/lib/opsi/audit/* >/dev/null 2>/dev/null || true
+chown opsiconfd:pcpatch /var/log/opsi
+chmod 2770 /var/log/opsi
+chown pcpatch:pcpatch /home/opsiproducts
+chmod 2770 /home/opsiproducts
+
+
+# --- Create opsi config in ldap ------------------------------------------------------------------------------------------------
+set +e
+ldapsearch -x -L -s base -b "cn=opsi,$ROOT_DN" | grep '^dn:' 1>/dev/null 2>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Creating opsi base"
+	univention-directory-manager container/cn create $@ \
+		--ignore_exists \
+		--position="$ROOT_DN" \
+		--set name=opsi
+	/usr/bin/opsi-admin -d method createOpsiBase
+fi
+
+set +e
+ldapsearch -x -L -s sub -b "$ROOT_DN" "(&(objectClass=opsiDepotserver)(opsiHostId=${FQDN}))" | grep '^dn:' 1>/dev/null 2>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	if [ "$OPSI_ROLE" = "configserver" ]; then
+		$VERBOSE && echo "Creating config server ${FQDN}"
+		/usr/bin/opsi-admin -d method createServer "$HOSTNAME" "$DOMAIN" >/dev/null
+	fi
+	
+	$VERBOSE && echo "Creating depot server ${FQDN}"
+	/usr/bin/opsi-admin -d method createDepot \
+		"$HOSTNAME" "$DOMAIN" \
+		"file:///opt/pcbin/install" \
+		"smb://${HOSTNAME}/opt_pcbin/install" \
+		"file:///var/lib/opsi/products" \
+		"webdavs://${FQDN}:4447/products" \
+		"${SUBNET}/${NETMASK}" >/dev/null
+	
+	if [ "$OPSI_ROLE" = "configserver" ]; then
+		/usr/bin/opsi-admin -d method setGeneralConfig "{ \
+				\"pcptchBitmap1\" : \"winst1.bmp\", \
+				\"pcptchBitmap2\" : \"winst2.bmp\", \
+				\"pcptchLabel1\" : \"opsi\", \
+				\"pcptchLabel2\" : \"uib gmbh\" }"
+		
+		/usr/bin/opsi-admin -d method setNetworkConfig "{ \
+				\"opsiServer\" : \"${FQDN}\", \
+				\"depotId\" : \"${FQDN}\", \
+				\"depotDrive\" : \"P:\", \
+				\"utilsDrive\" : \"P:\", \
+				\"configDrive\" : \"P:\", \
+				\"winDomain\" : \"${WINDOMAIN}\", \
+				\"nextBootServiceURL\" : \"https://${IPADDRESS}:4447\" }"
+	fi
+fi
+
+if [ "$OPSI_ROLE" = "configserver" ]; then
+	set +e
+	opsi-admin -d method getPcpatchPassword $FQDN 1>/dev/null 2>/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+		/usr/bin/opsi-admin -f /var/log/opsi/opsi4ucs-inst.log -d task setPcpatchPassword $pass
+	fi
+fi
+
+/usr/bin/opsi-admin -d method getPcpatchRSAPrivateKey >/dev/null 2>/dev/null || true
+
+
+# --- Commit changes ------------------------------------------------------------------------------------------------------------
+univention-baseconfig commit /var/www/ucs-overview/de.html
+univention-baseconfig commit /var/www/ucs-overview/en.html
+
+$VERBOSE && echo "Restarting services"
+/etc/init.d/dhcp3-server restart || true
+/etc/init.d/opsiconfd restart || true
+/etc/init.d/opsipxeconfd restart || true
+
+
+# --- Log success ---------------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Log join script success"
+test -n "`grep \"opsi4ucs v${VERSION} successful\" /usr/lib/univention-install/.index.txt`" || \
+	echo "opsi4ucs v${VERSION} successful" >>/usr/lib/univention-install/.index.txt
+
+
+$VERBOSE && echo "Done"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
