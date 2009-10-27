@@ -24,7 +24,7 @@ OPSI_ROLE="configserver"
 ROOT_DN=`univention-baseconfig get ldap/base`
 LDAP_MASTER=`univention-baseconfig get ldap/master`
 LDAP_USER=`univention-baseconfig get ldap/hostdn`
-LDAP_SECRET=$(cat /etc/machine.secret)
+LDAP_SECRET=`cat /etc/machine.secret`
 HOSTNAME=`uname -n`
 DOMAIN=`univention-baseconfig get domainname`
 FQDN=`hostname --fqdn`
@@ -34,6 +34,8 @@ GATEWAY=""
 SUBNET=""
 BROADCAST=""
 WINDOMAIN=`univention-baseconfig get windows/domain`
+UCS_VERSION=`ucr get version/version`
+UCS_PATCHLEVEL=`ucr get version/patchlevel`
 
 if   [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	$VERBOSE && echo -e "\nRunning on UCS Master"
@@ -102,6 +104,8 @@ set -e
 
 # --- Show system information ---------------------------------------------------------------------------------------------------
 $VERBOSE && echo -e "\nSystem information"
+$VERBOSE && echo "     UCS version      : $UCS_VERSION"
+$VERBOSE && echo "     UCS patchlevel   : $UCS_PATCHLEVEL"
 $VERBOSE && echo "     TFTP root        : $TFTPROOT"
 $VERBOSE && echo "     UCS role         : $SERVER_ROLE"
 $VERBOSE && echo "     Opsi server role : $OPSI_ROLE"
@@ -118,15 +122,20 @@ $VERBOSE && echo "     Subnet           : $SUBNET"
 $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
-
-## --- Create extended attribute -------------------------------------------------------------------------------------------------
-#univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
-#	--position "cn=custom attributes,cn=univention,$ROOT_DN" \
-#	--set "name=opsiHostId" --set "module=computers/windows" \
-#	--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
-#	--set "CLIName=opsiHostId" --set "tabName=opsi" \
-#	--set "default=<name>.$DOMAIN" --set "mayChange=1" \
-#	--set "ldapMapping=opsiHostId"
+# --- Create extended attribute -------------------------------------------------------------------------------------------------
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.2-1"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
+		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
+		--set "name=opsiHostId" --set "module=computers/windows" \
+		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
+		--set "CLIName=opsiHostId" --set "tabName=opsi" \
+		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
+		--set "ldapMapping=opsiHostId"
+fi
 
 # --- Configure opsi backend ----------------------------------------------------------------------------------------------------
 cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
@@ -283,8 +292,8 @@ ln -sf /tftpboot/linux/memtest.30 $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot.gz $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
 if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
-	mv $TFTPROOT/pxelinux.cfg/* /tftpboot/linux/pxelinux.cfg/
-	rm -R $TFTPROOT/pxelinux.cfg
+	find "$TFTPROOT/pxelinux.cfg" -mindepth 1 -maxdepth 1 -exec mv "{}" "/tftpboot/linux/pxelinux.cfg/" \;
+	rmdir $TFTPROOT/pxelinux.cfg
 	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
 fi
 

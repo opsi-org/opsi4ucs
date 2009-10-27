@@ -34,7 +34,7 @@ access to dn="cn=opsi,@%@ldap/base@%@"
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" read
 	by group/univentionGroup/uniqueMember="cn=DC Slave Hosts,cn=groups,@%@ldap/base@%@" read
 	by group/univentionGroup/uniqueMember="cn=OPSI Depot Servers,cn=groups,@%@ldap/base@%@" write
-	by * none
+	by * none break
 
 # Children (one) of cn=opsi shall be of objectClass organizationalRole only
 access to dn.one="cn=opsi,@%@ldap/base@%@"
