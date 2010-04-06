@@ -1,0 +1,28 @@
+Source: opsi4ucs
+Section: opsi
+Priority: optional
+Maintainer: uib GmbH <info@uib.de>
+Build-Depends: debhelper (>= 4.0.0)
+Standards-Version: 3.6.1
+
+Package: opsi4ucs-ldap-schema
+Section: opsi
+Architecture: all
+Depends: 
+Description: LDAP Schema fuer das Softwareverteilungssystem OPSI
+ opsi4ucs dient als Basis fuer das Softwareverteilungssystem OPSI auf UCS.
+ .
+ OPSI ist ein OpenSource Softwareverteilungssystem, das sowohl automatische
+ Betriebssystem- als auch Softwareinstallationen ermoeglicht.
+ http://www.opsi.org
+
+Package: opsi4ucs
+Section: opsi
+Architecture: all
+Depends: univention-client-boot-pxe, python-opsi (>=3.3.0.24), opsiconfd (>=2.0.0.8), opsipxeconfd (>=0.3.3-2), opsi-utils (>=3.3.0.11), opsi-linux-bootimage (>=20080826), opsi-configed, samba, dhcp3-server, sudo, wget
+Description: Das Softwareverteilungssystem OPSI fuer Univention Corporate Server
+ opsi4ucs dient als Basis fuer das Softwareverteilungssystem OPSI auf UCS.
+ .
+ OPSI ist ein OpenSource Softwareverteilungssystem, das sowohl automatische
+ Betriebssystem- als auch Softwareinstallationen ermoeglicht.
+ http://www.opsi.org
