@@ -1,3 +1,9 @@
+opsi4ucs (3.3.1-14) stable; urgency=low
+
+  * Fixed ldap acls
+
+ -- Jan Schneider <j.schneider@uib.de>  Fri, 20 Nov 2009 11:57:53 +0100
+
 opsi4ucs (3.3.1-13) stable; urgency=low
 
   * Fixed ldap acls
