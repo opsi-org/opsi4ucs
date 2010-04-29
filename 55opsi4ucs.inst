@@ -328,15 +328,17 @@ chmod 2770 /home/opsiproducts
 
 # --- Create opsi config in ldap ------------------------------------------------------------------------------------------------
 set +e
-ldapsearch -x -L -s base -b "cn=opsi,$ROOT_DN" | grep '^dn:' 1>/dev/null 2>/dev/null
+ldapsearch -x -L -s base -b "cn=products,cn=opsi,$ROOT_DN" | grep '^dn:' 1>/dev/null 2>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Creating opsi base"
-	univention-directory-manager container/cn create $@ \
-		--ignore_exists \
-		--position="$ROOT_DN" \
-		--set name=opsi
+	# permission denied if executed on ucs slave >= 2.3
+	# will be created in opsi4ucs-ldap-schema.postinst
+	#univention-directory-manager container/cn create $@ \
+	#	--ignore_exists \
+	#	--position="$ROOT_DN" \
+	#	--set name=opsi
 	/usr/bin/opsi-admin -d method createOpsiBase
 fi
 

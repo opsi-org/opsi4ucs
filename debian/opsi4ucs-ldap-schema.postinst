@@ -24,6 +24,8 @@ case "$1" in
 		univention-baseconfig commit /etc/ldap/slapd.conf
 		$VERBOSE && echo "Restarting slapd"
 		/etc/init.d/slapd restart || true
+		ROOT_DN=`univention-baseconfig get ldap/base`
+		univention-directory-manager container/cn create --ignore_exists --position="$ROOT_DN" --set name=opsi
 	;;
 	
 	abort-upgrade|abort-remove|abort-deconfigure)
