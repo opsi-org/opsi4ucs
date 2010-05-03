@@ -148,8 +148,14 @@ rm /tmp/40_opsi4ucs.conf
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.3-1"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	univention-directory-listener-ctrl resync replication
+fi
 
-univention-directory-listener-ctrl resync replication
 set +e
 univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
@@ -299,7 +305,13 @@ if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
 fi
 
 # --- Set file permissions ------------------------------------------------------------------------------------------------------
-univention-directory-listener-ctrl resync replication
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.3-1"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	univention-directory-listener-ctrl resync replication
+fi
 $VERBOSE && echo "Setting file permissions"
 chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
 chown opsiconfd:opsiadmin /etc/opsi/opsiconfd.pem || true
