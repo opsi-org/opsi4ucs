@@ -113,7 +113,7 @@ $VERBOSE && echo "     Root dn          : $ROOT_DN"
 $VERBOSE && echo "     LDAP master      : $LDAP_MASTER"
 $VERBOSE && echo "     LDAP user        : $LDAP_USER"
 $VERBOSE && echo "     Hostname         : $HOSTNAME"
-$VERBOSE && echo "     Windomain        : $DOMAIN"
+$VERBOSE && echo "     Domain           : $DOMAIN"
 $VERBOSE && echo "     FQDN             : $FQDN"
 $VERBOSE && echo "     IP-Address       : $IPADDRESS"
 $VERBOSE && echo "     Netmask          : $NETMASK"
@@ -148,6 +148,13 @@ rm /tmp/40_opsi4ucs.conf
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.3-1"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	univention-directory-listener-ctrl resync replication
+fi
 
 set +e
 univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
@@ -298,6 +305,13 @@ if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
 fi
 
 # --- Set file permissions ------------------------------------------------------------------------------------------------------
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.3-1"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	univention-directory-listener-ctrl resync replication
+fi
 $VERBOSE && echo "Setting file permissions"
 chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
 chown opsiconfd:opsiadmin /etc/opsi/opsiconfd.pem || true
@@ -326,15 +340,17 @@ chmod 2770 /home/opsiproducts
 
 # --- Create opsi config in ldap ------------------------------------------------------------------------------------------------
 set +e
-ldapsearch -x -L -s base -b "cn=opsi,$ROOT_DN" | grep '^dn:' 1>/dev/null 2>/dev/null
+ldapsearch -x -L -s base -b "cn=products,cn=opsi,$ROOT_DN" | grep '^dn:' 1>/dev/null 2>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Creating opsi base"
-	univention-directory-manager container/cn create $@ \
-		--ignore_exists \
-		--position="$ROOT_DN" \
-		--set name=opsi
+	# permission denied if executed on ucs slave >= 2.3
+	# will be created in opsi4ucs-ldap-schema.postinst
+	#univention-directory-manager container/cn create $@ \
+	#	--ignore_exists \
+	#	--position="$ROOT_DN" \
+	#	--set name=opsi
 	/usr/bin/opsi-admin -d method createOpsiBase
 fi
 
