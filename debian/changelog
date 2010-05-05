@@ -1,3 +1,9 @@
+opsi4ucs (3.4-9) stable; urgency=low
+
+  * Fixed path to join script in postinst
+
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 05 May 2010 17:04:03 +0200
+
 opsi4ucs (3.4-8) stable; urgency=low
 
   * Fixes for UCS 2.3-1
