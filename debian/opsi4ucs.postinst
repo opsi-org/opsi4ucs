@@ -19,7 +19,7 @@
 
 # run join script
 if [ "$(univention-baseconfig get server/role)" = "domaincontroller_master" ]; then
-	/usr/lib/univention-install/55opsi4ucs.inst || true
+	/usr/lib/univention-install/99opsi4ucs.inst || true
 fi
 
 case "$1" in
