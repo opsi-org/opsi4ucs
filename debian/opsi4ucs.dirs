@@ -1,10 +1,11 @@
-etc/opsi/backendManager.d
+etc/opsi/backendManager
 home/opsiproducts
 opt/pcbin/install
-opt/pcbin/utils
 usr/lib/univention-install
+var/lib/opsi/repository
 var/log/opsi
-var/lib/opsi/audit
-var/lib/opsi/products
+var/log/opsi/clientconnect
+var/log/opsi/bootimage
+var/log/opsi/instlog
 var/www/icon/opsi
 
