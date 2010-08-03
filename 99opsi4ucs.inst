@@ -122,20 +122,26 @@ $VERBOSE && echo "     Subnet           : $SUBNET"
 $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
-# --- Create extended attribute -------------------------------------------------------------------------------------------------
-set +e
-dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.2-1"
-ret=$?
-set -e
-if [ $ret = 0 ]; then
-	univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
-		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
-		--set "name=opsiHostId" --set "module=computers/windows" \
-		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
-		--set "CLIName=opsiHostId" --set "tabName=opsi" \
-		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
-		--set "ldapMapping=opsiHostId"
-fi
+
+## --- Create extended attribute -------------------------------------------------------------------------------------------------
+## This is disabled for now because:
+##   If this custom attribute is defined a computers/windows object will become an opsiClient object on creation
+##   This opsiClient will be incomplete because some attributes like opsiHostKey will be empty
+##   The client then will show up in opsi-configed but will not be fully functional
+##
+#set +e
+#dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.2-1"
+#ret=$?
+#set -e
+#if [ $ret = 0 ]; then
+#	univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
+#		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
+#		--set "name=opsiHostId" --set "module=computers/windows" \
+#		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
+#		--set "CLIName=opsiHostId" --set "tabName=opsi" \
+#		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
+#		--set "ldapMapping=opsiHostId"
+#fi
 
 # --- Configure opsi backend ----------------------------------------------------------------------------------------------------
 cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
