@@ -142,6 +142,9 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
 #		--set "ldapMapping=opsiHostId"
 #fi
+univention-directory-manager settings/extended_attribute remove $@ --ignore_exists \
+	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN"
+
 
 # --- Configure opsi backend ----------------------------------------------------------------------------------------------------
 cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
