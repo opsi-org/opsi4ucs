@@ -1,3 +1,11 @@
+opsi4ucs (3.4-10) stable; urgency=low
+
+  * Fix for UCS 2.3-2
+  * Modified LDAP opsi.schema
+  * custom-Attribute removed 
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 16 Aug 2010 22:33:40 +0200
+
 opsi4ucs (3.4-9) stable; urgency=low
 
   * Fixed path to join script in postinst
