@@ -1,7 +1,7 @@
 #! /bin/bash -e
 
 # = = = = = = = = = = = = = = = = = = = = = = =
-# =        Copyright (C) 2009 uib GmbH        =
+# =        Copyright (C) 2010 uib GmbH        =
 # =           http://www.uib.de               =
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
@@ -141,6 +141,8 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
 #		--set "ldapMapping=opsiHostId"
 #fi
+univention-directory-manager settings/extended_attribute remove $@ \
+	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" || true
 
 # --- Configure opsi backend ----------------------------------------------------------------------------------------------------
 cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
@@ -153,13 +155,6 @@ rm /tmp/40_opsi4ucs.conf
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
-set +e
-dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.3-1"
-ret=$?
-set -e
-if [ $ret = 0 ]; then
-	univention-directory-listener-ctrl resync replication
-fi
 
 set +e
 univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
@@ -171,7 +166,8 @@ if [ $ret != 0 ]; then
 		--position="cn=groups,$ROOT_DN" \
 		--set name="pcpatch" \
 		--set gidNumber="992" \
-		--set description="opsi file admin group"
+		--set description="opsi file admin group" \
+		--ignore_exists
 fi
 
 set +e
@@ -183,7 +179,8 @@ if [ $ret != 0 ]; then
 	univention-directory-manager groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="opsiadmin" \
-		--set description="opsi config admin group"
+		--set description="opsi config admin group" \
+		--ignore_exists
 fi
 
 set +e
@@ -205,7 +202,8 @@ if [ $ret != 0 ]; then
 		--set uidNumber="992" \
 		--set lastname="pcpatch" \
 		--set password="${pass}" \
-		--set overridePWLength=1
+		--set overridePWLength=1 \
+		--ignore_exists
 fi
 
 univention-directory-manager groups/group modify $@ \
@@ -249,7 +247,8 @@ if [ $ret != 0 ]; then
 		--set sambaSecurityMode=0777 \
 		--set sambaDirectorySecurityMode=0777 \
 		--set sambaOplocks=0 \
-		--set sambaLevel2Oplocks=0
+		--set sambaLevel2Oplocks=0 \
+		--ignore_exists
 fi
 
 set +e
@@ -273,7 +272,8 @@ if [ $ret != 0 ]; then
 		--set sambaCreateMode=0774 \
 		--set sambaDirectoryMode=0775 \
 		--set sambaSecurityMode=0777 \
-		--set sambaDirectorySecurityMode=0777
+		--set sambaDirectorySecurityMode=0777 \
+		--ignore_exists
 fi
 
 
@@ -310,13 +310,6 @@ if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
 fi
 
 # --- Set file permissions ------------------------------------------------------------------------------------------------------
-set +e
-dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.3-1"
-ret=$?
-set -e
-if [ $ret = 0 ]; then
-	univention-directory-listener-ctrl resync replication
-fi
 $VERBOSE && echo "Setting file permissions"
 chown -R opsiconfd:pcpatch /etc/opsi/backendManager.d
 chown opsiconfd:opsiadmin /etc/opsi/opsiconfd.pem || true
