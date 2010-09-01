@@ -136,7 +136,7 @@ attributetype ( 1.3.6.1.4.1.23807.1.1.40
 objectclass ( 1.3.6.1.4.1.23807.1.2.1
 	NAME 'opsiHost'
 	SUP top
-	AUXILIARY
+	ABSTRACT
 	DESC 'Opsi host'
 	MUST ( cn $ opsiHostId )
 	MAY ( opsiDescription $ opsiNotes $ opsiHardwareAddress $ opsiIpAddress $ opsiInventoryNumber) )
@@ -150,14 +150,14 @@ objectclass ( 1.3.6.1.4.1.23807.1.2.2
 objectclass ( 1.3.6.1.4.1.23807.1.2.3
 	NAME 'opsiDepotserver'
 	SUP opsiHost
-	STRUCTURAL
+	AUXILIARY
 	DESC 'Opsi depotserver'
 	MAY ( opsiHostKey $ opsiDepotRemoteUrl $ opsiDepotLocalUrl $ opsiRepositoryRemoteUrl $ opsiRepositoryLocalUrl $ opsiNetworkAddress $ opsiMaximumBandwidth ) )
 
 objectclass ( 1.3.6.1.4.1.23807.1.2.4
 	NAME 'opsiClient'
 	SUP opsiHost
-	STRUCTURAL
+	AUXILIARY
 	DESC 'Opsi client'
 	MAY ( opsiHostKey $ opsiCreatedTimestamp $ opsiLastSeenTimestamp ) )
 
