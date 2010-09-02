@@ -19,6 +19,7 @@ access to attrs=opsiHostKey,opsiPcpatchPassword
 	by group/univentionGroup/uniqueMember="cn=opsiadmin,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Slave Hosts,cn=groups,@%@ldap/base@%@" write
+	by group/univentionGroup/uniqueMember="cn=OPSI Depot Servers,cn=groups,@%@ldap/base@%@" write
 	by * none break
 
 # New children can be added to cn=opsi
