@@ -37,7 +37,8 @@ case "$1" in
 	;;
 esac
 
-#DEBHELPER#
+test -x /usr/sbin/univention-config-registry && univention-config-registry register opsi4ucs || true
+
 
 exit 0
 

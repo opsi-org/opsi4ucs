@@ -42,17 +42,25 @@ install: build
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-	mkdir /tmp/univention
-	install -m 0755 univention_baseconfig.py /tmp/univention/
-	install -m 0755 univention-install-baseconfig /tmp/univention/
-	/tmp/univention/univention-install-baseconfig
-	#install -m 0755 opsi_reinstall_listener.py debian/opsi4ucs/usr/lib/univention-directory-listener/system/
-	install -m 0644 files/univention.conf debian/opsi4ucs/etc/opsi/backends/
-	install -m 0644 files/dispatch.conf.univention debian/opsi4ucs/etc/opsi/backendManager/
-	install -m 0644 files/configed.png debian/opsi4ucs/var/www/icon/opsi/
-	install -m 0755 99opsi4ucs.inst debian/opsi4ucs/usr/lib/univention-install/
-	install -m 0755 opsi-setup debian/opsi4ucs/usr/bin/opsi-setup
-	install -m 0644 files/opsi.schema debian/opsi4ucs-ldap-schema/usr/share/univention-ldap/schema/
+	
+	install -m 0644 files/univention.conf           debian/opsi4ucs/etc/opsi/backends/
+	install -m 0644 files/dispatch.conf.univention  debian/opsi4ucs/etc/opsi/backendManager/
+	install -m 0644 files/configed.png              debian/opsi4ucs/var/www/icon/opsi/
+	install -m 0755 99opsi4ucs.inst                 debian/opsi4ucs/usr/lib/univention-install/
+	install -m 0755 opsi-setup                      debian/opsi4ucs/usr/bin/opsi-setup
+	install -m 0644 files/opsi.schema               debian/opsi4ucs-ldap-schema/usr/share/univention-ldap/schema/
+	
+	cp -r conffiles/ldap debian/opsi4ucs-ldap-schema/etc/univention/templates/files/etc
+	install -m 0644 debian/opsi4ucs-ldap-schema.univention-baseconfig debian/opsi4ucs-ldap-schema/etc/univention/templates/info/opsi4ucs-ldap-schema.info
+	
+	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
+	install -m 0644 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
+	
+	#install -m 0755 opsi_reinstall_listener.py     debian/opsi4ucs/usr/lib/univention-directory-listener/system/
+	
+	find debian/opsi4ucs -iname ".svn" -exec rm -r {} \; || true
+	find debian/opsi4ucs-ldap-schema -iname ".svn" -exec rm -r {} \; || true
+	
 	dh_install
 
 binary-indep: build install
