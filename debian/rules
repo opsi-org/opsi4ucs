@@ -42,7 +42,10 @@ install: build
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-	./univention-install-baseconfig
+	mkdir /tmp/univention
+	install -m 0755 univention_baseconfig.py /tmp/univention/
+	install -m 0755 univention-install-baseconfig /tmp/univention/
+	/tmp/univention/univention-install-baseconfig
 	#install -m 0755 opsi_reinstall_listener.py debian/opsi4ucs/usr/lib/univention-directory-listener/system/
 	install -m 0644 files/univention.conf debian/opsi4ucs/etc/opsi/backends/
 	install -m 0644 files/dispatch.conf.univention debian/opsi4ucs/etc/opsi/backendManager/
