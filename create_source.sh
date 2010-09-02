@@ -16,7 +16,7 @@ rm ${destdir}/${packagename}*.dsc     2>/dev/null || true
 
 test -e $tmpdir && rm -rf $tmpdir
 mkdir $tmpdir
-cp -r 99opsi4ucs.inst conffiles files opsi-setup univention_baseconfig.py debian univention univention-install-baseconfig ${tmpdir}/
+cp -r 99opsi4ucs.inst conffiles files opsi-setup debian ${tmpdir}/
 find ${tmpdir} -iname "*.pyc"   -exec rm "{}" \;
 find ${tmpdir} -iname "*.marks" -exec rm "{}" \;
 find ${tmpdir} -iname "*~"      -exec rm "{}" \;
