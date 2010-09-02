@@ -1,3 +1,3 @@
-/etc/opsi/backendManager/40_opsi4ucs.conf
+/etc/opsi/backends/univention.conf
 /etc/univention/templates/files/var/www/ucs-overview/en.html.d/40opsi-en.html
 /etc/univention/templates/files/var/www/ucs-overview/de.html.d/40opsi-de.html

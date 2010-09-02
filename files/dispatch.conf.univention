@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# =      backend dispatch configuration                                                                         =
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+#
+# This file configures which methods are dispatched to which backends.
+# Entries has to follow the form:
+# <regular expression to match method name(s)> : <comma separated list of backend name(s)>
+#
+# Backend names have to match a backend configuraton file basename <backend name>.conf beneath /etc/opsi/backends.
+# For every method executed on backend dispatcher the first matching regular expression will be decisive.
+#
+# Typical configurations:
+#    file, opsipxeconfd and dhcpd backend:
+#       backend_.*         : file, opsipxeconfd, dhcpd
+#       host_.*            : file, opsipxeconfd, dhcpd
+#       productOnClient_.* : file, opsipxeconfd
+#       configState_.*     : file, opsipxeconfd
+#       .*                 : file
+#
+#    jsonrpc, opsipxeconfd and dhcpd backend:
+#       backend_.*         : jsonrpc, opsipxeconfd, dhcpd
+#       .*                 : jsonrpc
+#
+#    ldap as main backend, mysql as hw/sw invent and license management backend, opsipxeconfd and dhcpd backend:
+#       backend_.*         : ldap, mysql, opsipxeconfd, dhcpd
+#       host_.*            : ldap, opsipxeconfd, dhcpd
+#       productOnClient_.* : ldap, opsipxeconfd
+#       configState_.*     : ldap, opsipxeconfd
+#       license.*          : mysql
+#       softwareLicense.*  : mysql
+#       audit.*            : mysql
+#       .*                 : ldap
+#
+
+backend_.*         : univention, opsipxeconfd
+host_.*            : univention, opsipxeconfd
+productOnClient_.* : univention, opsipxeconfd
+configState_.*     : univention, opsipxeconfd
+.*                 : univention
+

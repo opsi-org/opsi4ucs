@@ -1,7 +1,9 @@
+etc/opsi/backends
 etc/opsi/backendManager
 home/opsiproducts
 opt/pcbin/install
 usr/lib/univention-install
+usr/bin
 var/lib/opsi/repository
 var/log/opsi
 var/log/opsi/clientconnect

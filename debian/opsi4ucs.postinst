@@ -24,7 +24,7 @@ fi
 
 case "$1" in
 	configure)
-		
+		ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
 	;;
 	
 	abort-upgrade|abort-remove|abort-deconfigure)

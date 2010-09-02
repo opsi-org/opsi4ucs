@@ -45,6 +45,7 @@ install: build
 	./univention-install-baseconfig
 	#install -m 0755 opsi_reinstall_listener.py debian/opsi4ucs/usr/lib/univention-directory-listener/system/
 	install -m 0644 files/univention.conf debian/opsi4ucs/etc/opsi/backends/
+	install -m 0644 files/dispatch.conf.univention debian/opsi4ucs/etc/opsi/backendManager/
 	install -m 0644 files/configed.png debian/opsi4ucs/var/www/icon/opsi/
 	install -m 0755 99opsi4ucs.inst debian/opsi4ucs/usr/lib/univention-install/
 	install -m 0755 opsi-setup debian/opsi4ucs/usr/bin/opsi-setup
