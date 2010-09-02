@@ -1,3 +1,5 @@
+etc/univention/templates/info
+etc/univention/templates/files
 etc/opsi/backends
 etc/opsi/backendManager
 home/opsiproducts
