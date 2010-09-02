@@ -1,0 +1,2801 @@
+#!/usr/bin/python
+# = = = = = = = = = = = = = = = = = = = = = = =
+# =       Copyright (C) 2010 uib GmbH         =
+# =           http://www.uib.de               =
+# =          All rights reserved.             =
+# = = = = = = = = = = = = = = = = = = = = = = =
+
+
+from OPSI.Logger import *
+from OPSI.Types import *
+from OPSI.Object import *
+from OPSI.System import *
+from OPSI.Util.File import *
+from OPSI.Util.File.Opsi import *
+from OPSI.Util import * #findFiles, randomString, blowfishDecrypt, objectToBeautifiedText
+from OPSI.UI import *
+from OPSI.Backend.MySQL import *
+from OPSI.Backend.LDAP import *
+from OPSI.Backend.File import *
+from OPSI.Backend.JSONRPC import *
+from OPSI.Backend.Backend import ExtendedConfigDataBackend
+
+import os, sys, socket, re, shutil, getopt, pwd, grp, stat, codecs, time, MySQLdb, ldap
+
+logger = Logger()
+logger.setConsoleLevel(LOG_NOTICE)
+logger.setConsoleColor(True)
+
+LOG_FILE         = u'/tmp/opsi-config.log'
+SMB_CONF         = u'/etc/samba/smb.conf'
+SMB_INIT         = u'/etc/init.d/samba'
+DHCPD_CONF       = u'/etc/dhcp3/dhcpd.conf'
+DHCPD_INIT       = u'/etc/init.d/dhcp3-server'
+SUDOERS          = u'/etc/sudoers'
+OPSICONFD_USER   = u'opsiconfd'
+ADMIN_GROUP      = u'opsiadmin'
+CLIENT_USER      = u'pcpatch'
+FILE_ADMIN_GROUP = u'pcpatch'
+
+if os.path.exists(u'/etc/init.d/smbd'):
+	SMB_INIT = u'/etc/init.d/smbd'
+if os.path.exists(u'/etc/init.d/smb'):
+	SMB_INIT = u'/etc/init.d/smb'
+
+if os.path.exists(u'/etc/init.d/dhcpd'):
+	DHCPD_INIT = u'/etc/init.d/dhcpd'
+
+if os.path.exists(u'/etc/dhcpd.conf'):
+	DHCPD_CONF = u'/etc/dhcpd.conf'
+
+sysConfig = {}
+
+def getSysConfig():
+	global sysConfig
+	if sysConfig:
+		return sysConfig
+	
+	sysConfig['distributor'] = u'unknown'
+	try:
+		f = os.popen('lsb_release -i')
+		sysConfig['distributor'] = f.read().split(':')[1].strip()
+		f.close()
+	except Exception, e:
+		logger.error(u"Failed to get distributor: %s" % e)
+		
+	logger.notice(u"Getting current system config")
+	try:
+		sysConfig['fqdn'] = forceHostId(socket.getfqdn())
+	except:
+		raise Exception(u"Failed to get fully qualified domain name, got '%s'" % socket.getfqdn())
+	
+	sysConfig['hostname'] = sysConfig['fqdn'].split(u'.')[0]
+	sysConfig['domain'] = u'.'.join(sysConfig['fqdn'].split(u'.')[1:])
+	sysConfig['ipAddress'] = socket.gethostbyname(sysConfig['fqdn'])
+	if sysConfig['ipAddress'].split(u'.')[0] in ('127', '169'):
+		sysConfig['ipAddress'] = None
+	sysConfig['hardwareAddress'] = None
+	
+	for device in getEthernetDevices():
+		devconf = getNetworkDeviceConfig(device)
+		if devconf['ipAddress'] and devconf['ipAddress'].split(u'.')[0] not in ('127', '169'):
+			if not sysConfig['ipAddress']:
+				sysConfig['ipAddress'] = devconf['ipAddress']
+			if (sysConfig['ipAddress'] == devconf['ipAddress']):
+				sysConfig['netmask']         = devconf['netmask']
+				sysConfig['hardwareAddress'] = devconf['hardwareAddress']
+				break
+	
+	if not sysConfig['ipAddress']:
+		raise Exception(u"Failed to get a valid ip address for fqdn '%s'" % sysConfig['fqdn'])
+	
+	if not sysConfig.get('netmask'):
+		sysConfig['netmask'] = u'255.255.255.0'
+	
+	sysConfig['broadcast'] = u''
+	sysConfig['subnet']    = u''
+	for i in range(4):
+		if sysConfig['broadcast']: sysConfig['broadcast'] += u'.'
+		if sysConfig['subnet']:    sysConfig['subnet']    += u'.'
+		sysConfig['subnet']    += u'%d' % ( int(sysConfig['ipAddress'].split(u'.')[i]) & int(sysConfig['netmask'].split(u'.')[i]) )
+		sysConfig['broadcast'] += u'%d' % ( int(sysConfig['ipAddress'].split(u'.')[i]) | int(sysConfig['netmask'].split(u'.')[i]) ^ 255 )
+	
+	sysConfig['winDomain'] = u''
+	if os.path.exists(SMB_CONF):
+		f = open(SMB_CONF)
+		for line in f.readlines():
+			match = re.search('^\s*workgroup\s*=\s*(\S+)\s*$', line)
+			if match:
+				sysConfig['winDomain'] = match.group(1).upper()
+				break
+		f.close()
+	
+	logger.notice(u"System information:")
+	logger.notice(u"   distributor : %s" % sysConfig['distributor'])
+	logger.notice(u"   ip address  : %s" % sysConfig['ipAddress'])
+	logger.notice(u"   netmask     : %s" % sysConfig['netmask'])
+	logger.notice(u"   subnet      : %s" % sysConfig['subnet'])
+	logger.notice(u"   broadcast   : %s" % sysConfig['broadcast'])
+	logger.notice(u"   fqdn        : %s" % sysConfig['fqdn'])
+	logger.notice(u"   hostname    : %s" % sysConfig['hostname'])
+	logger.notice(u"   domain      : %s" % sysConfig['domain'])
+	logger.notice(u"   win domain  : %s" % sysConfig['winDomain'])
+	
+	return sysConfig
+
+
+def configureSamba():
+	logger.notice(u"Configuring samba")
+	
+	f = open(SMB_CONF)
+	lines = f.readlines()
+	f.close()
+	newlines = []
+	depotShareFound = False
+	configShareFound = False
+	workbenchShareFound = False
+	confChanged = False
+	
+	for i in range(len(lines)):
+		if (lines[i].lower().strip() == '; load opsi shares') and ((i+1) < len(lines)) and (lines[i+1].lower().strip() == 'include = /etc/samba/share.conf'):
+			i += 1
+			confChanged = True
+			continue
+		if   (lines[i].lower().strip() == '[opt_pcbin]'):
+			depotShareFound = True
+		elif (lines[i].lower().strip() == '[opsi_config]'):
+			configShareFound = True
+		elif (lines[i].lower().strip() == '[opsi_workbench]'):
+			workbenchShareFound = True
+		newlines.append(lines[i])
+	
+	if not depotShareFound:
+		logger.notice(u"   Adding share [opt_pcbin]")
+		confChanged = True
+		if (getSysConfig()['distributor'].lower().find('sles') != -1):
+			newlines.append(u"[opsi_depot]\n")
+		else:
+			newlines.append(u"[opt_pcbin]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi depot share\n")
+		if (getSysConfig()['distributor'].lower().find('sles') != -1):
+			newlines.append(u"   path = /var/lib/opsi/depot\n")
+		else:
+			newlines.append(u"   path = /opt/pcbin\n")
+		newlines.append(u"   oplocks = no\n")
+		newlines.append(u"   level2 oplocks = no\n")
+		newlines.append(u"   writeable = yes\n")
+		newlines.append(u"   invalid users = root\n")
+		newlines.append(u"\n")
+		
+	if not configShareFound:
+		logger.notice(u"   Adding share [opsi_config]")
+		confChanged = True
+		newlines.append(u"[opsi_config]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi config share\n")
+		newlines.append(u"   path = /var/lib/opsi/config\n")
+		newlines.append(u"   writeable = yes\n")
+		newlines.append(u"   invalid users = root\n")
+		newlines.append(u"\n")
+		
+	if not workbenchShareFound:
+		logger.notice(u"   Adding share [opsi_workbench]")
+		confChanged = True
+		newlines.append(u"[opsi_workbench]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi workbench\n")
+		if (getSysConfig()['distributor'].lower().find('sles') != -1):
+			newlines.append(u"   path = /var/lib/opsi/workbench\n")
+		else:
+			newlines.append(u"   path = /home/opsiproducts\n")
+		newlines.append(u"   writeable = yes\n")
+		newlines.append(u"   invalid users = root\n")
+		newlines.append(u"   create mask = 0660\n")
+		newlines.append(u"   directory mask = 0770\n")
+		newlines.append(u"\n")
+		
+	if confChanged:
+		logger.notice(u"   Creating backup of %s" % SMB_CONF)
+		shutil.copy(SMB_CONF, SMB_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+		
+		logger.notice(u"   Writing new smb.conf")
+		f = open(SMB_CONF, 'w')
+		lines = f.writelines(newlines)
+		f.close()
+		
+		logger.notice(u"   Reloading samba")
+		try:
+			execute(u'%s reload' % SMB_INIT)
+		except Exception, e:
+			logger.warning(e)
+		
+	
+def configureDHCPD():
+	logger.notice(u"Configuring dhcpd")
+	
+	dhcpdConf = DHCPDConfFile(DHCPD_CONF)
+	dhcpdConf.parse()
+	
+	confChanged = False
+	if dhcpdConf.getGlobalBlock().getParameters_hash().get('use-host-decl-names', False):
+		logger.info(u"   use-host-decl-names already enabled")
+	else:
+		confChanged = True
+		dhcpdConf.getGlobalBlock().addComponent(
+			DHCPDConf_Parameter(
+				startLine 	= -1,
+				parentBlock 	= dhcpdConf.getGlobalBlock(),
+				key 		= 'use-host-decl-names',
+				value 		= True ) )
+	
+	subnets = dhcpdConf.getGlobalBlock().getBlocks('subnet', recursive = True)
+	if not subnets:
+		confChanged = True
+		logger.notice(u"   No subnets found, adding subnet")
+		dhcpdConf.getGlobalBlock().addComponent(
+			DHCPDConf_Block(
+				startLine 	= -1,
+				parentBlock 	= dhcpdConf.getGlobalBlock(),
+				type 		= 'subnet',
+				settings 	= ['subnet', getSysConfig()['subnet'], 'netmask', getSysConfig()['netmask']] ) )
+	
+	for subnet in dhcpdConf.getGlobalBlock().getBlocks('subnet', recursive = True):
+		logger.info(u"   Found subnet %s/%s" % (subnet.settings[1], subnet.settings[3]))
+		groups = subnet.getBlocks('group')
+		if not groups:
+			confChanged = True
+			logger.notice(u"      No groups found, adding group")
+			subnet.addComponent(
+				DHCPDConf_Block(
+					startLine 	= -1,
+					parentBlock 	= subnet,
+					type 		= 'group',
+					settings 	= ['group'] ) )
+		for group in subnet.getBlocks('group'):
+			logger.info(u"      Configuring group")
+			params = group.getParameters_hash(inherit = 'global')
+			if params.get('next-server'):
+				logger.info(u"         next-server already set")
+			else:
+				confChanged = True
+				group.addComponent(
+					DHCPDConf_Parameter(
+						startLine 	= -1,
+						parentBlock 	= group,
+						key 		= 'next-server',
+						value 		= getSysConfig()['ipAddress'] ) )
+				logger.notice(u"   next-server set to %s" % getSysConfig()['ipAddress'])
+			if params.get('filename'):
+				logger.info(u"         filename already set")
+			else:
+				confChanged = True
+				filename = 'linux/pxelinux.0'
+				if (getSysConfig()['distributor'].lower().find('sles') != -1):
+					filename = 'opsi/pxelinux.0'
+				group.addComponent(
+					DHCPDConf_Parameter(
+						startLine 	= -1,
+						parentBlock 	= group,
+						key 		= 'filename',
+						value 		= filename ) )
+				logger.notice(u"         filename set to %s" % filename)
+	
+	if confChanged:
+		logger.notice(u"   Creating backup of %s" % DHCPD_CONF)
+		shutil.copy(DHCPD_CONF, DHCPD_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+		
+		logger.notice(u"   Writing new %s" % DHCPD_CONF)
+		dhcpdConf.generate()
+		
+		logger.notice(u"   Restarting dhcpd")
+		try:
+			execute(u'%s restart' % DHCPD_INIT)
+		except Exception, e:
+			logger.warning(e)
+	
+	logger.notice(u"Configuring sudoers")
+	
+	found = False
+	f = open(SUDOERS)
+	lines = []
+	for line in f.readlines():
+		if (line.find('%s restart' % DHCPD_INIT) != -1):
+			found = True
+		lines.append(line)
+	f.close()
+	if not found:
+		logger.notice(u"   Creating backup of %s" % SUDOERS)
+		shutil.copy(SUDOERS, SUDOERS + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+		
+		logger.notice(u"   Adding sudoers entry for dhcpd restart")
+		lines.append(u"opsiconfd ALL=NOPASSWD: %s restart\n" % DHCPD_INIT)
+		logger.notice(u"   Writing new %s" % SUDOERS)
+		f = open(SUDOERS, 'w')
+		f.writelines(lines)
+		f.close()
+	
+	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
+	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
+	os.chown(DHCPD_CONF, opsiconfdUid, adminGroupGid)
+	os.chmod(DHCPD_CONF, 0664)
+	
+def configureClientUser():
+	logger.notice(u"Configuring client user %s" % CLIENT_USER)
+	
+	clientUserHome = pwd.getpwnam(CLIENT_USER)[5]
+	sshDir = os.path.join(clientUserHome, '.ssh')
+	
+	if os.path.exists(sshDir):
+		shutil.rmtree(sshDir)
+	
+	idRsa = os.path.join(sshDir, u'id_rsa')
+	idRsaPub = os.path.join(sshDir, u'id_rsa.pub')
+	authorizedKeys = os.path.join(sshDir, u'authorized_keys')
+	if not os.path.exists(sshDir):
+		os.mkdir(sshDir)
+	if not os.path.exists(idRsa):
+		logger.notice(u"   Creating RSA private key for user %s in '%s'" % (CLIENT_USER, idRsa))
+		execute(u"%s -N '' -t rsa -f %s" % ( which('ssh-keygen'), idRsa))
+	if not os.path.exists(authorizedKeys):
+		f = open(idRsaPub, 'r')
+		f2 = open(authorizedKeys, 'w')
+		f2.write(f.read())
+		f2.close()
+		f.close()
+	setRights(sshDir)
+	
+	password = None
+	backend = None
+	try:
+		from OPSI.Backend.BackendManager import BackendManager
+		backend = BackendManager(
+			dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+			backendConfigDir   = u'/etc/opsi/backends',
+			extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+			depotBackend       = True
+		)
+		depot = backend.host_getObjects(type = 'OpsiDepotserver', id = getSysConfig()['fqdn'])[0]
+		
+		configserverId = None
+		for configserver in backend.host_getObjects(type = 'OpsiConfigserver'):
+			if (configserver.id == getSysConfig()['fqdn']):
+				configserverId = None
+				break
+			else:
+				configserverId = configserver.id
+		
+		if configserverId:
+			try:
+				jsonrpcBackend = JSONRPCBackend(address = configserverId, username = depot.id, password = depot.opsiHostKey)
+				password = blowfishDecrypt(depot.opsiHostKey, jsonrpcBackend.user_getCredentials(username = u'pcpatch', hostId = depot.id)['password'])
+				jsonrpcBackend.backend_exit()
+			except Exception, e:
+				logger.info(u"Failed to get client user (pcpatch) password from configserver: %s" % e)
+		if not password:
+			password = blowfishDecrypt(depot.opsiHostKey, backend.user_getCredentials(username = u'pcpatch', hostId = depot.id)['password'])
+	except Exception, e:
+		logger.info(u"Failed to get client user (pcpatch) password: %s" % e)
+		password = randomString(12)
+	if backend:
+		backend.backend_exit()
+	
+	logger.addConfidentialString(password)
+	execute('opsi-admin -d task setPcpatchPassword "%s"' % password)
+	
+def setRights(path=u'/'):
+	logger.notice(u"Setting rights")
+	basedir = path
+	if not os.path.isdir(basedir):
+		basedir = os.path.dirname(basedir)
+	
+	clientUserUid     = pwd.getpwnam(CLIENT_USER)[2]
+	opsiconfdUid      = pwd.getpwnam(OPSICONFD_USER)[2]
+	adminGroupGid     = grp.getgrnam(ADMIN_GROUP)[2]
+	fileAdminGroupGid = grp.getgrnam(FILE_ADMIN_GROUP)[2]
+	
+	depotDir = ''
+	dirnames = [u'/tftpboot/linux', u'/home/opsiproducts', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi']
+	if (getSysConfig()['distributor'].lower().find('sles') != -1):
+		dirnames = [u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi', u'/var/lib/opsi/workbench']
+	if not path.startswith('/etc') and not path.startswith('/tftpboot'):
+		try:
+			from OPSI.Backend.BackendManager import BackendManager
+			backend = BackendManager(
+				dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+				backendConfigDir   = u'/etc/opsi/backends',
+				extensionConfigDir = u'/etc/opsi/backendManager/extend.d'
+			)
+			depot = backend.host_getObjects(type = 'OpsiDepotserver', id = getSysConfig()['fqdn'])
+			backend.backend_exit()
+			if depot:
+				depot = depot[0]
+				depotUrl = depot.getDepotLocalUrl()
+				if not depotUrl.startswith('file:///'):
+					raise Exception(u"Bad repository local url '%s'" % depotUrl)
+				depotDir = depotUrl[7:]
+				if os.path.exists(depotDir):
+					logger.info(u"Local depot directory '%s' found" % depotDir)
+					dirnames.append(depotDir)
+		except Exception, e:
+			logger.error(e)
+	
+	for dirname in dirnames:
+		if not dirname.startswith(basedir) and not basedir.startswith(dirname):
+			continue
+		uid  = opsiconfdUid
+		gid  = fileAdminGroupGid
+		fmod = 0660
+		dmod = 0770
+		
+		isProduct = False
+		if dirname not in (u'/tftpboot/linux', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi'):
+			isProduct = True
+		
+		if dirname in (u'/tftpboot/linux',):
+			fmod = 0664
+			dmod = 0775
+		if dirname in (u'/var/log/opsi', u'/etc/opsi'):
+			gid = adminGroupGid
+		if dirname in (u'/home/opsiproducts', '/var/lib/opsi/workbench'):
+			uid = -1
+			dmod = 02770
+		if dirname in (depotDir,):
+			dmod = 02770
+		
+		if os.path.isfile(path):
+			logger.debug(u"Setting rights on file '%s'" % path)
+			os.chown(path, uid, gid)
+			if isProduct:
+				os.chmod(path, (os.stat(path)[0] | 0660) & 0770)
+			else:
+				os.chmod(path, fmod)
+			continue
+		
+		startPath = dirname
+		if basedir.startswith(dirname):
+			startPath = basedir
+		
+		logger.notice(u"Setting rights on directory '%s'" % startPath)
+		os.chown(startPath, uid, gid)
+		os.chmod(startPath, dmod)
+		for f in findFiles(startPath, prefix = startPath, returnLinks = False):
+			os.chown(f, uid, gid)
+			if os.path.isdir(f):
+				logger.debug(u"Setting rights on directory '%s'" % f)
+				os.chmod(f, dmod)
+			elif os.path.isfile(f):
+				logger.debug(u"Setting rights on file '%s'" % f)
+				if isProduct:
+					os.chmod(f, (os.stat(f)[0] | 0660) & 0770)
+				else:
+					os.chmod(f, fmod)
+		
+		if startPath.startswith(u'/var/lib/opsi'):
+			os.chmod(u'/var/lib/opsi', 0750)
+			os.chown(u'/var/lib/opsi', clientUserUid, fileAdminGroupGid)
+			sshDir = u'/var/lib/opsi/.ssh'
+			if os.path.exists(sshDir):
+				os.chown(sshDir, clientUserUid, fileAdminGroupGid)
+				os.chmod(sshDir, 0750)
+				idRsa = os.path.join(sshDir, u'id_rsa')
+				if os.path.exists(idRsa):
+					os.chmod(idRsa, 0640)
+					os.chown(idRsa, clientUserUid, fileAdminGroupGid)
+				idRsaPub = os.path.join(sshDir, u'id_rsa.pub')
+				if os.path.exists(idRsaPub):
+					os.chmod(idRsaPub, 0644)
+					os.chown(idRsaPub, clientUserUid, fileAdminGroupGid)
+				authorizedKeys = os.path.join(sshDir, u'authorized_keys')
+				if os.path.exists(authorizedKeys):
+					os.chmod(authorizedKeys, 0600)
+					os.chown(authorizedKeys, clientUserUid, fileAdminGroupGid)
+			
+def update(fromVersion = None):
+	if os.path.exists(u'/var/lib/opsi/products'):
+		logger.notice(u"Found /var/lib/opsi/products, moving to /var/lib/opsi/repository")
+		if not os.path.exists(u'/var/lib/opsi/repository'):
+			os.mkdir(u'/var/lib/opsi/repository')
+		for f in os.listdir(u'/var/lib/opsi/products'):
+			shutil.move(os.path.join(u'/var/lib/opsi/products', f), os.path.join(u'/var/lib/opsi/repository', f))
+		try:
+			os.rmdir(u'/var/lib/opsi/products')
+		except Exception, e:
+			logger.error(e)
+	
+	from OPSI.Backend.BackendManager import BackendManager
+	backend = BackendManager(
+		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+		backendConfigDir   = u'/etc/opsi/backends',
+		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+		depotbackend       = False
+	)
+	backend.backend_createBase()
+	
+	
+def updateLDAPBackend():
+	backendConfigFile = u'/etc/opsi/backends/ldap.conf'
+	
+	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+	logger.info(u"Loading backend config '%s'" % backendConfigFile)
+	execfile(backendConfigFile, l)
+	config = l['config']
+	baseDn = l['baseDn']
+	logger.info(u"Current ldap backend config: %s" % config)
+	
+	logger.notice(u"Creating ldap backend instance")
+	backend = ExtendedConfigDataBackend(LDAPBackend(**config))
+	
+	ldapSession = LDAPSession(address = config['address'], username = config['username'], password = config['password'])
+	ldapSession.connect()
+	
+	logger.notice(u"Testing ldap schema")
+	
+	try:
+		ldapObj = LDAPObject(u"cn=opsi-config-test,%s" % config['opsiBaseDn'])
+		ldapObj.new("opsiProductOnClient")
+		ldapObj.setAttribute('opsiProductId', ['test'])
+		ldapObj.setAttribute('opsiClientId', ['test.domain.tld'])
+		ldapObj.setAttribute('opsiProductType', ['LocalbootProduct'])
+		ldapObj.writeToDirectory(ldapSession)
+		ldapObj.deleteFromDirectory(ldapSession)
+	except Exception, e:
+		raise Exception(u'Test of opsi-ldap 4.0 schema failed: %s, Please verify opsi.schema and restart slapd.' % e)
+	
+	
+	for container in ('configs', 'configStates', 'objectToGroups', 'productOnClients', 'productOnDepots', 'productPropertyStates'):
+		ldapObj = LDAPObject(u"cn=%s,%s" % (container, config['opsiBaseDn']))
+		if ldapObj.exists(ldapSession):
+			logger.notice(u"Deleting container: %s" % ldapObj.getDn())
+			ldapObj.deleteFromDirectory(ldapSession, recursive = True)
+	
+	backend.backend_createBase()
+	
+	logger.notice(u"Converting opsiHost")
+	search = LDAPObjectSearch(ldapSession, baseDn, filter = u'(objectClass=opsiConfigserver)')
+	for obj in search.getObjects():
+		logger.info(u"Found config server: %s" % obj.getDn())
+		try:
+			obj.readFromDirectory(ldapSession)
+			hostId = forceHostId(obj.getCn())
+			obj.removeObjectClass('opsiHost')
+			obj.removeObjectClass('opsiDepotserver')
+			obj.removeObjectClass('opsiConfigserver')
+			obj.addObjectClass('OpsiHost')
+			obj.addObjectClass('OpsiDepotserver')
+			obj.addObjectClass('OpsiConfigserver')
+			url = obj.getAttribute('opsiRepositoryLocalUrl', default = "", valuesAsList = False).replace(u'/products', u'/repository')
+			obj.setAttribute('opsiRepositoryLocalUrl', [url])
+			url = obj.getAttribute('opsiRepositoryRemoteUrl', default = "", valuesAsList = False).replace(u'/products', u'/repository')
+			obj.setAttribute('opsiRepositoryRemoteUrl', [url])
+			obj.setAttribute('opsiIsMasterDepot', ['TRUE'])
+			obj.writeToDirectory(ldapSession)
+		except Exception, e:
+			obj.deleteFromDirectory(ldapSession)
+			logger.error(e)
+	
+	search = LDAPObjectSearch(ldapSession, baseDn, filter = u'(objectClass=opsiDepotserver)')
+	for obj in search.getObjects():
+		logger.info(u"Found depot server: %s" % obj.getDn())
+		try:
+			obj.readFromDirectory(ldapSession)
+			hostId = forceHostId(obj.getCn())
+			obj.removeObjectClass('opsiHost')
+			obj.removeObjectClass('opsiDepotserver')
+			obj.addObjectClass('OpsiHost')
+			obj.addObjectClass('OpsiDepotserver')
+			url = obj.getAttribute('opsiRepositoryLocalUrl', default = "", valuesAsList = False).replace(u'/products', u'/repository')
+			obj.setAttribute('opsiRepositoryLocalUrl', [url])
+			url = obj.getAttribute('opsiRepositoryRemoteUrl', default = "", valuesAsList = False).replace(u'/products', u'/repository')
+			obj.setAttribute('opsiRepositoryRemoteUrl', [url])
+			obj.setAttribute('opsiIsMasterDepot', ['TRUE'])
+			obj.writeToDirectory(ldapSession)
+		except Exception, e:
+			obj.deleteFromDirectory(ldapSession)
+			logger.error(e)
+	
+	search = LDAPObjectSearch(ldapSession, baseDn, filter = u'(objectClass=opsiClient)')
+	for obj in search.getObjects():
+		logger.info(u"Found client: %s" % obj.getDn())
+		try:
+			obj.readFromDirectory(ldapSession)
+			hostId = forceHostId(obj.getCn())
+			obj.removeObjectClass('opsiHost')
+			obj.removeObjectClass('opsiClient')
+			obj.addObjectClass('OpsiHost')
+			obj.addObjectClass('OpsiClient')
+			obj.writeToDirectory(ldapSession)
+		except Exception, e:
+			obj.deleteFromDirectory(ldapSession)
+			logger.error(e)
+		
+	serverIds = backend.host_getIdents(returnType = 'unicode', type = u'OpsiConfigserver')
+	depotIds  = backend.host_getIdents(returnType = 'unicode', type = u'OpsiDepotserver')
+	clientIds = backend.host_getIdents(returnType = 'unicode', type = u'OpsiClient')
+	
+	logger.notice(u"Converting opsiGeneralConfig")
+	search = LDAPObjectSearch(ldapSession, config['opsiBaseDn'], filter = u'(objectClass=opsiGeneralConfig)')
+	for obj in search.getObjects():
+		try:
+			obj.readFromDirectory(ldapSession)
+			logger.info(u"Found general config: %s" % obj.getDn())
+			hostId = forceHostId(obj.getCn())
+			for opsiKeyValuePair in obj.getAttribute('opsiKeyValuePair', default = [], valuesAsList = True):
+				try:
+					logger.info(u"Converting general config: %s" % opsiKeyValuePair)
+					(configId, value) = opsiKeyValuePair.split(u'=', 1)
+					if   hostId in serverIds:
+						backend.config_createObjects( UnicodeConfig(id = configId, defaultValues = [ value ]) )
+					elif hostId in clientIds:
+						backend.config_createObjects( UnicodeConfig(id = configId) )
+						backend.configState_createObjects( ConfigState(configId = configId, objectId = hostId, values = [ value ] ) )
+				except Exception, e:
+					logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+		except Exception, e:
+			logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+	
+	logger.notice(u"Converting opsiNetworkConfig")
+	search = LDAPObjectSearch(ldapSession, config['opsiBaseDn'], filter = u'(objectClass=opsiNetworkConfig)')
+	for obj in search.getObjects():
+		try:
+			obj.readFromDirectory(ldapSession)
+			logger.info(u"Found network config: %s" % obj.getDn())
+			hostId = forceHostId(obj.getCn())
+			for (key, value) in obj.getAttributeDict(valuesAsList = False).items():
+				try:
+					if not value:
+						continue
+					configId = None
+					multiValue = False
+					if   (key == 'opsiDepotserverReference'):
+						configId = u'clientconfig.depot.id'
+						value = forceHostId(value.split(',')[0].split('=')[1])
+					elif (key == 'opsiDepotDrive'):
+						configId = u'clientconfig.depot.drive'
+					elif (key == 'opsiNextBootServiceURL'):
+						configId = u'clientconfig.configserver.url'
+						if (value.find('/rpc') == -1):
+							value = value + '/rpc'
+						multiValue = True
+					elif (key == 'opsiWinDomain'):
+						configId = u'clientconfig.windows.domain'
+					
+					if not configId:
+						continue
+					
+					logger.info(u"Converting network config %s" % key)
+					
+					if   hostId in serverIds:
+						backend.config_createObjects( UnicodeConfig(id = configId, defaultValues = [ value ], multiValue = multiValue) )
+					elif hostId in clientIds:
+						backend.config_createObjects( UnicodeConfig(id = configId, multiValue = multiValue) )
+						backend.configState_createObjects( ConfigState(configId = configId, objectId = hostId, values = [ value ] ) )
+				except Exception, e:
+					logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+		except Exception, e:
+			logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+			
+	logger.notice(u"Converting opsiGroup")
+	
+	def convertGroupObject(obj, parentGroupId = None):
+		try:
+			groupId = forceGroupId(obj.getCn())
+			
+			search = LDAPObjectSearch(ldapSession, obj.getDn(), scope = ldap.SCOPE_ONELEVEL, filter = u'(objectClass=opsiGroup)')
+			for obj2 in search.getObjects():
+				convertGroupObject(obj2, parentGroupId = groupId)
+			objectToGroups = []
+			obj.readFromDirectory(ldapSession)
+			for value in obj.getAttribute('uniqueMember', default = [], valuesAsList = True):
+				try:
+					objectId = forceHostId(value.split(',')[0].split('=')[1])
+					objectToGroups.append( ObjectToGroup(groupId = groupId, groupType = 'HostGroup', objectId = objectId) )
+				except Exception, e:
+					logger.error(u"Failure while processing group member %s of group %s: %s" % (value, obj.getDn(), e))
+			obj.deleteFromDirectory(ldapSession)
+			backend.group_createObjects( HostGroup(id = groupId, parentGroupId = parentGroupId) )
+			backend.objectToGroup_createObjects(objectToGroups)
+		except Exception, e:
+			logger.error(u"Failure while processing group %s: %s" % (obj.getDn(), e))
+	
+	search = LDAPObjectSearch(ldapSession, "cn=groups,%s" % config['opsiBaseDn'], scope = ldap.SCOPE_ONELEVEL, filter = u'(objectClass=opsiGroup)')
+	for obj in search.getObjects():
+		convertGroupObject(obj)
+	
+	localbootProductIds = []
+	netbootProductIds = []
+	deleteDns = []
+	for objectClass in ('opsiLocalBootProduct', 'opsiNetBootProduct'):
+		logger.notice(u"Converting %s" % objectClass)
+		search = LDAPObjectSearch(ldapSession, config['opsiBaseDn'], filter = u'(objectClass=%s)' % objectClass)
+		for obj in search.getObjects():
+			try:
+				obj.readFromDirectory(ldapSession)
+				logger.info(u"Found product: %s" % obj.getDn())
+				
+				depotId = forceHostId( obj.getDn().split(',')[1].split('=')[1] )
+				containerDn = ','.join(obj.getDn().split(',')[1:])
+				if not containerDn in deleteDns:
+					deleteDns.append(containerDn)
+				
+				Class = LocalbootProduct
+				if (objectClass == 'opsiNetBootProduct'):
+					Class = NetbootProduct
+				
+				product = Class(
+					id                 = obj.getCn(),
+					productVersion     = obj.getAttribute('opsiProductVersion',         default = None, valuesAsList = False),
+					packageVersion     = obj.getAttribute('opsiPackageVersion',         default = None, valuesAsList = False),
+					name               = obj.getAttribute('opsiProductName',            default = None, valuesAsList = False),
+					licenseRequired    = obj.getAttribute('opsiProductLicenseRequired', default = None, valuesAsList = False),
+					setupScript        = obj.getAttribute('opsiSetupScript',            default = None, valuesAsList = False),
+					uninstallScript    = obj.getAttribute('opsiUninstallScript',        default = None, valuesAsList = False),
+					updateScript       = obj.getAttribute('opsiUpdateScript',           default = None, valuesAsList = False),
+					alwaysScript       = obj.getAttribute('opsiAlwaysScript',           default = None, valuesAsList = False),
+					onceScript         = obj.getAttribute('opsiOnceScript',             default = None, valuesAsList = False),
+					priority           = obj.getAttribute('opsiProductPriority',        default = None, valuesAsList = False),
+					description        = obj.getAttribute('description',                default = None, valuesAsList = False),
+					advice             = obj.getAttribute('opsiProductAdvice',          default = None, valuesAsList = False),
+					windowsSoftwareIds = obj.getAttribute('opsiWindowsSoftwareId',      default = None, valuesAsList = True)
+				)
+				if (objectClass == 'opsiNetBootProduct'):
+					if not product.id in netbootProductIds:
+						netbootProductIds.append(product.id)
+					product.setPxeConfigTemplate( obj.getAttribute('opsiPxeConfigTemplate', default = None, valuesAsList = False) )
+				else:
+					if not product.id in localbootProductIds:
+						localbootProductIds.append(product.id)
+				
+				backend.product_createObjects(product)
+				
+				backend.productOnDepot_createObjects(
+					ProductOnDepot(
+						productId      = product.getId(),
+						productType    = product.getType(),
+						productVersion = product.getProductVersion(),
+						packageVersion = product.getPackageVersion(),
+						depotId        = depotId,
+						locked         = obj.getAttribute('opsiProductIsLocked', default = False, valuesAsList = False)
+					)
+				)
+			except Exception, e:
+				logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+	
+	
+	logger.notice(u"Converting opsiProductPropertyDefinition")
+	search = LDAPObjectSearch(ldapSession, config['opsiBaseDn'], filter = u'(objectClass=opsiProductPropertyDefinition)')
+	for obj in search.getObjects():
+		try:
+			obj.readFromDirectory(ldapSession)
+			logger.info(u"Found product property: %s" % obj.getDn())
+			#obj.deleteFromDirectory(ldapSession, recursive = True)
+			
+			
+			productId = forceProductId( obj.getDn().split(',')[2].split('=')[1] )
+			depotId   = forceHostId( obj.getDn().split(',')[3].split('=')[1] )
+			
+			productOnDepot = backend.productOnDepot_getObjects(productId = productId, depotId = depotId)
+			if not productOnDepot:
+				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, depotId))
+			productOnDepot = productOnDepot[0]
+			
+			defaultValues  = obj.getAttribute('opsiProductPropertyDefaultValue',  default = None, valuesAsList = True)
+			possibleValues = obj.getAttribute('opsiProductPropertyPossibleValue', default = None, valuesAsList = True)
+			backend.productProperty_createObjects(
+				UnicodeProductProperty(
+					productId       = productOnDepot.productId,
+					productVersion  = productOnDepot.productVersion,
+					packageVersion  = productOnDepot.packageVersion,
+					propertyId      = obj.getCn().replace(' ', '_'),
+					description     = obj.getAttribute('description', default = None, valuesAsList = False),
+					possibleValues  = possibleValues,
+					defaultValues   = defaultValues,
+					editable        = bool(possibleValues),
+				)
+			)
+			if defaultValues:
+				backend.productPropertyState_createObjects(
+					ProductPropertyState(
+						productId   = productOnDepot.productId,
+						propertyId  = obj.getCn().replace(' ', '_'),
+						objectId    = depotId,
+						values      = defaultValues
+					)
+				)
+		except Exception, e:
+			logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+	
+	logger.notice(u"Converting opsiProductDependency")
+	search = LDAPObjectSearch(ldapSession, config['opsiBaseDn'], filter = u'(objectClass=opsiProductDependency)')
+	for obj in search.getObjects():
+		try:
+			obj.readFromDirectory(ldapSession)
+			logger.info(u"Found product dependency: %s" % obj.getDn())
+			
+			#cn=javavm,cn=setup,cn=productDependencies,cn=ooffice3,cn=exp-srv-005.uib.local,cn=products,cn=opsi,dc=uib,dc=local
+			requiredProductId = forceProductId(     obj.getDn().split(',')[0].split('=')[1] )
+			action            = forceActionRequest( obj.getDn().split(',')[1].split('=')[1] )
+			productId         = forceProductId(     obj.getDn().split(',')[3].split('=')[1] )
+			depotId           = forceHostId(        obj.getDn().split(',')[4].split('=')[1] )
+			
+			productOnDepot = backend.productOnDepot_getObjects(productId = productId, depotId = depotId)
+			if not productOnDepot:
+				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, depotId))
+			productOnDepot = productOnDepot[0]
+			
+			backend.productDependency_createObjects(
+				ProductDependency(
+					productId                  = productOnDepot.productId,
+					productVersion             = productOnDepot.productVersion,
+					packageVersion             = productOnDepot.packageVersion,
+					productAction              = action,
+					requiredProductId          = requiredProductId,
+					requiredAction             = obj.getAttribute('opsiActionRequired',             default = None, valuesAsList = False),
+					requiredInstallationStatus = obj.getAttribute('opsiInstallationStatusRequired', default = None, valuesAsList = False),
+					requirementType            = obj.getAttribute('opsiRequirementType',            default = None, valuesAsList = False)
+				)
+			)
+		except Exception, e:
+			logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+	
+	
+	for deleteDn in deleteDns:
+		try:
+			logger.notice(u"Deleting %s" % deleteDn)
+			LDAPObject(deleteDn).deleteFromDirectory(ldapSession, recursive = True)
+		except Exception, e:
+			logger.error(e)
+	
+	
+	
+	logger.notice(u"Converting opsiProductState")
+	contSearch = LDAPObjectSearch(ldapSession, "cn=productStates,%s" % config['opsiBaseDn'], scope = ldap.SCOPE_ONELEVEL, filter = u'(objectClass=organizationalRole)')
+	for contObj in contSearch.getObjects():
+		search = LDAPObjectSearch(ldapSession, contObj.getDn(), filter = u'(objectClass=opsiProductState)')
+		for obj in search.getObjects():
+			try:
+				obj.readFromDirectory(ldapSession)
+				logger.info(u"Found product state: %s" % obj.getDn())
+				
+				productType = 'LocalbootProduct'
+				if obj.getCn() in netbootProductIds:
+					productType = 'NetbootProduct'
+				
+				actionRequest       = obj.getAttribute('opsiProductActionRequestForced', default = None, valuesAsList = False)
+				installationStatus  = obj.getAttribute('opsiProductInstallationStatus', default = None, valuesAsList = False)
+				actionProgress      = obj.getAttribute('opsiProductActionProgress', default = None, valuesAsList = False)
+				actionResult        = None
+				targetConfiguration = None
+				
+				if installationStatus in ('failed',):
+					actionResult = 'failed'
+					installationStatus = 'not_installed'
+				if installationStatus in ('installing',):
+					actionProgress = 'installing'
+					installationStatus = 'not_installed'
+				try:
+					installationStatus = forceInstallationStatus(installationStatus)
+				except:
+					installationStatus = 'not_installed'
+				try:
+					actionRequest = forceActionRequest(actionRequest)
+				except:
+					actionRequest = 'none'
+				
+				if (actionProgress == '{}'):
+					actionProgress = None
+				
+				if (installationStatus == 'not_installed') and (actionRequest == 'none') and actionResult is None:
+					continue
+				
+				if (installationStatus == 'installed'):
+					targetConfiguration = 'installed'
+				
+				clientId = forceHostId( obj.getDn().split(',')[1].split('=')[1] )
+				if not clientId in clientIds:
+					continue
+				
+				backend.productOnClient_insertObject(
+					ProductOnClient(
+						productId           = obj.getCn(),
+						productType         = productType,
+						productVersion      = obj.getAttribute('opsiProductVersion', default = None, valuesAsList = False),
+						packageVersion      = obj.getAttribute('opsiPackageVersion', default = None, valuesAsList = False),
+						clientId            = clientId,
+						installationStatus  = installationStatus,
+						targetConfiguration = targetConfiguration,
+						actionRequest       = actionRequest,
+						actionProgress      = actionProgress
+					)
+				)
+			except Exception, e:
+				logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+	
+	
+	logger.notice(u"Converting opsiProductProperty")
+	search = LDAPObjectSearch(ldapSession, u'cn=productProperties,%s' % config['opsiBaseDn'], filter = u'(objectClass=opsiProductProperty)')
+	for obj in search.getObjects():
+		try:
+			obj.readFromDirectory(ldapSession)
+			logger.info(u"Found product property: %s" % obj.getDn())
+			
+			clientId = forceHostId( obj.getDn().split(',')[1].split('=')[1] )
+			if not clientId in clientIds:
+				continue
+			
+			productId = obj.getAttribute('opsiProductReference', valuesAsList = False).split(',')[0].split('=')[1]
+			
+			productPropertyStates = []
+			for opsiKeyValuePair in obj.getAttribute('opsiKeyValuePair', default = [], valuesAsList = True):
+				try:
+					logger.info(u"Converting product property: %s" % opsiKeyValuePair)
+					(propertyId, value) = opsiKeyValuePair.split(u'=', 1)
+					if (value == ''):
+						continue
+					productPropertyStates.append(
+						ProductPropertyState(
+							productId   = productId,
+							propertyId  = propertyId.replace(' ', '_'),
+							objectId    = clientId,
+							values      = [ value ]
+						)
+					)
+				except Exception, e:
+					logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+			backend.productPropertyState_createObjects(productPropertyStates)
+		except Exception, e:
+			logger.error(u"Failure while processing %s: %s" % (obj.getDn(), e))
+	
+	
+	for container in ('generalConfigs', 'networkConfigs', 'productClasses', 'productLicenses', 'productProperties', 'productStates'):
+		ldapObj = LDAPObject(u"cn=%s,%s" % (container, config['opsiBaseDn']))
+		if ldapObj.exists(ldapSession):
+			logger.notice(u"Deleting container: %s" % ldapObj.getDn())
+			ldapObj.deleteFromDirectory(ldapSession, recursive = True)
+
+def updateMySQLBackend():
+	backendConfigFile = u'/etc/opsi/backends/mysql.conf'
+	
+	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+	logger.info(u"Loading backend config '%s'" % backendConfigFile)
+	execfile(backendConfigFile, l)
+	config = l['config']
+	logger.info(u"Current mysql backend config: %s" % config)
+	
+	logger.notice(u"Connection to database '%s' on '%s' as user '%s'" % (config['database'], config['address'], config['username']))
+	mysql = MySQL(**config)
+	
+	tables = {}
+	logger.debug(u"Current tables:")
+	for i in mysql.getSet(u'SHOW TABLES;'):
+		tableName = i.values()[0]
+		logger.debug(u" [ %s ]" % tableName)
+		tables[tableName] = []
+		for j in mysql.getSet(u'SHOW COLUMNS FROM `%s`' % tableName):
+			logger.debug(u"      %s" % j)
+			tables[tableName].append(j['Field'])
+	
+	if 'HOST' in tables.keys() and 'host_id' in tables['HOST']:
+		logger.notice(u"Updating database table HOST from opsi 3.3 to 3.4")
+		# SOFTWARE_CONFIG
+		logger.notice(u"Updating table SOFTWARE_CONFIG")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `hostId` varchar(50) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `softwareId` varchar(100) NOT NULL;")
+		for res in mysql.getSet(u"SELECT hostId,host_id FROM `HOST` WHERE `hostId` != ''"):
+			mysql.query(u"update SOFTWARE_CONFIG set `hostId`='%s' where `host_id`=%s;" % (res['hostId'].replace("'", "\\'"), res['host_id']))
+		for res in mysql.getSet(u"SELECT softwareId,software_id FROM `SOFTWARE` WHERE `softwareId` != ''"):
+			mysql.query(u"update SOFTWARE_CONFIG set `softwareId`='%s' where `software_id`=%s;" % (res['softwareId'].replace("'", "\\'"), res['software_id']))
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `host_id`;")
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `software_id`;")
+		mysql.query(u"alter table SOFTWARE_CONFIG DEFAULT CHARACTER set utf8;")
+		mysql.query(u"alter table SOFTWARE_CONFIG ENGINE = InnoDB;")
+	
+	for key in tables.keys():
+		# HARDWARE_CONFIG
+		if key.startswith(u'HARDWARE_CONFIG') and 'host_id' in tables[key]:
+			logger.notice(u"Updating database table %s from opsi 3.3 to 3.4" % key)
+			mysql.query(u"alter table %s add `hostId` varchar(50) NOT NULL;" % key)
+			for res in mysql.getSet(u"SELECT hostId,host_id FROM `HOST` WHERE `hostId` != ''"):
+				mysql.query(u"update %s set `hostId` = '%s' where `host_id` = %s;" % (key, res['hostId'].replace("'", "\\'"), res['host_id']))
+			mysql.query(u"alter table %s drop `host_id`;" % key)
+			mysql.query(u"alter table %s DEFAULT CHARACTER set utf8;" % key)
+			mysql.query(u"alter table %s ENGINE = InnoDB;" % key)
+	
+	if 'HARDWARE_INFO' in tables.keys() and 'host_id' in tables['HARDWARE_INFO']:
+		logger.notice(u"Updating database table HARDWARE_INFO from opsi 3.3 to 3.4")
+		# HARDWARE_INFO
+		logger.notice(u"Updating table HARDWARE_INFO")
+		mysql.query(u"alter table HARDWARE_INFO add `hostId` varchar(50) NOT NULL;")
+		for res in mysql.getSet(u"SELECT hostId,host_id FROM `HOST` WHERE `hostId` != ''"):
+			mysql.query(u"update HARDWARE_INFO set `hostId` = '%s' where `host_id` = %s;" % (res['hostId'].replace("'", "\\'"), res['host_id']))
+		mysql.query(u"alter table HARDWARE_INFO drop `host_id`;")
+		mysql.query(u"alter table HARDWARE_INFO DEFAULT CHARACTER set utf8;")
+		mysql.query(u"alter table HARDWARE_INFO ENGINE = InnoDB;")
+	
+	if 'SOFTWARE' in tables.keys() and 'software_id' in tables['SOFTWARE']:
+		logger.notice(u"Updating database table SOFTWARE from opsi 3.3 to 3.4")
+		# SOFTWARE
+		logger.notice(u"Updating table SOFTWARE")
+		# remove duplicates
+		mysql.query("delete S1 from SOFTWARE S1, SOFTWARE S2 where S1.softwareId=S2.softwareId and S1.software_id > S2.software_id")
+		mysql.query(u"alter table SOFTWARE drop `software_id`;")
+		mysql.query(u"alter table SOFTWARE add primary key (`softwareId`);")
+	
+	if 'HOST' in tables.keys() and 'host_id' in tables['HOST']:
+		logger.notice(u"Updating database table HOST from opsi 3.3 to 3.4")
+		# HOST
+		logger.notice(u"Updating table HOST")
+		# remove duplicates
+		mysql.query("delete H1 from HOST H1, HOST H2 where H1.hostId=H2.hostId and H1.host_id > H2.host_id")
+		mysql.query(u"alter table HOST drop `host_id`;")
+		mysql.query(u"alter table HOST add primary key (`hostId`);")
+		mysql.query(u"alter table HOST add `type` varchar(20);")
+		mysql.query(u"alter table HOST add `description` varchar(100);")
+		mysql.query(u"alter table HOST add `notes` varchar(500);")
+		mysql.query(u"alter table HOST add `hardwareAddress` varchar(17);")
+		mysql.query(u"alter table HOST add `lastSeen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"alter table HOST DEFAULT CHARACTER set utf8;")
+		mysql.query(u"alter table HOST ENGINE = InnoDB;")
+		
+		mysql.query(u"update HOST set `type` = 'OPSI_CLIENT' where `hostId` != '';")
+	
+	tables = {}
+	logger.debug(u"Current tables:")
+	for i in mysql.getSet(u'SHOW TABLES;'):
+		tableName = i.values()[0]
+		logger.debug(u" [ %s ]" % tableName)
+		tables[tableName] = []
+		for j in mysql.getSet(u'SHOW COLUMNS FROM `%s`' % tableName):
+			logger.debug(u"      %s" % j)
+			tables[tableName].append(j['Field'])
+	
+	if 'HOST' in tables.keys() and not 'depotLocalUrl' in tables['HOST']:
+		logger.notice(u"Updating database table HOST from opsi 3.4 to 4.0")
+		# HOST
+		logger.notice(u"Updating table HOST")
+		mysql.query(u"alter table HOST modify `hostId` varchar(255) NOT NULL;")
+		mysql.query(u"alter table HOST modify `type` varchar(30);")
+		
+		mysql.query(u"alter table HOST add `ipAddress` varchar(15);")
+		mysql.query(u"alter table HOST add `inventoryNumber` varchar(30);")
+		mysql.query(u"alter table HOST add `created` TIMESTAMP;")
+		mysql.query(u"alter table HOST add `opsiHostKey` varchar(32);")
+		mysql.query(u"alter table HOST add `oneTimePassword` varchar(32);")
+		mysql.query(u"alter table HOST add `maxBandwidth` int;")
+		mysql.query(u"alter table HOST add `depotLocalUrl` varchar(128);")
+		mysql.query(u"alter table HOST add `depotRemoteUrl` varchar(255);")
+		mysql.query(u"alter table HOST add `depotWebdavUrl` varchar(255);")
+		mysql.query(u"alter table HOST add `repositoryLocalUrl` varchar(128);")
+		mysql.query(u"alter table HOST add `repositoryRemoteUrl` varchar(255);")
+		mysql.query(u"alter table HOST add `networkAddress` varchar(31);")
+		mysql.query(u"alter table HOST add `isMasterDepot` bool;")
+		mysql.query(u"alter table HOST add `masterDepotId` varchar(255);")
+		
+		mysql.query(u"update HOST set `type`='OpsiClient' where `type`='OPSI_CLIENT';")
+		mysql.query(u"update HOST set `description`=NULL where `description`='None';")
+		mysql.query(u"update HOST set `notes`=NULL where `notes`='None';")
+		mysql.query(u"update HOST set `hardwareAddress`=NULL where `hardwareAddress`='None';")
+		
+		mysql.query(u"alter table HOST add INDEX(`type`);")
+		
+	for key in tables.keys():
+		if key.startswith(u'HARDWARE_DEVICE'):
+			if not 'vendorId' in tables[key]:
+				continue
+			
+			logger.notice(u"Updating database table %s from opsi 3.4 to 4.0" % key)
+			for vendorId in ('NDIS', 'SSTP', 'AGIL', 'L2TP', 'PPTP', 'PPPO', 'PTIM'):
+				mysql.query(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, vendorId))
+			
+			for attr in ('vendorId', 'deviceId', 'subsystemVendorId', 'subsystemDeviceId'):
+				if not attr in tables[key]:
+					continue
+				mysql.query(u"update %s set `%s`=NULL where `%s`='';" % (key, attr, attr))
+				mysql.query(u"update %s set `%s`=NULL where `%s`='None';" % (key, attr, attr))
+				
+			for res in mysql.getSet(u"SELECT * FROM %s" % key):
+				if res.get('vendorId'):
+					try:
+						forceHardwareVendorId(res['vendorId'])
+					except:
+						logger.warning(u"Dropping bad vendorId '%s'" % res['vendorId'])
+						mysql.query(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, res['vendorId']))
+				if res.get('subsystemVendorId'):
+					try:
+						forceHardwareVendorId(res['subsystemVendorId'])
+					except:
+						logger.warning(u"Dropping bad subsystemVendorId id '%s'" % res['subsystemVendorId'])
+						mysql.query(u"update %s set `subsystemVendorId`=NULL where `subsystemVendorId`='%s';" % (key, res['subsystemVendorId']))
+				if res.get('deviceId'):
+					try:
+						forceHardwareDeviceId(res['deviceId'])
+					except:
+						logger.warning(u"Dropping bad deviceId '%s'" % res['deviceId'])
+						mysql.query(u"update %s set `deviceId`=NULL where `deviceId`='%s';" % (key, res['deviceId']))
+				if res.get('subsystemDeviceId'):
+					try:
+						forceHardwareDeviceId(res['subsystemDeviceId'])
+					except:
+						logger.warning(u"Dropping bad subsystemDeviceId '%s'" % res['subsystemDeviceId'])
+						mysql.query(u"update %s set `subsystemDeviceId`=NULL where `subsystemDeviceId`='%s';" % (key, res['subsystemDeviceId']))
+					
+		# HARDWARE_CONFIG
+		if key.startswith(u'HARDWARE_CONFIG') and 'audit_lastseen' in tables[key]:
+			logger.notice(u"Updating database table %s from opsi 3.4 to 4.0" % key)
+			
+			mysql.query(u"alter table %s change `audit_firstseen` `firstseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';" % key)
+			mysql.query(u"alter table %s change `audit_lastseen` `lastseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';" % key)
+			mysql.query(u"alter table %s change `audit_state` `state` TINYINT NOT NULL;" % key)
+	
+	if 'LICENSE_USED_BY_HOST' in tables.keys():
+		# LICENSE_ON_CLIENT
+		logger.notice(u"Updating table LICENSE_USED_BY_HOST to LICENSE_ON_CLIENT")
+		mysql.query(u'''CREATE TABLE `LICENSE_ON_CLIENT` (
+					`license_on_client_id` int NOT NULL AUTO_INCREMENT,
+					PRIMARY KEY( `license_on_client_id` ),
+					`softwareLicenseId` VARCHAR(100) NOT NULL,
+					`licensePoolId` VARCHAR(100) NOT NULL,
+					`clientId` varchar(255),
+					FOREIGN KEY( `softwareLicenseId`, `licensePoolId` ) REFERENCES SOFTWARE_LICENSE_TO_LICENSE_POOL( `softwareLicenseId`, `licensePoolId` ),
+					INDEX( `clientId` ),
+					`licenseKey` VARCHAR(100),
+					`notes` VARCHAR(1024)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+				''')
+		
+		mysql.query(u"insert into LICENSE_ON_CLIENT (`softwareLicenseId`, `licensePoolId`, `clientId`, `licenseKey`, `notes`) select `softwareLicenseId`, `licensePoolId`, `hostId`, `licenseKey`, `notes` from LICENSE_USED_BY_HOST where `softwareLicenseId` != ''")
+		mysql.query(u"drop table LICENSE_USED_BY_HOST")
+		
+	if 'SOFTWARE' in tables.keys() and not 'name' in tables['SOFTWARE']:
+		logger.notice(u"Updating database table SOFTWARE from opsi 3.4 to 4.0")
+		# SOFTWARE
+		logger.notice(u"Updating table SOFTWARE")
+		mysql.query(u"alter table SOFTWARE add `name` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `version` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `subVersion` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `language` varchar(10) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `architecture` varchar(3) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `windowsSoftwareId` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `windowsDisplayName` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `windowsDisplayVersion` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE add `type` varchar(30) NOT NULL;")
+		for res in mysql.getSet(u"SELECT * FROM `SOFTWARE`"):
+			name = res['displayName']
+			if not name:
+				name = res['softwareId']
+			name = name.replace("'", "\\'")
+			
+			version = u''
+			if res['displayVersion']:
+				version = res['displayVersion'].replace("'", "\\'")
+			
+			res2 = mysql.getSet(u"SELECT * FROM `SOFTWARE` where `name` = '%s' and version ='%s'" % (name, version))
+			if res2:
+				logger.warning(u"Skipping duplicate: %s" % res2)
+				mysql.query(u"DELETE FROM `SOFTWARE` where `softwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
+				continue
+			
+			update =  u"update SOFTWARE set"
+			update += u"  `type`='AuditSoftware'"
+			update += u", `windowsSoftwareId`='%s'"     % res['softwareId'].replace("'", "\\'")
+			update += u", `windowsDisplayName`='%s'"    % res['displayName'].replace("'", "\\'")
+			update += u", `windowsDisplayVersion`='%s'" % res['displayVersion'].replace("'", "\\'")
+			update += u", `architecture`='x86'"
+			update += u", `language`=''"
+			update += u", `name`='%s'" % name
+			update += u", `version`='%s'" % version
+			update += u", `subVersion`=''"
+			update += u" where `softwareId`='%s';" % res['softwareId'].replace("'", "\\'")
+			mysql.query(update)
+		mysql.query(u"alter table SOFTWARE drop PRIMARY KEY;")
+		mysql.query(u"alter table SOFTWARE add PRIMARY KEY ( `name`, `version`, `subVersion`, `language`, `architecture` );")
+		mysql.query(u"alter table SOFTWARE drop `softwareId`;")
+		mysql.query(u"alter table SOFTWARE drop `displayName`;")
+		mysql.query(u"alter table SOFTWARE drop `displayVersion`;")
+		mysql.query(u"alter table SOFTWARE drop `uninstallString`;")
+		mysql.query(u"alter table SOFTWARE drop `binaryName`;")
+		
+		mysql.query(u"alter table SOFTWARE add INDEX( `windowsSoftwareId` );")
+		mysql.query(u"alter table SOFTWARE add INDEX( `type` );")
+		
+	if 'SOFTWARE_CONFIG' in tables.keys() and not 'clientId' in tables['SOFTWARE_CONFIG']:
+		logger.notice(u"Updating database table SOFTWARE_CONFIG from opsi 3.4 to 4.0")
+		# SOFTWARE_CONFIG
+		logger.notice(u"Updating table SOFTWARE_CONFIG")
+		logger.notice(u"This may take a while, do not abort!")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `clientId` varchar(255) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `name` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `version` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `subVersion` varchar(100) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `language` varchar(10) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `architecture` varchar(3) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `uninstallString` varchar(200);")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `binaryName` varchar(100);")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `firstseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `lastseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `state` TINYINT NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_CONFIG add `licenseKey` varchar(100);")
+		for res in mysql.getSet(u"SELECT * FROM `SOFTWARE_CONFIG`"):
+			res2 = mysql.getSet(u"SELECT * FROM `SOFTWARE` where `windowsSoftwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
+			if not res2:
+				mysql.query(u"DELETE FROM `SOFTWARE_CONFIG` where `softwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
+				continue
+			res2 = res2[0]
+			update =  u"update SOFTWARE_CONFIG set"
+			update += u"  `clientId`='%s'"     % res['hostId'].replace("'", "\\'")
+			update += u", `name`='%s'"         % res2['name'].replace("'", "\\'")
+			update += u", `version`='%s'"      % res2['version'].replace("'", "\\'")
+			update += u", `subVersion`='%s'"   % res2['subVersion'].replace("'", "\\'")
+			update += u", `language`='%s'"     % res2['language']
+			update += u", `architecture`='%s'" % res2['architecture']
+			update += u", `firstseen`='%s'"    % res['audit_firstseen']
+			update += u", `lastseen`='%s'"     % res['audit_lastseen']
+			update += u", `state`=%s"          % res['audit_state']
+			update += u" where `softwareId`='%s' and `hostId`='%s';" % (res['softwareId'].replace("'", "\\'"), res['hostId'].replace("'", "\\'"))
+			mysql.query(update)
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `softwareId`;")
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `hostId`;")
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `audit_firstseen`;")
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `audit_lastseen`;")
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `audit_state`;")
+		
+		mysql.query(u"alter table SOFTWARE_CONFIG add INDEX( `clientId` );")
+		mysql.query(u"alter table SOFTWARE_CONFIG add INDEX( `name`, `version`, `subVersion`, `language`, `architecture` );")
+		
+	if 'LICENSE_CONTRACT' in tables.keys() and not 'type' in tables['LICENSE_CONTRACT']:
+		logger.notice(u"Updating database table LICENSE_CONTRACT from opsi 3.4 to 4.0")
+		# LICENSE_CONTRACT
+		mysql.query(u"alter table LICENSE_CONTRACT add `type` varchar(30) NOT NULL;")
+		mysql.query(u"alter table LICENSE_CONTRACT add `description` varchar(100) NOT NULL;")
+		mysql.query(u"alter table LICENSE_CONTRACT modify `conclusionDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"alter table LICENSE_CONTRACT modify `notificationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"alter table LICENSE_CONTRACT modify `expirationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"update LICENSE_CONTRACT set `type`='LicenseContract' where 1=1")
+		
+		mysql.query(u"alter table LICENSE_CONTRACT add INDEX( `type` );")
+		
+	if 'SOFTWARE_LICENSE' in tables.keys() and not 'type' in tables['SOFTWARE_LICENSE']:
+		logger.notice(u"Updating database table SOFTWARE_LICENSE from opsi 3.4 to 4.0")
+		# SOFTWARE_LICENSE
+		mysql.query(u"alter table SOFTWARE_LICENSE add `type` varchar(30) NOT NULL;")
+		mysql.query(u"alter table SOFTWARE_LICENSE modify `expirationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.query(u"alter table SOFTWARE_LICENSE modify `boundToHost` varchar(255);")
+		mysql.query(u"update SOFTWARE_LICENSE set `type`='RetailSoftwareLicense' where `licenseType`='RETAIL'")
+		mysql.query(u"update SOFTWARE_LICENSE set `type`='OEMSoftwareLicense' where `licenseType`='OEM'")
+		mysql.query(u"update SOFTWARE_LICENSE set `type`='VolumeSoftwareLicense' where `licenseType`='VOLUME'")
+		mysql.query(u"update SOFTWARE_LICENSE set `type`='ConcurrentSoftwareLicense' where `licenseType`='CONCURRENT'")
+		mysql.query(u"alter table SOFTWARE_LICENSE drop `licenseType`;")
+		
+		mysql.query(u"alter table SOFTWARE_LICENSE add INDEX( `type` );")
+		mysql.query(u"alter table SOFTWARE_LICENSE add INDEX( `boundToHost` );")
+		
+	if 'LICENSE_POOL' in tables.keys() and not 'type' in tables['LICENSE_POOL']:
+		logger.notice(u"Updating database table LICENSE_POOL from opsi 3.4 to 4.0")
+		# LICENSE_POOL
+		mysql.query(u"alter table LICENSE_POOL add `type` varchar(30) NOT NULL;")
+		mysql.query(u"update LICENSE_POOL set `type`='LicensePool' where 1=1")
+		
+		mysql.query(u"alter table LICENSE_POOL add INDEX( `type` );")
+	
+	if 'WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL' in tables.keys():
+		# AUDIT_SOFTWARE_TO_LICENSE_POOL
+		logger.notice(u"Updating table WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL to AUDIT_SOFTWARE_TO_LICENSE_POOL")
+		
+		mysql.query(u'''CREATE TABLE `AUDIT_SOFTWARE_TO_LICENSE_POOL` (
+					`licensePoolId` VARCHAR(100) NOT NULL,
+					FOREIGN KEY ( `licensePoolId` ) REFERENCES LICENSE_POOL( `licensePoolId` ),
+					`name` varchar(100) NOT NULL,
+					`version` varchar(100) NOT NULL,
+					`subVersion` varchar(100) NOT NULL,
+					`language` varchar(10) NOT NULL,
+					`architecture` varchar(3) NOT NULL,
+					PRIMARY KEY( `name`, `version`, `subVersion`, `language`, `architecture` )
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+				''')
+		
+		for res in mysql.getSet(u"SELECT * FROM `WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL`"):
+			res2 = mysql.getSet(u"SELECT * FROM `SOFTWARE` where `windowsSoftwareId` = '%s'" % res['windowsSoftwareId'].replace("'", "\\'"))
+			if not res2:
+				continue
+			res2 = res2[0]
+			mysql.query(u"insert into AUDIT_SOFTWARE_TO_LICENSE_POOL (`licensePoolId`, `name`, `version`, `subVersion`, `language`, `architecture`) VALUES ('%s', '%s', '%s', '%s', '%s', '%s');" \
+					% (res['licensePoolId'], res2['name'].replace("'", "\\'"), res2['version'].replace("'", "\\'"), res2['subVersion'].replace("'", "\\'"), res2['language'], res2['architecture']) )
+		
+		mysql.query(u"drop table WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL;")
+	
+	
+	for res in mysql.getSet(u"SELECT * FROM `LICENSE_CONTRACT`"):
+		if (res['licenseContractId'] != forceLicenseContractId(res['licenseContractId'])):
+			deleteLicenseContractId = res['licenseContractId']
+			res['licenseContractId'] = forceLicenseContractId(res['licenseContractId'])
+			logger.warning(u"Changing license contract id '%s' to '%s'" % (deleteLicenseContractId, res['licenseContractId']))
+			
+			data = {}
+			for tab in ('SOFTWARE_LICENSE', ):
+				data[tab] = []
+				for res2 in mysql.getSet(u"SELECT * FROM `%s` where licenseContractId = '%s'" % (tab, deleteLicenseContractId)):
+					res2['licenseContractId'] = res['licenseContractId']
+					data[tab].append(res2)
+				mysql.delete(tab, "licenseContractId = '%s'" % deleteLicenseContractId)
+			
+			mysql.delete('LICENSE_CONTRACT', "licenseContractId = '%s'" % deleteLicenseContractId)
+			mysql.insert('LICENSE_CONTRACT', res)
+			for (tab, ins) in data.items():
+				for i in ins:
+					mysql.insert(tab, i)
+			
+	for res in mysql.getSet(u"SELECT * FROM `LICENSE_POOL`"):
+		if (res['licensePoolId'] != forceLicensePoolId(res['licensePoolId'])):
+			deleteLicensePoolId = res['licensePoolId']
+			res['licensePoolId'] = forceLicensePoolId(res['licensePoolId'])
+			logger.warning(u"Changing license pool id '%s' to '%s'" % (deleteLicensePoolId, res['licensePoolId']))
+			
+			data = {}
+			for tab in ('AUDIT_SOFTWARE_TO_LICENSE_POOL', 'PRODUCT_ID_TO_LICENSE_POOL', 'LICENSE_ON_CLIENT', 'SOFTWARE_LICENSE_TO_LICENSE_POOL'):
+				data[tab] = []
+				for res2 in mysql.getSet(u"SELECT * FROM `%s` where licensePoolId = '%s'" % (tab, deleteLicensePoolId)):
+					res2['licensePoolId'] = res['licensePoolId']
+					data[tab].append(res2)
+				mysql.delete(tab, "licensePoolId = '%s'" % deleteLicensePoolId)
+			
+			mysql.delete('LICENSE_POOL', "licensePoolId = '%s'" % deleteLicensePoolId)
+			mysql.insert('LICENSE_POOL', res)
+			for tab in ('AUDIT_SOFTWARE_TO_LICENSE_POOL', 'PRODUCT_ID_TO_LICENSE_POOL', 'SOFTWARE_LICENSE_TO_LICENSE_POOL', 'LICENSE_ON_CLIENT'):
+				for i in data[tab]:
+					mysql.insert(tab, i)
+			
+	for res in mysql.getSet(u"SELECT * FROM `SOFTWARE_LICENSE`"):
+		if (res['softwareLicenseId'] != forceSoftwareLicenseId(res['softwareLicenseId'])):
+			deleteSoftwareLicenseId = res['softwareLicenseId']
+			res['softwareLicenseId'] = forceSoftwareLicenseId(res['softwareLicenseId'])
+			logger.warning(u"Changing software license id '%s' to '%s'" % (deleteSoftwareLicenseId, res['softwareLicenseId']))
+			
+			data = {}
+			for tab in ('LICENSE_ON_CLIENT', 'SOFTWARE_LICENSE_TO_LICENSE_POOL'):
+				data[tab] = []
+				for res2 in mysql.getSet(u"SELECT * FROM `%s` where softwareLicenseId = '%s'" % (tab, deleteSoftwareLicenseId)):
+					res2['softwareLicenseId'] = res['softwareLicenseId']
+					data[tab].append(res2)
+				mysql.delete(tab, "softwareLicenseId = '%s'" % deleteSoftwareLicenseId)
+			
+			mysql.delete('SOFTWARE_LICENSE', "softwareLicenseId = '%s'" % deleteSoftwareLicenseId)
+			mysql.insert('SOFTWARE_LICENSE', res)
+			for tab in ('SOFTWARE_LICENSE_TO_LICENSE_POOL', 'LICENSE_ON_CLIENT'):
+				for i in data[tab]:
+					mysql.insert(tab, i)
+			
+	mysqlBackend = MySQLBackend(**config)
+	mysqlBackend.backend_createBase()
+	mysqlBackend.backend_exit()
+
+
+
+def updateFileBackend():
+	backendConfigFile = u'/etc/opsi/backends/file.conf'
+	
+	if not os.path.isfile(backendConfigFile):
+		raise Exception("Configuration file does not exist: '%s'" % (backendConfigFile))
+	
+	logger.notice(u"Loading backend config '%s'" % backendConfigFile)
+	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+	execfile(backendConfigFile, l)
+	config = l['config']
+	logger.info(u"Current file backend config: %s" % config)
+	
+	#test for version 40
+	newConfigFile = os.path.join(os.path.dirname(config["baseDir"]), u'config', u'config.ini')
+	if os.path.isfile(newConfigFile):
+		raise Exception(u"Detected a file ('%s') that should only be in opsi version 4.0, update denied!" % (newConfigFile))
+	
+	logger.notice(u"Creating file backend instance")
+	backend = ExtendedConfigDataBackend(FileBackend(**config))
+	
+	backupDir = os.path.join(os.path.dirname(config["baseDir"]), u'backup_%s' % time.time())
+	
+	backupClientConfigDir   = os.path.join(backupDir, u'clients')
+	backupDepotConfigDir    = os.path.join(backupDir, u'depots')
+#	backupProductDir        = os.path.join(backupDir, u'products')
+#	backupAuditDir          = os.path.join(backupDir, u'audit')
+#	backupClientTemplateDir = os.path.join(backupDir, u'templates')
+	
+	logger.notice(u"Backing up current directory '%s' to '%s'" % (config["baseDir"], backupDir))
+	if not os.path.isdir(config["baseDir"]):
+		raise Exception("Base directory given from file '%s' does not exist: '%s'" % (backendConfigFile, config["baseDir"]))
+	
+	noClientDir = False
+	if not os.path.isdir(os.path.join(config["baseDir"], u'clients')):
+		noClientDir = True
+		logger.warning("Client directory does not exist: '%s'" % (os.path.join(config["baseDir"], u'clients')))
+
+	noDepotDir = False
+	if not os.path.isdir(os.path.join(config["baseDir"], u'depots')):
+		noDepotDir = True
+		logger.warning("Depot directory does not exist: '%s'" % (os.path.join(config["baseDir"], u'depots')))
+	
+	
+	
+	shutil.move(config["baseDir"], backupDir)
+	
+	backend.backend_createBase()
+	
+	
+	
+	opsiHostKeys = {}
+	if os.path.isfile(config["hostKeyFile"]):
+		logger.notice(u"Backing up hostKeyFile '%s' to '%s'" % (config["hostKeyFile"], backupDir))
+		shutil.copy(config["hostKeyFile"], backupDir)
+		lines = []
+		f = codecs.open(config["hostKeyFile"], 'r', 'utf-8')
+		for line in f.readlines():
+			line = line.strip()
+			if not line:
+				continue
+			if line[0] in ('#', ';'):
+				continue
+			try:
+				(hostId, key) = line.strip().split(':')
+				hostId = forceHostId(hostId.replace('_', '-'))
+			except Exception, e:
+				logger.error(u"Bad line in %s: '%s': %s" % (config["hostKeyFile"], line, e))
+				continue
+			lines.append(u"%s:%s\n" % (hostId, key))
+		f.close()
+		f = codecs.open(config["hostKeyFile"], 'w', 'utf-8')
+		f.writelines(lines)
+		f.close()
+		opsiHostKeys = HostKeyFile(filename = config["hostKeyFile"]).parse()
+		os.remove(config["hostKeyFile"])
+	else:
+		logger.warning(u"Host key file does not exist: '%s'" % (config["hostKeyFile"]))
+	
+	
+	lockedList = {}
+	if os.path.isfile(os.path.join(backupDepotConfigDir, u'product.locks')):
+		logger.info(u"Getting information on product.locks" % ())
+		try:
+			iniFile = IniFile(filename = os.path.join(backupDepotConfigDir, u'product.locks'), ignoreCase = False)
+			ini = iniFile.parse()
+			
+			for proId in ini.sections():
+				for depId in ini.options(proId):
+					if (ini.get(proId, depId) == u'locked'):
+						key = u'%s' % (proId.lower() + '#' + depId.lower())
+						lockedList[key] = True
+		except Exception, e:
+			logger.error(u"Could not get all information on product.locks: %s" % (e))
+	else:
+		logger.warning(u"Product locks fils does not exist: '%s'" % (os.path.join(backupDepotConfigDir, u'product.locks')))
+	
+	
+	
+	#needed for configStates
+	updatedConfigs = []
+	
+	logger.notice(u"Updating depots ...")
+	if not noDepotDir:
+		for depotId in os.listdir(backupDepotConfigDir):
+			oldPath = os.path.join(backupDepotConfigDir, depotId)
+			oldDepot = os.path.join(oldPath, u'depot.ini')
+			if (not oldDepot.endswith('.ini')) or (not os.path.isfile(oldDepot)):
+				logger.debug2(u"Ignoring '%s'" % (oldPath))
+				continue
+			try:
+				depotId = forceHostId(depotId)
+			except Exception, e:
+				logger.error(u"Invalid depot: '%s': %s" % (oldPath, e))
+				continue
+			
+			logger.notice(u"Updating depot '%s'" % depotId)
+			
+			oldDepotDict = {
+				'id':                  depotId,
+				'opsiHostKey':         None,
+				'depotLocalUrl':       None,
+				'depotRemoteUrl':      None,
+				'repositoryLocalUrl':  None,
+				'repositoryRemoteUrl': None,
+				'description':         None,
+				'notes':               None,
+				'hardwareAddress':     None,
+				'ipAddress':           None,
+				'inventoryNumber':     None,
+				'networkAddress':      None,
+				'maxBandwidth':        None,
+				'isMasterDepot':       True
+			}
+			
+			if depotId in opsiHostKeys.keys():
+				oldDepotDict['opsiHostKey'] = opsiHostKeys[depotId]
+			
+			
+			updatedProductPropertyStates = []
+			try:
+				iniFile = IniFile(filename = oldDepot)
+				ini = iniFile.parse()
+				
+				if ini.has_option('depotshare', 'localurl'):
+					oldDepotDict['depotLocalUrl']       = ini.get('depotshare', 'localurl')
+				if ini.has_option('depotshare', 'remoteurl'):
+					oldDepotDict['depotRemoteUrl']      = ini.get('depotshare', 'remoteurl')
+				if ini.has_option('repository', 'localurl'):
+					oldDepotDict['repositoryLocalUrl']  = ini.get('repository', 'localurl').replace(u'/products', u'/repository')
+				if ini.has_option('repository', 'remoteurl'):
+					oldDepotDict['repositoryRemoteUrl'] = ini.get('repository', 'remoteurl').replace(u'/products', u'/repository')
+				if ini.has_option('repository', 'maxbandwidth'):
+					oldDepotDict['maxBandwidth']        = ini.get('repository', 'maxbandwidth')
+				if ini.has_option('depotserver', 'description'):
+					oldDepotDict['description']         = ini.get('depotserver', 'description')
+				if ini.has_option('depotserver', 'notes'):
+					oldDepotDict['notes']               = ini.get('depotserver', 'notes')
+				if ini.has_option('depotserver', 'network'):
+					oldDepotDict['networkAddress']      = ini.get('depotserver', 'network')
+				if ini.has_option('depotserver', 'hardwareaddress'):
+					oldDepotDict['hardwareAddress']     = ini.get('depotserver', 'hardwareaddress')
+				if ini.has_option('depotserver', 'ipaddress'):
+					oldDepotDict['ipAddress']           = ini.get('depotserver', 'ipaddress')
+				if ini.has_option('depotserver', 'inventorynumber'):
+					oldDepotDict['inventoryNumber']     = ini.get('depotserver', 'inventorynumber')
+				
+			except Exception, e:
+				logger.warning(u"Could not get all information on depot: %s" % (e))
+			
+			backend.host_createObjects([OpsiDepotserver.fromHash(oldDepotDict)])
+			
+			
+			
+			logger.notice(u"Updating products on depot '%s'" % (depotId))
+			productFilenames = []
+			
+			for productPath in (os.path.join(oldPath, u'products', u'localboot'), os.path.join(oldPath, u'products', u'netboot')):
+				if not os.path.isdir(productPath):
+					logger.warning(u"Path does not exist, skipping: '%s'" % (productPath))
+					continue
+				
+				for productId in os.listdir(productPath):
+					try:
+						productFilename = os.path.join(productPath, forceProductId(productId))
+						if not (os.path.isfile(productFilename)):
+							logger.debug2(u"Ignoring '%s'" % (productFilename))
+							continue
+						productFilenames.append(productFilename)
+					except Exception, e:
+						logger.warning(u"Invalid product: '%s' in '%s': %s" % (productId, productPath, e))
+						continue
+			
+			
+			
+			updatedProductDependencies = []
+			for productFilename in productFilenames:
+				packageControlFile = PackageControlFile(filename = productFilename)
+				oldProduct = None
+				
+				try:
+					oldProduct = packageControlFile.getProduct()
+				except Exception, e:
+					logger.error(u"Invalid product '%s': %s" % (productFilename, e))
+					continue
+				
+				backend.product_createObjects([oldProduct])
+				
+				
+				
+				logger.info(u"Updating ProductProperties in '%s'" % (oldProduct.getId()))
+				for pp in packageControlFile.getProductProperties():
+					try:
+						pp.setPropertyId(pp.getPropertyId().replace(u' ', u'_'))
+						if pp.getPossibleValues():
+							pp.setEditable(False)
+						backend.productProperty_createObjects([pp])
+					except Exception, e:
+						logger.error(u"Could not create ProductProperty '%s': %s" % (pp.getIdent(), e))
+					
+					updatedProductPropertyStates.append(
+						ProductPropertyState.fromHash(
+							{
+							'productId':  pp.getProductId(),
+							'propertyId': pp.getPropertyId().replace(u' ', u'_'),
+							'objectId':   depotId,
+							'values':     pp.getDefaultValues()
+							}
+						)
+					)
+				
+				
+				#logger.notice(u"Updating ProductDependencies in '%s'" % (depotId))
+				#will be updated after all products
+				#updatedProductDependencies = []
+				for pd in packageControlFile.getProductDependencies():
+					updatedProductDependencies.append(pd)
+				
+				logger.info(u"Updating ProductOnDepot on '%s'" % (depotId))
+				
+				locked = None
+				if (len(lockedList) > 0):
+					try:
+						key = u'%s' % (oldProduct.getId().lower() + '#' + depotId.lower())
+						locked = lockedList[key]
+					except:
+						pass
+				
+				backend.productOnDepot_createObjects([
+						ProductOnDepot.fromHash({
+							'productId':      oldProduct.getId(),
+							'productType':    oldProduct.getType(),
+							'productVersion': oldProduct.getProductVersion(),
+							'packageVersion': oldProduct.getPackageVersion(),
+							'depotId':        depotId,
+							'locked':         locked
+						})
+				])
+			
+			logger.notice(u"Updating ProductDependencies on '%s'" % (depotId))
+			for pd in updatedProductDependencies:
+				try:
+					backend.productDependency_createObjects([pd])
+				except Exception, e:
+					logger.error(u"Could not create ProductDependency '%s': %s" % (pd.getIdent(), e))
+			
+			
+			
+			logger.notice(u"Updating ProductPropertyStates in '%s'" % (depotId))
+			for pps in updatedProductPropertyStates:
+				try:
+					backend.productPropertyState_createObjects([pps])
+				except Exception, e:
+					logger.error(u"Could not create ProductPropertyState '%s': %s" % (pps.getIdent(), e))
+	else:
+		logger.info(u"No depot folder, skipping depots.")
+	
+	logger.notice(u"Updating Configs ..." % ())
+	try:
+		iniFile = IniFile(filename = os.path.join(backupDir, u'global.ini'), ignoreCase = False)
+		ini = iniFile.parse()
+		
+		for section in ini.sections():
+			if section.lower() not in (u'networkconfig', u'generalconfig'):
+				logger.warning(u"Unknown section in global.ini: %s" % (section))
+				continue
+			
+			configId = None
+			value = None
+			
+			for option in ini.options(section):
+				configId = configId = option.lower()
+				value = ini.get(section, option)
+				
+				multiValue = False
+				try:
+					if (section.lower() == u'networkconfig'):
+						if (option.lower() == u'depotid'):
+							configId = u'clientconfig.depot.id'
+						elif (option.lower() == u'depotdrive'):
+							configId = u'clientconfig.depot.drive'
+						elif (option.lower() == u'nextbootserviceurl'):
+							configId = u'clientconfig.configserver.url'
+							if (value.find('/rpc') == -1):
+								value = value + '/rpc'
+							multiValue = True
+						elif (option.lower() == u'windomain'):
+							configId = u'clientconfig.windows.domain'
+				except Exception, e:
+					logger.error(u"Error in option '%s' in section '%s': '%s'" % (option, section, e))
+					continue
+				
+				updatedConfigs.append(UnicodeConfig(id = configId, defaultValues = [value], multiValue = multiValue))
+	except Exception, e:
+		logger.error(u"Failed to update config '%s': '%s'" % (os.path.join(backupDir, u'global.ini'), e))
+	
+	for c in updatedConfigs:
+		try:
+			backend.config_createObjects([c])
+		except Exception, e:
+			logger.error(u"Could not create config '%s': %s" % (c.getIdent(), e))
+	
+	
+	logger.notice(u"Updating clients ...")
+	if not noClientDir:
+		for filename in os.listdir(backupClientConfigDir):
+			updatedConfigStates = []
+			
+			oldClient = os.path.join(backupClientConfigDir, filename)
+			if not (filename.endswith('.ini')) or not os.path.isfile(oldClient):
+				logger.debug2(u"Ignoring client ini '%s'" % (filename))
+				continue
+			try:
+				clientId = forceHostId(filename[:-4].replace('_', '-'))
+			except Exception, e:
+				logger.error(u"Invalid client id '%s': %s" % (filename[:-4], e))
+				continue
+			
+			logger.notice(u"Updating client '%s'" % clientId)
+			
+			oldClientDict = {
+				'id':              clientId,
+				'opsiHostKey':     None,
+				'description':     None,
+				'notes':           None,
+				'hardwareAddress': None,
+				'ipAddress':       None,
+				'inventoryNumber': None,
+				'created':         None,
+				'lastSeen':        None
+			}
+			
+			if clientId in opsiHostKeys.keys():
+				oldClientDict['opsiHostKey'] = opsiHostKeys[clientId]
+			
+			
+			updatedProductPropertyStates = []
+			updatedProductOnClients = []
+			try:
+				iniFile = IniFile(filename = oldClient)
+				ini = iniFile.parse()
+				
+				if ini.has_option('info', 'description'):
+					oldClientDict['description']     = ini.get('info', 'description')
+				if ini.has_option('info', 'notes'):
+					oldClientDict['notes']           = ini.get('info', 'notes')
+				if ini.has_option('info', 'macaddress'):
+					oldClientDict['hardwareAddress'] = ini.get('info', 'macaddress')
+				if ini.has_option('info', 'ipaddress'):
+					oldClientDict['ipAddress']       = ini.get('info', 'ipaddress')
+				if ini.has_option('info', 'inventorynumber'):
+					oldClientDict['inventoryNumber'] = ini.get('info', 'inventorynumber')
+				if ini.has_option('info', 'created'):
+					oldClientDict['created']         = ini.get('info', 'created')
+				if ini.has_option('info', 'lastSeen'):
+					oldClientDict['lastSeen']        = ini.get('info', 'lastSeen')
+				
+				for section in ini.sections():
+					if (section.lower().endswith(u'-install')):
+						for option in ini.options(section):
+							try:
+								updatedProductPropertyStates.append(
+									ProductPropertyState.fromHash(
+										{
+										'productId':  section[:-8],
+										'propertyId': option,
+										'objectId':   clientId,
+										'values':     [ini.get(section, option)]
+										}
+										)
+									)
+							except Exception, e:
+								logger.error(u"Exception while creating ProductPropertyState from '%s': %s" % (section, e))
+					
+					elif (section.lower().endswith(u'_product_states')):
+						for productId in ini.options(section):
+							try:
+								poc = {
+									'productId':           productId,
+									'productType':         section[:-15],
+									'clientId':            clientId,
+									'installationStatus':  u'not_installed',
+									'actionRequest':       u'none',
+									'actionProgress':      None,
+									'targetConfiguration': None,
+									'productVersion':      None,
+									'packageVersion':      None,
+									'modificationTime':    None
+								}
+								
+								try:
+									(poc['installationStatus'], poc['actionRequest']) = ini.get(section, productId).split(u':')
+								except Exception, e:
+									logger.error(u"Failed to get state from '%s': %s" % (ini.get(section, productId), e))
+								
+								if poc['installationStatus'] not in (u'installed', u'not_installed'):
+									poc['actionProgress'] = poc['installationStatus']
+									poc['installationStatus'] = u'not_installed'
+								
+								if not poc['actionRequest'] in (u'setup', u'uninstall', u'update', u'always', u'once', u'custom', u'none'):
+									poc['actionRequest'] = u'none'
+								
+								if (poc['installationStatus'] == 'not_installed') and (poc['actionRequest'] == 'none'):
+									continue
+								
+								if ini.has_section(productId + u'-state'):
+									if (ini.get(productId + u'-state', 'productversion') != u''):
+										poc['productVersion']   = ini.get(productId + u'-state', 'productversion')
+									if (ini.get(productId + u'-state', 'packageversion') != u''):
+										poc['packageVersion']   = ini.get(productId + u'-state', 'packageversion')
+									if ini.has_option(productId + u'-state', 'laststatechange'):
+										poc['modificationTime'] = ini.get(productId + u'-state', 'laststatechange')
+								
+								updatedProductOnClients.append(ProductOnClient.fromHash(poc))
+							except Exception, e:
+								logger.error(u"Exception while creating ProductOnClient from '%s': %s" % (oldClient, e))
+					
+#					elif (section.lower().endswith(u'-state')):
+#						continue #will be handled above
+					
+					elif (section.lower() in (u'networkconfig', u'generalconfig')):
+						for option in ini.options(section):
+							configId = configId = option.lower()
+							value = ini.get(section, option)
+							
+							try:
+								if (section.lower() == u'networkconfig'):
+									if (option.lower() == u'depotid'):
+										configId = u'clientconfig.depot.id'
+									elif (option.lower() == u'depotdrive'):
+										configId = u'clientconfig.depot.drive'
+									elif (option.lower() == u'nextbootserviceurl'):
+										configId = u'clientconfig.configserver.url'
+										if (value.find('/rpc') == -1):
+											value = value + '/rpc'
+									elif (option.lower() == u'windomain'):
+										configId = u'clientconfig.windows.domain'
+							except Exception, e:
+								logger.error(u"%s" % (e))
+								continue
+							
+							updatedConfigStates.append(ConfigState(configId = configId, objectId = clientId, values = [value]))
+				
+			except Exception, e:
+				logger.warning(u"Could not get all information on client: %s" % e)
+			
+			backend.host_createObjects([OpsiClient.fromHash(oldClientDict)])
+			
+			for cs in updatedConfigStates:
+				#TODO: check, if configState.configId exists
+				try:
+					backend.configState_createObjects([cs])
+				except Exception, e:
+					logger.error(u"Could not create configState '%s': %s" % (cs.getIdent(), e))
+			
+			logger.info(u"Updating ProductOnClients in '%s'" % (clientId))
+			for poc in updatedProductOnClients:
+				try:
+					backend.productOnClient_createObjects([poc])
+				except Exception, e:
+					logger.error(u"Could not create ProductOnClient '%s': %s" % (poc.getIdent(), e))
+			
+			
+			logger.info(u"Updating ProductPropertyStates in '%s'" % (clientId))
+			for pps in updatedProductPropertyStates:
+				try:
+					backend.productPropertyState_createObjects([pps])
+				except Exception, e:
+					logger.error(u"Could not create ProductPropertyState '%s': %s" % (pps.getIdent(), e))
+	else:
+		logger.error(u"No client folder, skipping clients.")
+	
+	
+	
+	logger.notice(u"Updating Groups ..." % ())
+	updatedGroups = []
+	updatedObjectToGroups = []
+	backupClientGroupsFile = os.path.join(backupDir, u'clientgroups.ini')
+	if os.path.isfile(backupClientGroupsFile):
+		iniFile = IniFile(filename = backupClientGroupsFile)
+		ini = iniFile.parse()
+		
+		parentGroupIdList= []
+		for section in ini.sections():
+			try:
+				g = {
+					'id':            forceGroupId(section),
+					'description':   None,
+					'notes':         None,
+					'parentGroupId': None
+				}
+				
+				for option in ini.options(section):
+					if (option.lower() == u'parentgroupid'):
+						updatedGroup['parentGroupId'] = ini.get(section, option)
+						if (not ini.get(section, option) in parentGroupIdList):
+							parentGroupIdList.append(ini.get(section, option))
+						continue
+					
+					if (ini.get(section, option) != 0):
+						logger.debug2(u"Ignoring objectId '%s' in '%s' (value is 0)" % (option, section))
+						continue
+					
+					otg = {
+						'groupId'   :  section, #already forced above
+						'groupType' : 'HostGroup',
+						'objectId'  : forceObjectId(option)
+					}
+					
+					updatedObjectToGroups.append(ObjectToGroup.fromHash(otg))
+				
+				updatedGroups.append(Group.fromHash(g))
+			except Exception, e:
+				logger.error(u"Exception while creating Group from '%s': %s" % (section, e))
+		
+		#switching groups with parentGroupId after parentGroup
+		switchedGroups = []
+		unsortedGroups = updatedGroups
+		counter = -1
+		while (len(switchedGroups) != len(updatedGroups)):
+			if (counter > 1000): #TODO: check for unresolved parentGroupIds
+				logger.error(u"Unresolved parentGroupIdList: %s" % (parentGroupIdList))
+				break
+			else:
+				counter =+ 1
+			
+			nowUnsorted = []
+			for ug in unsortedGroups:
+				if (ug.getParentGroupId() is None) or (not ug.getParentGroupId() in parentGroupIdList):
+					switchedGroups.append(ug)
+					if (ug.getId() in parentGroupIdList):
+						parentGroupIdList.remove(ug.getId())
+				else:
+					nowUnsorted.append(ug)
+			
+			unsortedGroups = nowUnsorted
+		
+		updatedGroups = switchedGroups
+		
+		
+		for g in updatedGroups:
+			try:
+				backend.group_createObjects([g])
+			except Exception, e:
+				logger.error(u"Could not create Group '%s': %s" % (g.getIdent(), e))
+		
+		for otg in updatedObjectToGroups:
+			try:
+				backend.objectToGroup_createObjects([otg])
+			except Exception, e:
+				logger.error(u"Could not create ObjectToGroup '%s': %s" % (otg.getIdent(), e))
+	else:
+		logger.error(u"No groups file, skipping groups.")
+	
+	
+	
+	#TODO: ignore?
+	#AuditSoftwares/AuditSoftwareOnClients/AuditHardwares/AuditHardwareOnHosts
+
+
+
+def configureMySQLBackend():
+	backendConfigFile = u'/etc/opsi/backends/mysql.conf'
+	
+	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+	logger.info(u"Loading backend config '%s'" % backendConfigFile)
+	execfile(backendConfigFile, l)
+	config = l['config']
+	logger.info(u"Current mysql backend config: %s" % config)
+	
+	consoleLevel = logger.getConsoleLevel()
+	logger.setConsoleLevel(LOG_NONE)
+	ui = UIFactory(type = 'snack')
+	try:
+		dbAdminUser = u'root'
+		dbAdminPass = u''
+		messageBox = None
+		while True:
+			values = [
+				{ "name": u"Database host",             "value": config['address'] },
+				{ "name": u"Database admin user",       "value": dbAdminUser },
+				{ "name": u"Database admin password",   "value": dbAdminPass, "password": True },
+				{ "name": u"Opsi database name",        "value": config['database'] },
+				{ "name": u"Opsi database user",        "value": config['username'] },
+				{ "name": u"Opsi database password",    "value": config['password'], "password": True }
+			]
+			values = ui.getValues(title = u'MysQL config', width = 70, height = 15, entries = values)
+			if values is None:
+				raise Exception(u"Canceled")
+			
+			config['address']  = values[0]["value"]
+			dbAdminUser        = values[1]["value"]
+			dbAdminPass        = values[2]["value"]
+			config['database'] = values[3]["value"]
+			config['username'] = values[4]["value"]
+			config['password'] = values[5]["value"]
+			
+			messageBox = ui.createMessageBox(width = 70, height = 20, title = u'MysQL config', text = u'')
+			# Connect to database host
+			logger.notice(u"Connecting to host '%s' as user '%s'" % (config['address'], dbAdminUser))
+			messageBox.addText(u"Connecting to host '%s' as user '%s'\n" % (config['address'], dbAdminUser))
+			
+			try:
+				db = MySQLdb.connect(host = config['address'], user = dbAdminUser, passwd = dbAdminPass)
+			except Exception, e:
+				messageBox.hide()
+				logger.error(u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], dbAdminUser, e))
+				ui.showError(text = u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], dbAdminUser, e),
+						title = u'Failed to connect', width = 70, height = 6, seconds = 0)
+				continue
+			logger.notice(u"Successfully connected to host '%s' as user '%s'" % (config['address'], dbAdminUser))
+			messageBox.addText(u"Successfully connected to host '%s' as user '%s'\n" % (config['address'], dbAdminUser))
+			
+			# Create opsi database and user
+			logger.notice(u"Creating database '%s'" % config['database'])
+			messageBox.addText(u"Creating database '%s'\n" % config['database'])
+			try:
+				db.query(u'CREATE DATABASE %s DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;' % config['database'])
+			except MySQLdb.ProgrammingError, e:
+				if (e[0] != 1007):
+					# 1007: database exists
+					raise
+			logger.notice(u"Database '%s' created" % config['database'])
+			messageBox.addText(u"Database '%s' created\n" % config['database'])
+			
+			logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
+			messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
+			db.query(u'USE %s;' % config['database'])
+			db.query(u'GRANT ALL ON %s .* TO %s@%s IDENTIFIED BY \'%s\'' \
+					% (config['database'], config['username'], config['address'], config['password']));
+			db.query(u'FLUSH PRIVILEGES;')
+			logger.notice(u"User '%s' created and privileges set" % config['username'])
+			messageBox.addText(u"User '%s' created and privileges set\n" % config['username'])
+			
+			# Disconnect from database
+			db.close()
+			
+			# Test connection / credentials
+			logger.notice(u"Testing connection to database '%s' as user '%s'" % (config['database'], config['username']))
+			messageBox.addText(u"Testing connection to database '%s' as user '%s'\n" % (config['database'], config['username']))
+			
+			try:
+				db = MySQLdb.connect(host = config['address'], user = config['username'], passwd = config['password'], db = config['database'])
+				db.close()
+			except Exception, e:
+				messageBox.hide()
+				logger.error(u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], config['username'], e))
+				ui.showError(text = u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], config['username'], e),
+						title = u'Connection failed', width = 70, height = 6, seconds = 0)
+				continue
+			
+			logger.notice(u"Successfully connected to host '%s' as user '%s'" % (config['address'], config['username']))
+			messageBox.addText(u"Successfully connected to host '%s' as user '%s'\n" % (config['address'], config['username']))
+			break
+		
+		logger.notice(u"Updating backend config '%s'" % backendConfigFile)
+		messageBox.addText(u"Updating backend config '%s'\n" % backendConfigFile)
+		
+		lines = []
+		f = codecs.open(backendConfigFile, 'r', 'utf-8')
+		for line in f.readlines():
+			if re.search('^\s*config\s*\=', line):
+				break
+			lines.append(line)
+		f.close()
+		f = codecs.open(backendConfigFile, 'w', 'utf-8')
+		f.writelines(lines)
+		f.write("config = %s\n" % objectToBeautifiedText(config))
+		f.close()
+		
+		logger.notice(u"Backend config '%s' updated" % backendConfigFile)
+		messageBox.addText(u"Backend config '%s' updated\n" % backendConfigFile)
+		
+		logger.notice(u"Initializing mysql backend")
+		messageBox.addText(u"Initializing mysql backend\n")
+		
+		backend = MySQLBackend(**config)
+		backend.backend_createBase()
+		
+		time.sleep(2)
+		messageBox.hide()
+		
+		ui.showMessage(title = u'Success', text = u"MySQL Backend configuration done", width = 70, height = 4, seconds = 0)
+		
+	finally:
+		ui.exit()
+		logger.setConsoleLevel(consoleLevel)
+	
+
+def registerDepot():
+	backendConfigFile = u'/etc/opsi/backends/jsonrpc.conf'
+	dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf'
+	
+	getSysConfig()
+	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+	logger.info(u"Loading backend config '%s'" % backendConfigFile)
+	execfile(backendConfigFile, l)
+	config = l['config']
+	logger.info(u"Current jsonrpc backend config: %s" % config)
+	
+	
+	jsonrpcBackend = None
+	depot = None
+	
+	consoleLevel = logger.getConsoleLevel()
+	logger.setConsoleLevel(LOG_NONE)
+	ui = UIFactory(type = 'snack')
+	try:
+		adminUser = u'root'
+		adminPass = u''
+		messageBox = None
+		while True:
+			values = [
+				{ "name": u"Config server",             "value": config['address'] },
+				{ "name": u"Opsi admin user",           "value": adminUser },
+				{ "name": u"Opsi admin password",       "value": adminPass, "password": True }
+			]
+			values = ui.getValues(title = u'Config server connection', width = 70, height = 10, entries = values)
+			if values is None:
+				raise Exception(u"Canceled")
+			
+			config['address']  = values[0]["value"]
+			adminUser          = values[1]["value"]
+			adminPass          = values[2]["value"]
+			
+			messageBox = ui.createMessageBox(width = 70, height = 20, title = u'Register depot', text = u'')
+			# Connect to config server
+			logger.notice(u"Connecting to config server '%s' as user '%s'" % (config['address'], adminUser))
+			messageBox.addText(u"Connecting to config server '%s' as user '%s'\n" % (config['address'], adminUser))
+			
+			try:
+				jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
+			except Exception, e:
+				messageBox.hide()
+				logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
+				ui.showError(text = u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e),
+						title = u'Failed to connect', width = 70, height = 6, seconds = 0)
+				continue
+			logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
+			messageBox.addText(u"Successfully connected to config server '%s' as user '%s'\n" % (config['address'], adminUser))
+			break
+		
+		depots = jsonrpcBackend.host_getObjects(id = getSysConfig()['fqdn'])
+		if depots:
+			# Already exists
+			depot = depots[0]
+			if not depot.depotWebdavUrl: depot.depotWebdavUrl = u''
+			if not depot.masterDepotId:  depot.masterDepotId = u''
+		else:
+			depotLocalUrl  = u'file:///opt/pcbin/install'
+			depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
+			if (getSysConfig()['distributor'].lower().find('sles') != -1):
+				depotLocalUrl = u'file:///var/lib/opsi/depot'
+				depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
+			
+			depot = OpsiDepotserver(
+					id                  = getSysConfig()['fqdn'],
+					opsiHostKey         = None,
+					depotLocalUrl       = depotLocalUrl,
+					depotRemoteUrl      = depotRemoteUrl,
+					depotWebdavUrl      = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
+					repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
+					repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
+					description         = u'',
+					notes               = u'',
+					hardwareAddress     = getSysConfig()['hardwareAddress'] or u'',
+					ipAddress           = getSysConfig()['ipAddress'] or u'',
+					inventoryNumber     = u'',
+					networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
+					maxBandwidth        = 0,
+					isMasterDepot       = True,
+					masterDepotId       = u'',
+			)
+		while True:
+			if (depot.maxBandwidth < 0):
+				depot.maxBandwidth = 0
+			if (depot.maxBandwidth > 0):
+				depot.maxBandwidth = int(depot.maxBandwidth/1000)
+			
+			values = [
+				{ "name": u"Description",                 "value": depot.description         },
+				{ "name": u"Inventory number",            "value": depot.inventoryNumber     },
+				{ "name": u"Notes",                       "value": depot.notes               },
+				{ "name": u"Ip address",                  "value": depot.ipAddress           },
+				{ "name": u"Hardware address",            "value": depot.hardwareAddress     },
+				{ "name": u"Network address",             "value": depot.networkAddress      },
+				{ "name": u"Maximum bandwidth (kbyte/s)", "value": depot.maxBandwidth        },
+				{ "name": u"Local depot url",             "value": depot.depotLocalUrl       },
+				{ "name": u"Remote depot url",            "value": depot.depotRemoteUrl      },
+				{ "name": u"Depot webdav url",            "value": depot.depotWebdavUrl      },
+				{ "name": u"Local repository url",        "value": depot.repositoryLocalUrl  },
+				{ "name": u"Remote repository url",       "value": depot.repositoryRemoteUrl },
+				{ "name": u"Is master depot",             "value": depot.isMasterDepot       },
+				{ "name": u"Master depot id",             "value": depot.masterDepotId       },
+				
+			]
+			values = ui.getValues(title = u'Depot server settings', width = 70, height = 16, entries = values)
+			if values is None:
+				raise Exception(u"Canceled")
+			
+			error = None
+			try:
+				depot.setDescription( values[0].get('value') )
+			except Exception, e:
+				if not error: error = u'Invalid description'
+			
+			try:
+				depot.setInventoryNumber( values[1].get('value') )
+			except Exception, e:
+				if not error: error = u'Inventory number invalid'
+			
+			try:
+				depot.setNotes( values[2].get('value') )
+			except Exception, e:
+				if not error: error = u'Invalid notes'
+			
+			try:
+				depot.setIpAddress( values[3].get('value') )
+			except Exception, e:
+				if not error: error = u'Invalid ip address'
+			
+			try:
+				depot.setHardwareAddress( values[4].get('value') )
+			except Exception, e:
+				if not error: error = u'Invalid hardware address'
+			
+			try:
+				depot.setNetworkAddress( values[5].get('value') )
+			except Exception, e:
+				if not error: error = u'Invalid network address'
+			
+			try:
+				depot.setMaxBandwidth( forceInt(values[6].get('value'))*1000 )
+			except Exception, e:
+				if not error: error = u'Invalid maximum bandwidth'
+			
+			try:
+				depot.setDepotLocalUrl( values[7].get('value') )
+			except Exception, e:
+				if not error: error = u'Depot local url invalid'
+			
+			try:
+				depot.setDepotRemoteUrl( values[8].get('value') )
+			except Exception, e:
+				if not error: error = u'Depot remote url invalid'
+			
+			try:
+				if values[9].get('value'):
+					depot.setDepotWebdavUrl( values[9].get('value') )
+				else:
+					depot.depotWebdavUrl = None
+			except Exception, e:
+				if not error: error = u'Depot webdav url invalid'
+			
+			try:
+				depot.setRepositoryLocalUrl( values[10].get('value') )
+			except Exception, e:
+				if not error: error = u'Repository local url invalid'
+			
+			try:
+				depot.setRepositoryRemoteUrl( values[11].get('value') )
+			except Exception, e:
+				if not error: error = u'Repository remote url invalid'
+			
+			try:
+				depot.setIsMasterDepot( values[12].get('value') )
+			except Exception, e:
+				if not error: error = u'Invalid value for is master depot'
+			
+			try:
+				if values[13].get('value'):
+					depot.setMasterDepotId( values[13].get('value') )
+				else:
+					depot.masterDepotId = None
+			except Exception, e:
+				if not error: error = u'Master depot id invalid'
+			
+			if error:
+				ui.showError(title = u'Bad value', text = error, width = 50, height = 5)
+				continue
+			
+			break
+	finally:
+		ui.exit()
+		logger.setConsoleLevel(consoleLevel)
+	
+	logger.notice(u"Creating depot '%s'" % depot.id)
+	jsonrpcBackend.host_createObjects([ depot ])
+	
+	logger.notice(u"Getting depot '%s'" % depot.id)
+	depots = jsonrpcBackend.host_getObjects(id = depot.id)
+	if not depots:
+		raise Exception(u"Failed to create depot")
+	depot = depots[0]
+	config['username'] = depot.id
+	config['password'] = depot.opsiHostKey
+	jsonrpcBackend.backend_exit()
+	
+	logger.notice(u"Testing connection to config server as user '%s'" % config['username'])
+	try:
+		jsonrpcBackend = JSONRPCBackend(address = config['address'], username = config['username'], password = config['password'])
+	except Exception, e:
+		raise Exception(u"Failed to connect to config server as user '%s': %s" % (config['username'], e))
+	logger.notice(u"Successfully connected to config server as user '%s'" % config['username'])
+	
+	logger.notice(u"Updating backend config '%s'" % backendConfigFile)
+	lines = []
+	f = codecs.open(backendConfigFile, 'r', 'utf-8')
+	for line in f.readlines():
+		if re.search('^\s*config\s*\=', line):
+			break
+		lines.append(line)
+	f.close()
+	f = codecs.open(backendConfigFile, 'w', 'utf-8')
+	f.writelines(lines)
+	f.write("config = %s\n" % forceUnicode(config).replace(',', ',\n').replace('{', '{\n').replace('}', '\n}'))
+	f.close()
+	logger.notice(u"Backend config '%s' updated" % backendConfigFile)
+	
+	logger.notice(u"Updating dispatch config '%s'" % dispatchConfigFile)
+	lines = []
+	f = codecs.open(dispatchConfigFile, 'r', 'utf-8')
+	for line in f.readlines():
+		if line.strip() and line.strip()[0] not in (';', '#'):
+			break
+		lines.append(line)
+	f.close()
+	f = codecs.open(dispatchConfigFile, 'w', 'utf-8')
+	f.writelines(lines)
+	f.write("backend_.* : jsonrpc, opsipxeconfd, dhcpd\n")
+	f.write(".*         : jsonrpc\n")
+	f.close()
+	logger.notice(u"Dispatch config '%s' updated" % dispatchConfigFile)
+	
+	setRights()
+	
+	logger.notice(u"Restarting services")
+	execute("/etc/init.d/opsiconfd restart")
+	execute("/etc/init.d/opsipxeconfd restart")
+	
+def initializeBackends():
+	if not os.path.exists(u'/etc/opsi/passwd'):
+		f = open(u'/etc/opsi/passwd', 'w')
+		f.close()
+		opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
+		adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
+		os.chown(u'/etc/opsi/passwd', opsiconfdUid, adminGroupGid)
+		os.chmod(u'/etc/opsi/passwd', 0660)
+		
+	from OPSI.Backend.BackendManager import BackendManager
+	backend = BackendManager(
+		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+		backendConfigDir   = u'/etc/opsi/backends',
+		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+		depotbackend       = False
+	)
+	backend.backend_createBase()
+	
+	if not backend.host_getIdents(type = 'OpsiConfigserver', id = getSysConfig()['fqdn']):
+		depot = backend.host_getObjects(type = 'OpsiDepotserver', id = getSysConfig()['fqdn'])
+		if not depot:
+			logger.notice(u"Creating config server '%s'" % getSysConfig()['fqdn'])
+			depotLocalUrl  = u'file:///opt/pcbin/install'
+			depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
+			if (getSysConfig()['distributor'].lower().find('sles') != -1):
+				depotLocalUrl = u'file:///var/lib/opsi/depot'
+				depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
+			
+			configServer = backend.host_createOpsiConfigserver(
+				id                  = getSysConfig()['fqdn'],
+				opsiHostKey         = None,
+				depotLocalUrl       = depotLocalUrl,
+				depotRemoteUrl      = depotRemoteUrl,
+				repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
+				repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
+				description         = u'',
+				notes               = u'',
+				hardwareAddress     = getSysConfig()['hardwareAddress'],
+				ipAddress           = getSysConfig()['ipAddress'],
+				inventoryNumber     = u'',
+				networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
+				maxBandwidth        = 0,
+				isMasterDepot       = True,
+				masterDepotId       = None,
+			)
+		else:
+			logger.notice(u"Converting depot server '%s' to config server" % getSysConfig()['fqdn'])
+			configServer = OpsiConfigserver.fromHash(depot[0].toHash())
+			backend.host_createObjects(configServer)
+	
+	configServer = backend.host_getObjects(type = 'OpsiConfigserver', id = getSysConfig()['fqdn'])
+	if not configServer:
+		raise Exception(u"Config server '%s' not found" % getSysConfig()['fqdn'])
+	configServer = configServer[0]
+	if getSysConfig()['ipAddress']:
+		configServer.setIpAddress(getSysConfig()['ipAddress'])
+	if getSysConfig()['hardwareAddress']:
+		configServer.setHardwareAddress(getSysConfig()['hardwareAddress'])
+	backend.host_updateObjects([configServer])
+	
+	configs = []
+	configIdents = backend.config_getIdents(returnType = 'unicode')
+	if not 'clientconfig.configserver.url' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'clientconfig.configserver.url',
+				description    = u'URL(s) of opsi config service(s) to use',
+				possibleValues = [ u'https://%s:4447/rpc' % configServer.getIpAddress() ],
+				defaultValues  = [ u'https://%s:4447/rpc' % configServer.getIpAddress() ],
+				editable       = True,
+				multiValue     = True
+			)
+		)
+	if not 'clientconfig.depot.id' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'clientconfig.depot.id',
+				description    = u'ID of the opsi depot to use',
+				possibleValues = [ configServer.getId() ],
+				defaultValues  = [ configServer.getId() ],
+				editable       = True,
+				multiValue     = False
+			)
+		)
+	if not 'clientconfig.depot.dynamic' in configIdents:
+		configs.append(
+			BoolConfig(
+				id             = u'clientconfig.depot.dynamic',
+				description    = u'Use dynamic depot selection',
+				defaultValues  = [ False ]
+			)
+		)
+	if not 'clientconfig.depot.drive' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'clientconfig.depot.drive',
+				description    = u'Drive letter for depot share',
+				possibleValues = [ u'c:', u'd:', u'e:', u'f:', u'g:', u'h:', u'i:', u'j:', u'k:', u'l:', u'm:', u'n:', u'o:', u'p:', u'q:', u'r:', u's:', u't:', u'u:', u'v:', u'w:', u'x:', u'y:', u'z:' ],
+				defaultValues  = [ u'p:' ],
+				editable       = False,
+				multiValue     = False
+			)
+		)
+	if not 'clientconfig.windows.domain' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'clientconfig.windows.domain',
+				description    = u'Windows domain',
+				possibleValues = [],
+				defaultValues  = [ getSysConfig()['winDomain'] ],
+				editable       = True,
+				multiValue     = False
+			)
+		)
+	if not 'opsi-linux-bootimage.append' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'opsi-linux-bootimage.append',
+				description    = u'Extra options to append to kernel command line',
+				possibleValues = [ u'acpi=off', u'irqpoll', u'noapic' ],
+				defaultValues  = [ u'' ],
+				editable       = True,
+				multiValue     = True
+			)
+		)
+	if not 'license-management.use' in configIdents:
+		configs.append(
+			BoolConfig(
+				id             = u'license-management.use',
+				description    = u'Activate license management',
+				defaultValues  = [ False ]
+			)
+		)
+	
+	if not 'product_sort_algorithm' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'product_sort_algorithm',
+				description    = u'Product sorting algorithm',
+				possibleValues = [ u'algorithm1', u'algorithm2' ],
+				defaultValues  = [ u'algorithm1' ],
+				editable       = False,
+				multiValue     = False
+			)
+		)
+	
+	if configs:
+		backend.config_createObjects(configs)
+
+
+def editConfigDefaults():
+	from OPSI.Backend.BackendManager import BackendManager
+	backend = BackendManager(
+		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+		backendConfigDir   = u'/etc/opsi/backends',
+		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+		depotbackend       = False
+	)
+	configs = backend.config_getObjects()
+	
+	consoleLevel = logger.getConsoleLevel()
+	logger.setConsoleLevel(LOG_NONE)
+	ui = UIFactory(type = 'snack')
+	try:
+		while True:
+			entries = []
+			maxConfigIdLen = 0
+			for config in configs:
+				if (len(config.id) > maxConfigIdLen):
+					maxConfigIdLen = len(config.id)
+			format = u"%-10s %-" + str(maxConfigIdLen) + "s = %s"
+			for config in configs:
+				type = '[unicode]'
+				if (config.getType() == 'BoolConfig'):
+					type = '[bool]'
+				entries.append({ "id": config.id, "name": format % ( type, config.id, u', '.join(forceUnicodeList(config.defaultValues)) ) })
+			
+			selection = ui.getSelection(entries, radio = True, width=100, height=10, title=u'Please select config value to change', okLabel='OK', cancelLabel='Cancel')
+			
+			if not selection:
+				return
+			
+			configId = None
+			for entry in entries:
+				if (selection[0] == entry['name']):
+					configId = entry['id']
+					break
+			
+			selectedConfig = -1
+			for i in range(len(configs)):
+				if (configs[i].id == configId):
+					selectedConfig = i
+					break
+			
+			addNewValue = False
+			cancelLabel = u'Back'
+			title = u'Edit default values for: %s' % configs[selectedConfig].id
+			text = configs[selectedConfig].description or u''
+			if configs[selectedConfig].possibleValues:
+				entries = []
+				for possibleValue in configs[selectedConfig].possibleValues:
+					entries.append({'name': possibleValue, 'value': possibleValue, 'selected': possibleValue in configs[selectedConfig].defaultValues})
+				radio = not configs[selectedConfig].multiValue
+				if configs[selectedConfig].editable:
+					entries.append({'name': '<other value>', 'value': '<other value>', 'selected': False})
+				selection = ui.getSelection(entries, radio = radio, width = 65, height = 10, title = title, text = text, cancelLabel = cancelLabel)
+				
+				if selection is None:
+					continue
+				if "<other value>" in selection:
+					addNewValue = True
+				else:
+					configs[selectedConfig].setDefaultValues(selection)
+			else:
+				addNewValue = True
+			
+			if addNewValue:
+				default = u''
+				if configs[selectedConfig].defaultValues:
+					default = configs[selectedConfig].defaultValues[0]
+				value = ui.getValue(width = 65, height = 13, title = title, default = default, password = False, text = text, cancelLabel = cancelLabel)
+				if value is None:
+					continue
+				
+				possibleValues = configs[selectedConfig].getPossibleValues()
+				if not value in possibleValues:
+					possibleValues.append(value)
+					configs[selectedConfig].setPossibleValues(possibleValues)
+				configs[selectedConfig].setDefaultValues(value)
+			
+			backend.config_updateObjects([configs[selectedConfig]])
+	
+	finally:
+		ui.exit()
+		logger.setConsoleLevel(consoleLevel)
+
+def cleanupBackend():
+	from OPSI.Backend.BackendManager import BackendManager
+	backend = BackendManager(
+		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+		backendConfigDir   = u'/etc/opsi/backends',
+		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+		depotbackend       = False
+	)
+	
+	logger.notice(u"Cleaning up groups")
+	updatedGroups = []
+	groupIds = []
+	groups = backend.group_getObjects(type = 'HostGroup')
+	for group in groups:
+		groupIds.append(group.id)
+	for group in groups:
+		if group.getParentGroupId() and group.getParentGroupId() not in groupIds:
+			logger.info(u"Removing parent group id '%s' from group '%s' because parent group does not exist" % (group.parentGroupId, group.id))
+			group.parentGroupId = None
+			updatedGroups.append(group)
+	if updatedGroups:
+		backend.group_createObjects(updatedGroups)
+	
+	logger.notice(u"Cleaning up products")
+	productIds = []
+	productIdents = []
+	for productOnDepot in backend.productOnDepot_getObjects():
+		productIdent = u"%s;%s;%s" % (productOnDepot.productId, productOnDepot.productVersion, productOnDepot.packageVersion)
+		if not productIdent in productIdents:
+			productIdents.append(productIdent)
+	deleteProducts = []
+	for product in backend.product_getObjects():
+		if not product.getIdent(returnType = 'unicode') in productIdents:
+			logger.info(u"Marking unreferenced product %s for deletion" % product)
+			deleteProducts.append(product)
+		else:
+			if not product.id in productIds:
+				productIds.append(product.id)
+	if deleteProducts:
+		backend.product_deleteObjects(deleteProducts)
+	
+	logger.notice(u"Cleaning up product properties")
+	productPropertyIdents = []
+	deleteProductProperties = []
+	for productProperty in backend.productProperty_getObjects():
+		if not productProperty.productId in productIds:
+			logger.info(u"Marking productProperty %s of non existent product '%s' for deletion" % (productProperty, productProperty.productId))
+			deleteProductProperties.append(productProperty)
+		else:
+			productPropertyIdent = u'%s;%s' % (productProperty.productId, productProperty.propertyId)
+			if not productPropertyIdent in productPropertyIdents:
+				productPropertyIdents.append(productPropertyIdent)
+	if deleteProductProperties:
+		backend.productProperty_deleteObjects(deleteProductProperties)
+	
+	logger.notice(u"Cleaning up product property states")
+	deleteProductPropertyStates = []
+	for productPropertyState in backend.productPropertyState_getObjects():
+		productPropertyIdent = u'%s;%s' % (productPropertyState.productId, productPropertyState.propertyId)
+		if not productPropertyIdent in productPropertyIdents:
+			logger.info(u"Marking productPropertyState %s of non existent productProperty '%s' for deletion" % (productPropertyState, productPropertyIdent))
+			deleteProductPropertyStates.append(productPropertyState)
+	if deleteProductPropertyStates:
+		backend.productPropertyState_deleteObjects(deleteProductPropertyStates)
+	
+	logger.notice(u"Cleaning up config states")
+	deleteConfigStates = []
+	configIds = backend.config_getIdents()
+	for configState in backend.configState_getObjects():
+		if not configState.configId in configIds:
+			logger.info(u"Marking configState %s of non existent config '%s' for deletion" % (configState, configState.configId))
+			deleteConfigStates.append(configState)
+	if deleteConfigStates:
+		backend.configState_deleteObjects(deleteConfigStates)
+	
+	
+def usage():
+	print u"\nUsage: %s [options]" % os.path.basename(sys.argv[0])
+	print u""
+	print u"Options:"
+	print u"   -h, --help  show this help"
+	print u"   -l          log-level 0..9"
+	print u""
+	print u"   --log-file <path>          path to log file"
+	print u"   --register-depot           register depot at config server"
+	print u"   --set-rights [path]        set default rights on opsi files (in [path] only)"
+	print u"   --init-current-config      init current backend configuration"
+	#print u"   --update-from=<version>    update from opsi version <version>"
+	print u"   --update-mysql             update mysql backend"
+	print u"   --update-ldap              update ldap backend"
+	print u"   --update-file              update file backend"
+	print u"   --configure-mysql          configure mysql backend"
+	print u"   --edit-config-defaults     edit global config defaults"
+	print u"   --cleanup-backend          cleanup backend"
+	print u"   --auto-configure-samba     patch smb.conf"
+	print u"   --auto-configure-dhcpd     patch dhcpd.conf"
+	print u""
+	
+def main():
+	if (os.geteuid() != 0):
+		raise Exception(u"This script must be startet as root")
+	
+	try:
+		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
+			['help', 'log-file=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
+			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-file', 'edit-config-defaults', 'cleanup-backend'])
+			#, 'update-from='])
+		
+	except Exception, e:
+		usage()
+		raise
+	
+	task = None
+	updateFrom = None
+	autoConfigureSamba = False
+	autoConfigureDhcpd = False
+	
+	for (opt, arg) in opts:
+		if opt in ("-h", "--help"):
+			usage()
+			return
+		elif (opt == "--log-file"):
+			logger.setLogFile(arg)
+			logger.setFileLevel(LOG_DEBUG)
+		elif (opt == "-l"):
+			logger.setConsoleLevel(int(arg))
+		elif (opt == "--init-current-config"):
+			task = 'init-current-config'
+		elif (opt == "--set-rights"):
+			task = 'set-rights'
+		elif (opt == "--register-depot"):
+			task = 'register-depot'
+		elif (opt == "--configure-mysql"):
+			task = 'configure-mysql'
+		elif (opt == "--update-mysql"):
+			task = 'update-mysql'
+		elif (opt == "--update-ldap"):
+			task = 'update-ldap'
+		elif (opt == "--update-file"):
+			task = 'update-file'
+		elif (opt == "--edit-config-defaults"):
+			task = 'edit-config-defaults'
+		elif (opt == "--cleanup-backend"):
+			task = 'cleanup-backend'
+		#elif (opt == "--update-from"):
+		#	updateFrom = arg
+		elif (opt == "--auto-configure-samba"):
+			autoConfigureSamba = True
+		elif (opt == "--auto-configure-dhcpd"):
+			autoConfigureDhcpd = True
+	
+	path = u'/'
+	if (len(args) > 0):
+		if (task == 'set-rights') and (len(args) == 1):
+			path = os.path.abspath(forceFilename(args[0]))
+		else:
+			usage()
+			raise Exception(u"Too many arguments")
+	
+	if autoConfigureSamba:
+		configureSamba()
+	
+	if autoConfigureDhcpd:
+		configureDHCPD()
+	
+	if (task == 'set-rights'):
+		setRights(path)
+	
+	elif (task == 'init-current-config'):
+		initializeBackends()
+		configureClientUser()
+	
+	elif (task == 'configure-mysql'):
+		configureMySQLBackend()
+	
+	elif (task == 'update-mysql'):
+		updateMySQLBackend()
+		update()
+	
+	elif (task == 'update-ldap'):
+		updateLDAPBackend()
+		update()
+	
+	elif (task == 'update-file'):
+		updateFileBackend()
+		update()
+	
+	elif (task == 'register-depot'):
+		registerDepot()
+		configureClientUser()
+		
+	elif (task == 'edit-config-defaults'):
+		editConfigDefaults()
+	
+	elif (task == 'cleanup-backend'):
+		cleanupBackend()
+	
+	elif not autoConfigureSamba and not autoConfigureDhcpd:
+		usage()
+		sys.exit(1)
+	
+if (__name__ == "__main__"):
+	logger.setLogFormat(u'[%l] [%D] %M (%F|%N)')
+	logger.setLogFile(LOG_FILE)
+	logger.setFileLevel(LOG_DEBUG)
+	exception = None
+	try:
+		main()
+	except SystemExit, e:
+		pass
+	
+	except Exception, e:
+		exception = e
+	
+	if exception:
+		logger.logException(exception)
+		print >> sys.stderr, u"\nERROR: %s\n" % exception
+		sys.exit(1)
+	sys.exit(0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
