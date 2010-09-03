@@ -57,11 +57,16 @@ def getSysConfig():
 	
 	sysConfig['distributor'] = u'unknown'
 	try:
-		f = os.popen('lsb_release -i')
+		f = os.popen('lsb_release -i 2>/dev/null')
 		sysConfig['distributor'] = f.read().split(':')[1].strip()
 		f.close()
 	except Exception, e:
-		logger.error(u"Failed to get distributor: %s" % e)
+		try:
+			f = open('/etc/SuSE-brand')
+			sysConfig['distributor'] = f.readline().strip()
+			f.close()
+		except Exception, e:
+			logger.error(u"Failed to get distributor: %s" % e)
 		
 	logger.notice(u"Getting current system config")
 	try:
@@ -397,7 +402,7 @@ def setRights(path=u'/'):
 	depotDir = ''
 	dirnames = [u'/tftpboot/linux', u'/home/opsiproducts', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi']
 	if (getSysConfig()['distributor'].lower().find('sles') != -1):
-		dirnames = [u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi', u'/var/lib/opsi/workbench']
+		dirnames = [u'/var/lib/tftpboot/opsi', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi', u'/var/lib/opsi/workbench']
 	if not path.startswith('/etc') and not path.startswith('/tftpboot'):
 		try:
 			from OPSI.Backend.BackendManager import BackendManager
@@ -429,10 +434,10 @@ def setRights(path=u'/'):
 		dmod = 0770
 		
 		isProduct = False
-		if dirname not in (u'/tftpboot/linux', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi'):
+		if dirname not in (u'/var/lib/tftpboot/opsi', u'/tftpboot/linux', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi', u'/var/lib/opsi/workbench'):
 			isProduct = True
 		
-		if dirname in (u'/tftpboot/linux',):
+		if dirname in (u'/var/lib/tftpboot/opsi', u'/tftpboot/linux'):
 			fmod = 0664
 			dmod = 0775
 		if dirname in (u'/var/log/opsi', u'/etc/opsi'):
