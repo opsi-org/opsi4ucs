@@ -2367,6 +2367,7 @@ def initializeBackends():
 				opsiHostKey         = None,
 				depotLocalUrl       = depotLocalUrl,
 				depotRemoteUrl      = depotRemoteUrl,
+				depotWebdavUrl      = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
 				repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
 				repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
 				description         = u'',
