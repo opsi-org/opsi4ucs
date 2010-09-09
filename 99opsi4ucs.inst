@@ -148,18 +148,18 @@ ucr settings/extended_attribute remove $@ \
 $VERBOSE && echo "Adding system users and groups..."
 
 set +e
-ucr groups/group list $@ --filter "(name=OPSI Depot Servers)" | grep '^DN:' 1>/dev/null
+univention-directory-manager groups/group list $@ --filter "(name=OPSI Depot Servers)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group OPSI Depot Servers"
-	ucr groups/group create $@ \
+	univention-directory-manager groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="OPSI Depot Servers" \
 		--set description="opsi depot servers" \
 		--ignore_exists
 fi
-ucr groups/group modify $@ \
+univention-directory-manager groups/group modify $@ \
 	--dn "cn=OPSI Depot Servers,cn=groups,$ROOT_DN" \
 	--append users="$LDAP_USER"
 
