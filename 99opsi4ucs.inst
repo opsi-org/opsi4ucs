@@ -142,7 +142,7 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #		--set "ldapMapping=opsiHostId"
 #fi
 ucr settings/extended_attribute remove $@ \
-	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" || true
+	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
