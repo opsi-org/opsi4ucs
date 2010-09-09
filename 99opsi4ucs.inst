@@ -142,7 +142,7 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #		--set "ldapMapping=opsiHostId"
 #fi
 univention-directory-manager settings/extended_attribute remove $@ \
-	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" || true
+	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
 # --- Configure opsi backend ----------------------------------------------------------------------------------------------------
 cp /etc/opsi/backendManager.d/40_opsi4ucs.conf /tmp/
@@ -155,6 +155,22 @@ rm /tmp/40_opsi4ucs.conf
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
+
+set +e
+ucr groups/group list $@ --filter "(name=OPSI Depot Servers)" | grep '^DN:' 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding group OPSI Depot Servers"
+	ucr groups/group create $@ \
+		--position="cn=groups,$ROOT_DN" \
+		--set name="OPSI Depot Servers" \
+		--set description="opsi depot servers" \
+		--ignore_exists
+fi
+ucr groups/group modify $@ \
+	--dn "cn=OPSI Depot Servers,cn=groups,$ROOT_DN" \
+	--append users="$LDAP_USER"
 
 set +e
 univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
