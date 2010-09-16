@@ -133,7 +133,7 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #ret=$?
 #set -e
 #if [ $ret = 0 ]; then
-#	ucr settings/extended_attribute create $@ --ignore_exists \
+#	univention-directory-manager settings/extended_attribute create $@ --ignore_exists \
 #		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
 #		--set "name=opsiHostId" --set "module=computers/windows" \
 #		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
@@ -141,7 +141,7 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
 #		--set "ldapMapping=opsiHostId"
 #fi
-ucr settings/extended_attribute remove $@ \
+univention-directory-manager settings/extended_attribute remove $@ \
 	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
@@ -164,12 +164,12 @@ univention-directory-manager groups/group modify $@ \
 	--append users="$LDAP_USER"
 
 set +e
-ucr groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
+univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group pcpatch"
-	ucr groups/group create $@ \
+	univention-directory-manager groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="pcpatch" \
 		--set gidNumber="992" \
@@ -178,12 +178,12 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-ucr groups/group list $@ --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
+univention-directory-manager groups/group list $@ --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group opsiadmin"
-	ucr groups/group create $@ \
+	univention-directory-manager groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="opsiadmin" \
 		--set description="opsi config admin group" \
@@ -191,7 +191,7 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-ucr users/user list $@ --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
+univention-directory-manager users/user list $@ --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
@@ -200,7 +200,7 @@ if [ $ret != 0 ]; then
 	
 	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
 	
-	ucr users/user create $@ \
+	univention-directory-manager users/user create $@ \
 		--position="cn=users,$ROOT_DN" \
 		--set username="pcpatch" \
 		--set description="opsi-pseudo user" \
@@ -213,7 +213,7 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
-ucr groups/group modify $@ \
+univention-directory-manager groups/group modify $@ \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 
@@ -226,18 +226,18 @@ rm /tmp/.group.tmp.opsi4ucs
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Creating container for samba shares"
-ucr container/cn create $@ \
+univention-directory-manager container/cn create $@ \
 	--ignore_exists \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
 set +e
-ucr shares/share list $@ --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
+univention-directory-manager shares/share list $@ --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opt_pcbin"
-	ucr shares/share create $@ \
+	univention-directory-manager shares/share create $@ \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opt_pcbin \
 		--set host=$FQDN \
@@ -259,12 +259,12 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-ucr shares/share list $@ --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
+univention-directory-manager shares/share list $@ --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opsi_workbench"
-	ucr shares/share create $@ \
+	univention-directory-manager shares/share create $@ \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_workbench \
 		--set host=$FQDN \
