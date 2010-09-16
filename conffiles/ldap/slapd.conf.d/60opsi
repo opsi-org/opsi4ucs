@@ -13,8 +13,8 @@ access to dn.sub="cn=opsi,@%@ldap/base@%@"
 	by dn="cn=admin,@%@ldap/base@%@" write
 	by * none break
 
-# Protect attributes opsiHostKey and opsiPcpatchPassword
-access to attrs=opsiHostKey,opsiPcpatchPassword
+# Protect attribute opsiHostKey
+access to attrs=opsiHostKey
 	attrs=children
 	by group/univentionGroup/uniqueMember="cn=opsiadmin,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" write
