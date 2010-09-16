@@ -81,6 +81,13 @@ attributetype ( 1.3.6.1.4.1.23807.1.1.23
 	DESC 'InventoryNumber'
 	SINGLE-VALUE )
 
+attributetype ( 1.3.6.1.4.1.23807.1.1.24
+	NAME 'opsiOneTimePassword'
+	DESC 'Opsi one time password'
+	EQUALITY caseExactMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+	SINGLE-VALUE )
+
 attributetype ( 1.3.6.1.4.1.23807.1.1.30
 	NAME 'opsiDepotRemoteUrl'
 	EQUALITY caseIgnoreMatch
@@ -127,6 +134,27 @@ attributetype ( 1.3.6.1.4.1.23807.1.1.35
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
 	SINGLE-VALUE )
 
+attributetype ( 1.3.6.1.4.1.23807.1.1.36
+	NAME 'opsiIsMasterDepot'
+	DESC 'Is master depot?'
+	EQUALITY booleanMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+	SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.23807.1.1.37
+	NAME 'opsiMasterDepotId'
+	SUP opsiHostId
+	DESC 'id of master depot'
+	SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.23807.1.1.38
+	NAME 'opsiDepotWebdavUrl'
+	EQUALITY caseIgnoreMatch
+	SUBSTR caseIgnoreSubstringsMatch
+	DESC 'Depotshare WebDAV URL'
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{255}
+	SINGLE-VALUE )
+
 attributetype ( 1.3.6.1.4.1.23807.1.1.40
 	NAME 'opsiKeyValuePair'
 	EQUALITY caseIgnoreIA5Match
@@ -139,7 +167,7 @@ objectclass ( 1.3.6.1.4.1.23807.1.2.1
 	ABSTRACT
 	DESC 'Opsi host'
 	MUST ( cn $ opsiHostId )
-	MAY ( opsiDescription $ opsiNotes $ opsiHardwareAddress $ opsiIpAddress $ opsiInventoryNumber) )
+	MAY ( opsiDescription $ opsiNotes $ opsiHardwareAddress $ opsiIpAddress $ opsiInventoryNumber ) )
 
 objectclass ( 1.3.6.1.4.1.23807.1.2.2
 	NAME 'opsiConfigserver'
@@ -152,14 +180,14 @@ objectclass ( 1.3.6.1.4.1.23807.1.2.3
 	SUP opsiHost
 	AUXILIARY
 	DESC 'Opsi depotserver'
-	MAY ( opsiHostKey $ opsiDepotRemoteUrl $ opsiDepotLocalUrl $ opsiRepositoryRemoteUrl $ opsiRepositoryLocalUrl $ opsiNetworkAddress $ opsiMaximumBandwidth ) )
+	MAY ( opsiHostKey $ opsiDepotRemoteUrl $ opsiDepotWebdavUrl $ opsiDepotLocalUrl $ opsiRepositoryRemoteUrl $ opsiRepositoryLocalUrl $ opsiNetworkAddress $ opsiMaximumBandwidth $ opsiIsMasterDepot $ opsiMasterDepotId ) )
 
 objectclass ( 1.3.6.1.4.1.23807.1.2.4
 	NAME 'opsiClient'
 	SUP opsiHost
 	AUXILIARY
 	DESC 'Opsi client'
-	MAY ( opsiHostKey $ opsiCreatedTimestamp $ opsiLastSeenTimestamp ) )
+	MAY ( opsiHostKey $ opsiOneTimePassword $ opsiCreatedTimestamp $ opsiLastSeenTimestamp ) )
 
 # $OID: 1.3.6.1.4.1.23807.3 (Products) $
 
@@ -585,13 +613,18 @@ attributetype ( 1.3.6.1.4.1.23807.8.1.2
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
 	SINGLE-VALUE )
 
+attributetype ( 1.3.6.1.4.1.23807.8.1.3
+	NAME 'opsiMemberObjectId'
+	DESC 'Opsi member object id'
+	SUP opsiObjectId )
+
 objectclass ( 1.3.6.1.4.1.23807.8.2.1
 	NAME 'opsiGroup'
 	SUP top 
 	STRUCTURAL
 	DESC 'Opsi Group'
 	MUST ( cn $ opsiGroupId )
-	MAY ( description $ opsiDescription $ opsiNotes $ opsiParentGroupId $ uniqueMember ) )
+	MAY ( description $ opsiDescription $ opsiNotes $ opsiParentGroupId $ opsiMemberObjectId $ uniqueMember ) )
 
 
 # $OID: 1.3.6.1.4.1.23807.9 (productStates) $
@@ -843,11 +876,12 @@ objectclass ( 1.3.6.1.4.1.23807.19.2.1
 	STRUCTURAL
 	DESC 'Opsi HostGroup' )
 	
-# $OID: 1.3.6.1.4.1.23807.20 (ObjectToGroups) $
-	
-objectclass ( 1.3.6.1.4.1.23807.20.2.1
-	NAME 'opsiObjectToGroup'
-	SUP top
-	STRUCTURAL
-	DESC 'Opsi Object To Group'
-	MUST ( cn $ opsiGroupId $ opsiObjectId ) )
+## $OID: 1.3.6.1.4.1.23807.20 (ObjectToGroups) $
+#	
+#objectclass ( 1.3.6.1.4.1.23807.20.2.1
+#	NAME 'opsiObjectToGroup'
+#	SUP top
+#	STRUCTURAL
+#	DESC 'Opsi Object To Group'
+#	MUST ( cn $ opsiGroupId $ opsiObjectId ) )
+
