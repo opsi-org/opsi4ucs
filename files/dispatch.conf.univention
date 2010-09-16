@@ -33,9 +33,10 @@
 #       .*                 : ldap
 #
 
-backend_.*         : univention, opsipxeconfd
+backend_.*         : univention, file, opsipxeconfd
 host_.*            : univention, opsipxeconfd
 productOnClient_.* : univention, opsipxeconfd
 configState_.*     : univention, opsipxeconfd
+audit.*            : file
 .*                 : univention
 
