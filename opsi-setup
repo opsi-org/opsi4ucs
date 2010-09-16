@@ -1192,6 +1192,7 @@ def updateMySQLBackend():
 			update += u", `subVersion`=''"
 			update += u" where `softwareId`='%s';" % res['softwareId'].replace("'", "\\'")
 			mysql.query(update)
+
 		mysql.query(u"alter table SOFTWARE drop PRIMARY KEY;")
 		mysql.query(u"alter table SOFTWARE add PRIMARY KEY ( `name`, `version`, `subVersion`, `language`, `architecture` );")
 		mysql.query(u"alter table SOFTWARE drop `softwareId`;")
@@ -1207,45 +1208,30 @@ def updateMySQLBackend():
 		logger.notice(u"Updating database table SOFTWARE_CONFIG from opsi 3.4 to 4.0")
 		# SOFTWARE_CONFIG
 		logger.notice(u"Updating table SOFTWARE_CONFIG")
-		logger.notice(u"This may take a while, do not abort!")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `clientId` varchar(255) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `name` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `version` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `subVersion` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `language` varchar(10) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `architecture` varchar(3) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `uninstallString` varchar(200);")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `binaryName` varchar(100);")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `firstseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `lastseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `state` TINYINT NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `licenseKey` varchar(100);")
-		for res in mysql.getSet(u"SELECT * FROM `SOFTWARE_CONFIG`"):
-			res2 = mysql.getSet(u"SELECT * FROM `SOFTWARE` where `windowsSoftwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
-			if not res2:
-				mysql.query(u"DELETE FROM `SOFTWARE_CONFIG` where `softwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
-				continue
-			res2 = res2[0]
-			update =  u"update SOFTWARE_CONFIG set"
-			update += u"  `clientId`='%s'"     % res['hostId'].replace("'", "\\'")
-			update += u", `name`='%s'"         % res2['name'].replace("'", "\\'")
-			update += u", `version`='%s'"      % res2['version'].replace("'", "\\'")
-			update += u", `subVersion`='%s'"   % res2['subVersion'].replace("'", "\\'")
-			update += u", `language`='%s'"     % res2['language']
-			update += u", `architecture`='%s'" % res2['architecture']
-			update += u", `firstseen`='%s'"    % res['audit_firstseen']
-			update += u", `lastseen`='%s'"     % res['audit_lastseen']
-			update += u", `state`=%s"          % res['audit_state']
-			update += u" where `softwareId`='%s' and `hostId`='%s';" % (res['softwareId'].replace("'", "\\'"), res['hostId'].replace("'", "\\'"))
-			mysql.query(update)
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `softwareId`;")
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `hostId`;")
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `audit_firstseen`;")
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `audit_lastseen`;")
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `audit_state`;")
+
+		mysql.query(u"alter table SOFTWARE_CONFIG 	change `hostId` `clientId` varchar(255) NOT NULL, \
+				add `name` varchar(100) NOT NULL, \
+				add `version` varchar(100) NOT NULL, \
+				add `subVersion` varchar(100) NOT NULL, \
+				add `language` varchar(10) NOT NULL, \
+				add `architecture` varchar(3) NOT NULL, \
+				add `uninstallString` varchar(200), \
+				add `binaryName` varchar(100), \
+				change `audit_firstseen` `firstseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00', \
+				change `audit_lastseen` `lastseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00', \
+				change `audit_state` `state` TINYINT NOT NULL, \
+				add `licenseKey` varchar(100), \
+				add INDEX( `clientId` ), \
+				add INDEX( `name`, `version`, `subVersion`, `language`, `architecture` );")
+
+		mysql.query(u"UPDATE SOFTWARE_CONFIG as sc \
+				LEFT JOIN (select windowsSoftwareId, name, version, subVersion, language, architecture from SOFTWARE group by windowsSoftwareId) \
+				as s on s.windowsSoftwareId = sc.softwareId \
+				set sc.name = s.name, sc.version = s.version, sc.subVersion = s.subVersion, sc.architecture = s.architecture \
+				where s.windowsSoftwareId is not null;")
 		
-		mysql.query(u"alter table SOFTWARE_CONFIG add INDEX( `clientId` );")
-		mysql.query(u"alter table SOFTWARE_CONFIG add INDEX( `name`, `version`, `subVersion`, `language`, `architecture` );")
+		mysql.query(u"delete from SOFTWARE_CONFIG where `name` = '';")
+		mysql.query(u"alter table SOFTWARE_CONFIG drop `softwareId`;")
 		
 	if 'LICENSE_CONTRACT' in tables.keys() and not 'type' in tables['LICENSE_CONTRACT']:
 		logger.notice(u"Updating database table LICENSE_CONTRACT from opsi 3.4 to 4.0")
