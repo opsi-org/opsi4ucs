@@ -976,10 +976,11 @@ def updateMySQLBackend():
 		tableName = i.values()[0]
 		logger.debug(u" [ %s ]" % tableName)
 		tables[tableName] = []
+		mysql.query("alter table `%s` convert to charset utf8 collate utf8_general_ci;" % tableName);
 		for j in mysql.getSet(u'SHOW COLUMNS FROM `%s`' % tableName):
 			logger.debug(u"      %s" % j)
 			tables[tableName].append(j['Field'])
-	
+			
 	if 'HOST' in tables.keys() and 'host_id' in tables['HOST']:
 		logger.notice(u"Updating database table HOST from opsi 3.3 to 3.4")
 		# SOFTWARE_CONFIG
@@ -1183,8 +1184,10 @@ def updateMySQLBackend():
 			update =  u"update SOFTWARE set"
 			update += u"  `type`='AuditSoftware'"
 			update += u", `windowsSoftwareId`='%s'"     % res['softwareId'].replace("'", "\\'")
-			update += u", `windowsDisplayName`='%s'"    % res['displayName'].replace("'", "\\'")
-			update += u", `windowsDisplayVersion`='%s'" % res['displayVersion'].replace("'", "\\'")
+			if res['displayName'] is not None:
+				update += u", `windowsDisplayName`='%s'"    % res['displayName'].replace("'", "\\'")
+			if res['displayVersion'] is not None:
+				update += u", `windowsDisplayVersion`='%s'" % res['displayVersion'].replace("'", "\\'")
 			update += u", `architecture`='x86'"
 			update += u", `language`=''"
 			update += u", `name`='%s'" % name
