@@ -170,7 +170,7 @@ if [ $ret != 0 ]; then
 fi
 univention-directory-manager groups/group modify $@ \
 	--dn "cn=OPSI Depot Servers,cn=groups,$ROOT_DN" \
-	--append users="$LDAP_USER"
+	--append hosts="$LDAP_USER"
 
 set +e
 univention-directory-manager groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
