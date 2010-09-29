@@ -1,34 +1,14 @@
-opsi4ucs (3.4-12) stable; urgency=low
+opsi4ucs (4.0-1) stable; urgency=low
 
-  * add group "OPSI Depot Servers"
+  * opsi 4.0 stable release
 
- -- Jan Schneider <j.schneider@uib.de>  Thu, 09 Sep 2010 13:20:03 +0200
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 29 Sep 2010 11:28:22 +0200
 
-opsi4ucs (3.4-11) stable; urgency=low
+opsi4ucs (3.99-1) unstable; urgency=low
 
-  * remove resync replication, add --ignore_exists
+  * Opsi 4.0
 
- -- Jan Schneider <j.schneider@uib.de>  Thu, 19 Aug 2010 11:52:10 +0200
-
-opsi4ucs (3.4-10) stable; urgency=low
-
-  * Fix for UCS 2.3-2
-  * Modified LDAP opsi.schema
-  * custom-Attribute removed 
-
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 16 Aug 2010 22:33:40 +0200
-
-opsi4ucs (3.4-9) stable; urgency=low
-
-  * Fixed path to join script in postinst
-
- -- Jan Schneider <j.schneider@uib.de>  Wed, 05 May 2010 17:04:03 +0200
-
-opsi4ucs (3.4-8) stable; urgency=low
-
-  * Fixes for UCS 2.3-1
-
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 03 May 2010 15:15:32 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 29 Apr 2010 16:49:20 +0200
 
 opsi4ucs (3.4-7) stable; urgency=low
 

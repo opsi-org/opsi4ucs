@@ -1,2 +1,4 @@
+etc/univention/templates/files/etc
+etc/univention/templates/info
 usr/share/univention-ldap/schema
 
