@@ -22,12 +22,12 @@
 
 case "$1" in
 	install)
-		mkdir -p /var/lib/opsi/products
-		mkdir -p /var/lib/opsi/config/depots
-		chown -R root:root /var/lib/opsi
-		chmod 2777 /var/lib/opsi
-		chmod 2777 /var/lib/opsi/products
-		chmod 0666 /var/lib/opsi/products/* >/dev/null 2>/dev/null || true
+		#mkdir -p /var/lib/opsi/products
+		#mkdir -p /var/lib/opsi/config/depots
+		#chown -R root:root /var/lib/opsi
+		#chmod 2777 /var/lib/opsi
+		#chmod 2777 /var/lib/opsi/products
+		#chmod 0666 /var/lib/opsi/products/* >/dev/null 2>/dev/null || true
 	;;
 	
 	upgrade|abort-upgrade)
