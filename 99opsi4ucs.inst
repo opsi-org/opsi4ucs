@@ -354,8 +354,6 @@ $VERBOSE && echo "Restarting services"
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
 
-opsi-setup --init-current-config
-
 # --- Log success ---------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Log join script success"
 test -n "`grep \"opsi4ucs v${VERSION} successful\" /usr/lib/univention-install/.index.txt`" || \
