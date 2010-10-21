@@ -2115,6 +2115,8 @@ def registerDepot():
 			
 			try:
 				jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
+				if not jsonrpcBackend.accessControl_userIsAdmin():
+					raise Exception(u"User '%s' is not an admin user" % adminUser)
 			except Exception, e:
 				messageBox.hide()
 				logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
@@ -2154,7 +2156,7 @@ def registerDepot():
 					networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
 					maxBandwidth        = 0,
 					isMasterDepot       = True,
-					masterDepotId       = u'',
+					masterDepotId       = None,
 			)
 		while True:
 			if (depot.maxBandwidth < 0):
@@ -2163,20 +2165,20 @@ def registerDepot():
 				depot.maxBandwidth = int(depot.maxBandwidth/1000)
 			
 			values = [
-				{ "name": u"Description",                 "value": depot.description         },
-				{ "name": u"Inventory number",            "value": depot.inventoryNumber     },
-				{ "name": u"Notes",                       "value": depot.notes               },
-				{ "name": u"Ip address",                  "value": depot.ipAddress           },
-				{ "name": u"Hardware address",            "value": depot.hardwareAddress     },
-				{ "name": u"Network address",             "value": depot.networkAddress      },
-				{ "name": u"Maximum bandwidth (kbyte/s)", "value": depot.maxBandwidth        },
-				{ "name": u"Local depot url",             "value": depot.depotLocalUrl       },
-				{ "name": u"Remote depot url",            "value": depot.depotRemoteUrl      },
-				{ "name": u"Depot webdav url",            "value": depot.depotWebdavUrl      },
-				{ "name": u"Local repository url",        "value": depot.repositoryLocalUrl  },
-				{ "name": u"Remote repository url",       "value": depot.repositoryRemoteUrl },
-				{ "name": u"Is master depot",             "value": depot.isMasterDepot       },
-				{ "name": u"Master depot id",             "value": depot.masterDepotId       },
+				{ "name": u"Description",                 "value": depot.description          },
+				{ "name": u"Inventory number",            "value": depot.inventoryNumber      },
+				{ "name": u"Notes",                       "value": depot.notes                },
+				{ "name": u"Ip address",                  "value": depot.ipAddress            },
+				{ "name": u"Hardware address",            "value": depot.hardwareAddress      },
+				{ "name": u"Network address",             "value": depot.networkAddress       },
+				{ "name": u"Maximum bandwidth (kbyte/s)", "value": depot.maxBandwidth         },
+				{ "name": u"Local depot url",             "value": depot.depotLocalUrl        },
+				{ "name": u"Remote depot url",            "value": depot.depotRemoteUrl       },
+				{ "name": u"Depot webdav url",            "value": depot.depotWebdavUrl       },
+				{ "name": u"Local repository url",        "value": depot.repositoryLocalUrl   },
+				{ "name": u"Remote repository url",       "value": depot.repositoryRemoteUrl  },
+				{ "name": u"Is master depot",             "value": depot.isMasterDepot        },
+				{ "name": u"Master depot id",             "value": depot.masterDepotId or u'' },
 				
 			]
 			values = ui.getValues(title = u'Depot server settings', width = 70, height = 16, entries = values)
