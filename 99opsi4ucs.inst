@@ -321,18 +321,26 @@ if [ "$SERVER_ROLE" != "domaincontroller_master" ]; then
 	# Referrals don not seem to work (error: no write access to parent)
 	sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"${LDAP_MASTER}\"/" /etc/opsi/backends/univention.conf
 fi
+
 opsi-setup --init-current-config
 opsi-setup --set-rights
 
 if [ "$OPSI_ROLE" = "depotserver" ]; then
-	opsi-admin -d method host_createOpsiDepotserver \
-		"$FQDN" \
-		null \
-		"file:///opt/pcbin/install" \
-		"smb://${HOSTNAME}/opt_pcbin/install" \
-		"webdavs://${FQDN}:4447/depot" \
-		"file:///var/lib/opsi/repository" \
-		"webdavs://${FQDN}:4447/repository"
+	set +e
+	opsi-admin -S -d method host_getIdents unicode "{\"id\":\"${FQDN}\"}" | grep $FQDN 1>/dev/null 2>/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		$VERBOSE && echo "Creating depotserver"
+		opsi-admin --no-depot -d method host_createOpsiDepotserver \
+			"$FQDN" \
+			null \
+			"file:///opt/pcbin/install" \
+			"smb://${HOSTNAME}/opt_pcbin/install" \
+			"webdavs://${FQDN}:4447/depot" \
+			"file:///var/lib/opsi/repository" \
+			"webdavs://${FQDN}:4447/repository"
+	fi
 fi
 #sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
 
@@ -346,6 +354,7 @@ $VERBOSE && echo "Restarting services"
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
 
+opsi-setup --init-current-config
 
 # --- Log success ---------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Log join script success"
