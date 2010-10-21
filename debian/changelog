@@ -1,3 +1,10 @@
+opsi4ucs (4.0-3) stable; urgency=low
+
+  * Call opsi-setup --init-current-config twice
+  * Do not recreate depotserver
+
+ -- Jan Schneider <j.schneider@uib.de>  Thu, 21 Oct 2010 12:03:07 +0200
+
 opsi4ucs (4.0-2) stable; urgency=low
 
   * fix default masterDepotId in opsi-setup
