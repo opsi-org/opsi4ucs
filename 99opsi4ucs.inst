@@ -322,6 +322,8 @@ if [ "$SERVER_ROLE" != "domaincontroller_master" ]; then
 	sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"${LDAP_MASTER}\"/" /etc/opsi/backends/univention.conf
 fi
 
+ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
+
 opsi-setup --init-current-config
 opsi-setup --set-rights
 
