@@ -1,5 +1,11 @@
 Type: subfile
 Multifile: etc/ldap/slapd.conf
-Subfile: etc/ldap/slapd.conf.d/60opsi
+Subfile: etc/ldap/slapd.conf.d/11opsi-schema
+Variables: ldap/server/type
+Variables: ldap/master
+
+Type: subfile
+Multifile: etc/ldap/slapd.conf
+Subfile: etc/ldap/slapd.conf.d/60opsi-acls
 Variables: ldap/server/type
 Variables: ldap/master

@@ -1,7 +1,3 @@
-@!@
-if baseConfig['ldap/server/type']=="master":
-	print 'include /usr/share/univention-ldap/schema/opsi.schema'
-@!@
 
 # Für Memberserver gibt es bisher keine Gruppe á la DC Slave Hosts, die
 # abgefragt werden könnte, um den Mitgliedern Zugriff zu erlauben. Aus diesem
