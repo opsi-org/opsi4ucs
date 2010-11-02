@@ -1,1 +1,2 @@
-/etc/univention/templates/files/etc/ldap/slapd.conf.d/60opsi
+/etc/univention/templates/files/etc/ldap/slapd.conf.d/11opsi-schema
+/etc/univention/templates/files/etc/ldap/slapd.conf.d/60opsi-acls
