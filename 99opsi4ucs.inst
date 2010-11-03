@@ -319,7 +319,7 @@ $VERBOSE && echo "Configuring opsi"
 sed -i "s/^password\s*=.*/password = \"${LDAP_SECRET}\"/" /etc/opsi/backends/univention.conf
 if [ "$SERVER_ROLE" != "domaincontroller_master" ]; then
 	# Referrals don not seem to work (error: no write access to parent)
-	sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"${LDAP_MASTER}\"/" /etc/opsi/backends/univention.conf
+	sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"${LDAP_MASTER}\",/" /etc/opsi/backends/univention.conf
 fi
 
 ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
