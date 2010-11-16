@@ -976,7 +976,7 @@ def updateMySQLBackend():
 		tableName = i.values()[0]
 		logger.debug(u" [ %s ]" % tableName)
 		tables[tableName] = []
-		mysql.query("alter table `%s` convert to charset utf8 collate utf8_general_ci;" % tableName);
+		mysql.execute("alter table `%s` convert to charset utf8 collate utf8_general_ci;" % tableName);
 		for j in mysql.getSet(u'SHOW COLUMNS FROM `%s`' % tableName):
 			logger.debug(u"      %s" % j)
 			tables[tableName].append(j['Field'])
@@ -985,65 +985,65 @@ def updateMySQLBackend():
 		logger.notice(u"Updating database table HOST from opsi 3.3 to 3.4")
 		# SOFTWARE_CONFIG
 		logger.notice(u"Updating table SOFTWARE_CONFIG")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `hostId` varchar(50) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_CONFIG add `softwareId` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE_CONFIG add `hostId` varchar(50) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE_CONFIG add `softwareId` varchar(100) NOT NULL;")
 		for res in mysql.getSet(u"SELECT hostId,host_id FROM `HOST` WHERE `hostId` != ''"):
-			mysql.query(u"update SOFTWARE_CONFIG set `hostId`='%s' where `host_id`=%s;" % (res['hostId'].replace("'", "\\'"), res['host_id']))
+			mysql.execute(u"update SOFTWARE_CONFIG set `hostId`='%s' where `host_id`=%s;" % (res['hostId'].replace("'", "\\'"), res['host_id']))
 		for res in mysql.getSet(u"SELECT softwareId,software_id FROM `SOFTWARE` WHERE `softwareId` != ''"):
-			mysql.query(u"update SOFTWARE_CONFIG set `softwareId`='%s' where `software_id`=%s;" % (res['softwareId'].replace("'", "\\'"), res['software_id']))
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `host_id`;")
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `software_id`;")
-		mysql.query(u"alter table SOFTWARE_CONFIG DEFAULT CHARACTER set utf8;")
-		mysql.query(u"alter table SOFTWARE_CONFIG ENGINE = InnoDB;")
+			mysql.execute(u"update SOFTWARE_CONFIG set `softwareId`='%s' where `software_id`=%s;" % (res['softwareId'].replace("'", "\\'"), res['software_id']))
+		mysql.execute(u"alter table SOFTWARE_CONFIG drop `host_id`;")
+		mysql.execute(u"alter table SOFTWARE_CONFIG drop `software_id`;")
+		mysql.execute(u"alter table SOFTWARE_CONFIG DEFAULT CHARACTER set utf8;")
+		mysql.execute(u"alter table SOFTWARE_CONFIG ENGINE = InnoDB;")
 	
 	for key in tables.keys():
 		# HARDWARE_CONFIG
 		if key.startswith(u'HARDWARE_CONFIG') and 'host_id' in tables[key]:
 			logger.notice(u"Updating database table %s from opsi 3.3 to 3.4" % key)
-			mysql.query(u"alter table %s add `hostId` varchar(50) NOT NULL;" % key)
+			mysql.execute(u"alter table %s add `hostId` varchar(50) NOT NULL;" % key)
 			for res in mysql.getSet(u"SELECT hostId,host_id FROM `HOST` WHERE `hostId` != ''"):
-				mysql.query(u"update %s set `hostId` = '%s' where `host_id` = %s;" % (key, res['hostId'].replace("'", "\\'"), res['host_id']))
-			mysql.query(u"alter table %s drop `host_id`;" % key)
-			mysql.query(u"alter table %s DEFAULT CHARACTER set utf8;" % key)
-			mysql.query(u"alter table %s ENGINE = InnoDB;" % key)
+				mysql.execute(u"update %s set `hostId` = '%s' where `host_id` = %s;" % (key, res['hostId'].replace("'", "\\'"), res['host_id']))
+			mysql.execute(u"alter table %s drop `host_id`;" % key)
+			mysql.execute(u"alter table %s DEFAULT CHARACTER set utf8;" % key)
+			mysql.execute(u"alter table %s ENGINE = InnoDB;" % key)
 	
 	if 'HARDWARE_INFO' in tables.keys() and 'host_id' in tables['HARDWARE_INFO']:
 		logger.notice(u"Updating database table HARDWARE_INFO from opsi 3.3 to 3.4")
 		# HARDWARE_INFO
 		logger.notice(u"Updating table HARDWARE_INFO")
-		mysql.query(u"alter table HARDWARE_INFO add `hostId` varchar(50) NOT NULL;")
+		mysql.execute(u"alter table HARDWARE_INFO add `hostId` varchar(50) NOT NULL;")
 		for res in mysql.getSet(u"SELECT hostId,host_id FROM `HOST` WHERE `hostId` != ''"):
-			mysql.query(u"update HARDWARE_INFO set `hostId` = '%s' where `host_id` = %s;" % (res['hostId'].replace("'", "\\'"), res['host_id']))
-		mysql.query(u"alter table HARDWARE_INFO drop `host_id`;")
-		mysql.query(u"alter table HARDWARE_INFO DEFAULT CHARACTER set utf8;")
-		mysql.query(u"alter table HARDWARE_INFO ENGINE = InnoDB;")
+			mysql.execute(u"update HARDWARE_INFO set `hostId` = '%s' where `host_id` = %s;" % (res['hostId'].replace("'", "\\'"), res['host_id']))
+		mysql.execute(u"alter table HARDWARE_INFO drop `host_id`;")
+		mysql.execute(u"alter table HARDWARE_INFO DEFAULT CHARACTER set utf8;")
+		mysql.execute(u"alter table HARDWARE_INFO ENGINE = InnoDB;")
 	
 	if 'SOFTWARE' in tables.keys() and 'software_id' in tables['SOFTWARE']:
 		logger.notice(u"Updating database table SOFTWARE from opsi 3.3 to 3.4")
 		# SOFTWARE
 		logger.notice(u"Updating table SOFTWARE")
 		# remove duplicates
-		mysql.query("delete S1 from SOFTWARE S1, SOFTWARE S2 where S1.softwareId=S2.softwareId and S1.software_id > S2.software_id")
-		mysql.query(u"alter table SOFTWARE drop `software_id`;")
-		mysql.query(u"alter table SOFTWARE add primary key (`softwareId`);")
+		mysql.execute("delete S1 from SOFTWARE S1, SOFTWARE S2 where S1.softwareId=S2.softwareId and S1.software_id > S2.software_id")
+		mysql.execute(u"alter table SOFTWARE drop `software_id`;")
+		mysql.execute(u"alter table SOFTWARE add primary key (`softwareId`);")
 	
 	if 'HOST' in tables.keys() and 'host_id' in tables['HOST']:
 		logger.notice(u"Updating database table HOST from opsi 3.3 to 3.4")
 		# HOST
 		logger.notice(u"Updating table HOST")
 		# remove duplicates
-		mysql.query("delete H1 from HOST H1, HOST H2 where H1.hostId=H2.hostId and H1.host_id > H2.host_id")
-		mysql.query(u"alter table HOST drop `host_id`;")
-		mysql.query(u"alter table HOST add primary key (`hostId`);")
-		mysql.query(u"alter table HOST add `type` varchar(20);")
-		mysql.query(u"alter table HOST add `description` varchar(100);")
-		mysql.query(u"alter table HOST add `notes` varchar(500);")
-		mysql.query(u"alter table HOST add `hardwareAddress` varchar(17);")
-		mysql.query(u"alter table HOST add `lastSeen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"alter table HOST DEFAULT CHARACTER set utf8;")
-		mysql.query(u"alter table HOST ENGINE = InnoDB;")
+		mysql.execute("delete H1 from HOST H1, HOST H2 where H1.hostId=H2.hostId and H1.host_id > H2.host_id")
+		mysql.execute(u"alter table HOST drop `host_id`;")
+		mysql.execute(u"alter table HOST add primary key (`hostId`);")
+		mysql.execute(u"alter table HOST add `type` varchar(20);")
+		mysql.execute(u"alter table HOST add `description` varchar(100);")
+		mysql.execute(u"alter table HOST add `notes` varchar(500);")
+		mysql.execute(u"alter table HOST add `hardwareAddress` varchar(17);")
+		mysql.execute(u"alter table HOST add `lastSeen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.execute(u"alter table HOST DEFAULT CHARACTER set utf8;")
+		mysql.execute(u"alter table HOST ENGINE = InnoDB;")
 		
-		mysql.query(u"update HOST set `type` = 'OPSI_CLIENT' where `hostId` != '';")
+		mysql.execute(u"update HOST set `type` = 'OPSI_CLIENT' where `hostId` != '';")
 	
 	tables = {}
 	logger.debug(u"Current tables:")
@@ -1059,30 +1059,30 @@ def updateMySQLBackend():
 		logger.notice(u"Updating database table HOST from opsi 3.4 to 4.0")
 		# HOST
 		logger.notice(u"Updating table HOST")
-		mysql.query(u"alter table HOST modify `hostId` varchar(255) NOT NULL;")
-		mysql.query(u"alter table HOST modify `type` varchar(30);")
+		mysql.execute(u"alter table HOST modify `hostId` varchar(255) NOT NULL;")
+		mysql.execute(u"alter table HOST modify `type` varchar(30);")
 		
-		mysql.query(u"alter table HOST add `ipAddress` varchar(15);")
-		mysql.query(u"alter table HOST add `inventoryNumber` varchar(30);")
-		mysql.query(u"alter table HOST add `created` TIMESTAMP;")
-		mysql.query(u"alter table HOST add `opsiHostKey` varchar(32);")
-		mysql.query(u"alter table HOST add `oneTimePassword` varchar(32);")
-		mysql.query(u"alter table HOST add `maxBandwidth` int;")
-		mysql.query(u"alter table HOST add `depotLocalUrl` varchar(128);")
-		mysql.query(u"alter table HOST add `depotRemoteUrl` varchar(255);")
-		mysql.query(u"alter table HOST add `depotWebdavUrl` varchar(255);")
-		mysql.query(u"alter table HOST add `repositoryLocalUrl` varchar(128);")
-		mysql.query(u"alter table HOST add `repositoryRemoteUrl` varchar(255);")
-		mysql.query(u"alter table HOST add `networkAddress` varchar(31);")
-		mysql.query(u"alter table HOST add `isMasterDepot` bool;")
-		mysql.query(u"alter table HOST add `masterDepotId` varchar(255);")
+		mysql.execute(u"alter table HOST add `ipAddress` varchar(15);")
+		mysql.execute(u"alter table HOST add `inventoryNumber` varchar(30);")
+		mysql.execute(u"alter table HOST add `created` TIMESTAMP;")
+		mysql.execute(u"alter table HOST add `opsiHostKey` varchar(32);")
+		mysql.execute(u"alter table HOST add `oneTimePassword` varchar(32);")
+		mysql.execute(u"alter table HOST add `maxBandwidth` int;")
+		mysql.execute(u"alter table HOST add `depotLocalUrl` varchar(128);")
+		mysql.execute(u"alter table HOST add `depotRemoteUrl` varchar(255);")
+		mysql.execute(u"alter table HOST add `depotWebdavUrl` varchar(255);")
+		mysql.execute(u"alter table HOST add `repositoryLocalUrl` varchar(128);")
+		mysql.execute(u"alter table HOST add `repositoryRemoteUrl` varchar(255);")
+		mysql.execute(u"alter table HOST add `networkAddress` varchar(31);")
+		mysql.execute(u"alter table HOST add `isMasterDepot` bool;")
+		mysql.execute(u"alter table HOST add `masterDepotId` varchar(255);")
 		
-		mysql.query(u"update HOST set `type`='OpsiClient' where `type`='OPSI_CLIENT';")
-		mysql.query(u"update HOST set `description`=NULL where `description`='None';")
-		mysql.query(u"update HOST set `notes`=NULL where `notes`='None';")
-		mysql.query(u"update HOST set `hardwareAddress`=NULL where `hardwareAddress`='None';")
+		mysql.execute(u"update HOST set `type`='OpsiClient' where `type`='OPSI_CLIENT';")
+		mysql.execute(u"update HOST set `description`=NULL where `description`='None';")
+		mysql.execute(u"update HOST set `notes`=NULL where `notes`='None';")
+		mysql.execute(u"update HOST set `hardwareAddress`=NULL where `hardwareAddress`='None';")
 		
-		mysql.query(u"alter table HOST add INDEX(`type`);")
+		mysql.execute(u"alter table HOST add INDEX(`type`);")
 		
 	for key in tables.keys():
 		if key.startswith(u'HARDWARE_DEVICE'):
@@ -1091,13 +1091,13 @@ def updateMySQLBackend():
 			
 			logger.notice(u"Updating database table %s from opsi 3.4 to 4.0" % key)
 			for vendorId in ('NDIS', 'SSTP', 'AGIL', 'L2TP', 'PPTP', 'PPPO', 'PTIM'):
-				mysql.query(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, vendorId))
+				mysql.execute(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, vendorId))
 			
 			for attr in ('vendorId', 'deviceId', 'subsystemVendorId', 'subsystemDeviceId'):
 				if not attr in tables[key]:
 					continue
-				mysql.query(u"update %s set `%s`=NULL where `%s`='';" % (key, attr, attr))
-				mysql.query(u"update %s set `%s`=NULL where `%s`='None';" % (key, attr, attr))
+				mysql.execute(u"update %s set `%s`=NULL where `%s`='';" % (key, attr, attr))
+				mysql.execute(u"update %s set `%s`=NULL where `%s`='None';" % (key, attr, attr))
 				
 			for res in mysql.getSet(u"SELECT * FROM %s" % key):
 				if res.get('vendorId'):
@@ -1105,38 +1105,38 @@ def updateMySQLBackend():
 						forceHardwareVendorId(res['vendorId'])
 					except:
 						logger.warning(u"Dropping bad vendorId '%s'" % res['vendorId'])
-						mysql.query(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, res['vendorId']))
+						mysql.execute(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, res['vendorId']))
 				if res.get('subsystemVendorId'):
 					try:
 						forceHardwareVendorId(res['subsystemVendorId'])
 					except:
 						logger.warning(u"Dropping bad subsystemVendorId id '%s'" % res['subsystemVendorId'])
-						mysql.query(u"update %s set `subsystemVendorId`=NULL where `subsystemVendorId`='%s';" % (key, res['subsystemVendorId']))
+						mysql.execute(u"update %s set `subsystemVendorId`=NULL where `subsystemVendorId`='%s';" % (key, res['subsystemVendorId']))
 				if res.get('deviceId'):
 					try:
 						forceHardwareDeviceId(res['deviceId'])
 					except:
 						logger.warning(u"Dropping bad deviceId '%s'" % res['deviceId'])
-						mysql.query(u"update %s set `deviceId`=NULL where `deviceId`='%s';" % (key, res['deviceId']))
+						mysql.execute(u"update %s set `deviceId`=NULL where `deviceId`='%s';" % (key, res['deviceId']))
 				if res.get('subsystemDeviceId'):
 					try:
 						forceHardwareDeviceId(res['subsystemDeviceId'])
 					except:
 						logger.warning(u"Dropping bad subsystemDeviceId '%s'" % res['subsystemDeviceId'])
-						mysql.query(u"update %s set `subsystemDeviceId`=NULL where `subsystemDeviceId`='%s';" % (key, res['subsystemDeviceId']))
+						mysql.execute(u"update %s set `subsystemDeviceId`=NULL where `subsystemDeviceId`='%s';" % (key, res['subsystemDeviceId']))
 					
 		# HARDWARE_CONFIG
 		if key.startswith(u'HARDWARE_CONFIG') and 'audit_lastseen' in tables[key]:
 			logger.notice(u"Updating database table %s from opsi 3.4 to 4.0" % key)
 			
-			mysql.query(u"alter table %s change `audit_firstseen` `firstseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';" % key)
-			mysql.query(u"alter table %s change `audit_lastseen` `lastseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';" % key)
-			mysql.query(u"alter table %s change `audit_state` `state` TINYINT NOT NULL;" % key)
+			mysql.execute(u"alter table %s change `audit_firstseen` `firstseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';" % key)
+			mysql.execute(u"alter table %s change `audit_lastseen` `lastseen` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';" % key)
+			mysql.execute(u"alter table %s change `audit_state` `state` TINYINT NOT NULL;" % key)
 	
 	if 'LICENSE_USED_BY_HOST' in tables.keys():
 		# LICENSE_ON_CLIENT
 		logger.notice(u"Updating table LICENSE_USED_BY_HOST to LICENSE_ON_CLIENT")
-		mysql.query(u'''CREATE TABLE `LICENSE_ON_CLIENT` (
+		mysql.execute(u'''CREATE TABLE `LICENSE_ON_CLIENT` (
 					`license_on_client_id` int NOT NULL AUTO_INCREMENT,
 					PRIMARY KEY( `license_on_client_id` ),
 					`softwareLicenseId` VARCHAR(100) NOT NULL,
@@ -1149,22 +1149,22 @@ def updateMySQLBackend():
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 				''')
 		
-		mysql.query(u"insert into LICENSE_ON_CLIENT (`softwareLicenseId`, `licensePoolId`, `clientId`, `licenseKey`, `notes`) select `softwareLicenseId`, `licensePoolId`, `hostId`, `licenseKey`, `notes` from LICENSE_USED_BY_HOST where `softwareLicenseId` != ''")
-		mysql.query(u"drop table LICENSE_USED_BY_HOST")
+		mysql.execute(u"insert into LICENSE_ON_CLIENT (`softwareLicenseId`, `licensePoolId`, `clientId`, `licenseKey`, `notes`) select `softwareLicenseId`, `licensePoolId`, `hostId`, `licenseKey`, `notes` from LICENSE_USED_BY_HOST where `softwareLicenseId` != ''")
+		mysql.execute(u"drop table LICENSE_USED_BY_HOST")
 		
 	if 'SOFTWARE' in tables.keys() and not 'name' in tables['SOFTWARE']:
 		logger.notice(u"Updating database table SOFTWARE from opsi 3.4 to 4.0")
 		# SOFTWARE
 		logger.notice(u"Updating table SOFTWARE")
-		mysql.query(u"alter table SOFTWARE add `name` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `version` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `subVersion` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `language` varchar(10) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `architecture` varchar(3) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `windowsSoftwareId` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `windowsDisplayName` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `windowsDisplayVersion` varchar(100) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE add `type` varchar(30) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `name` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `version` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `subVersion` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `language` varchar(10) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `architecture` varchar(3) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `windowsSoftwareId` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `windowsDisplayName` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `windowsDisplayVersion` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE add `type` varchar(30) NOT NULL;")
 		for res in mysql.getSet(u"SELECT * FROM `SOFTWARE`"):
 			name = res['displayName']
 			if not name:
@@ -1178,7 +1178,7 @@ def updateMySQLBackend():
 			res2 = mysql.getSet(u"SELECT * FROM `SOFTWARE` where `name` = '%s' and version ='%s'" % (name, version))
 			if res2:
 				logger.warning(u"Skipping duplicate: %s" % res2)
-				mysql.query(u"DELETE FROM `SOFTWARE` where `softwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
+				mysql.execute(u"DELETE FROM `SOFTWARE` where `softwareId` = '%s'" % res['softwareId'].replace("'", "\\'"))
 				continue
 			
 			update =  u"update SOFTWARE set"
@@ -1194,25 +1194,25 @@ def updateMySQLBackend():
 			update += u", `version`='%s'" % version
 			update += u", `subVersion`=''"
 			update += u" where `softwareId`='%s';" % res['softwareId'].replace("'", "\\'")
-			mysql.query(update)
+			mysql.execute(update)
 
-		mysql.query(u"alter table SOFTWARE drop PRIMARY KEY;")
-		mysql.query(u"alter table SOFTWARE add PRIMARY KEY ( `name`, `version`, `subVersion`, `language`, `architecture` );")
-		mysql.query(u"alter table SOFTWARE drop `softwareId`;")
-		mysql.query(u"alter table SOFTWARE drop `displayName`;")
-		mysql.query(u"alter table SOFTWARE drop `displayVersion`;")
-		mysql.query(u"alter table SOFTWARE drop `uninstallString`;")
-		mysql.query(u"alter table SOFTWARE drop `binaryName`;")
+		mysql.execute(u"alter table SOFTWARE drop PRIMARY KEY;")
+		mysql.execute(u"alter table SOFTWARE add PRIMARY KEY ( `name`, `version`, `subVersion`, `language`, `architecture` );")
+		mysql.execute(u"alter table SOFTWARE drop `softwareId`;")
+		mysql.execute(u"alter table SOFTWARE drop `displayName`;")
+		mysql.execute(u"alter table SOFTWARE drop `displayVersion`;")
+		mysql.execute(u"alter table SOFTWARE drop `uninstallString`;")
+		mysql.execute(u"alter table SOFTWARE drop `binaryName`;")
 		
-		mysql.query(u"alter table SOFTWARE add INDEX( `windowsSoftwareId` );")
-		mysql.query(u"alter table SOFTWARE add INDEX( `type` );")
+		mysql.execute(u"alter table SOFTWARE add INDEX( `windowsSoftwareId` );")
+		mysql.execute(u"alter table SOFTWARE add INDEX( `type` );")
 		
 	if 'SOFTWARE_CONFIG' in tables.keys() and not 'clientId' in tables['SOFTWARE_CONFIG']:
 		logger.notice(u"Updating database table SOFTWARE_CONFIG from opsi 3.4 to 4.0")
 		# SOFTWARE_CONFIG
 		logger.notice(u"Updating table SOFTWARE_CONFIG")
 
-		mysql.query(u"alter table SOFTWARE_CONFIG 	change `hostId` `clientId` varchar(255) NOT NULL, \
+		mysql.execute(u"alter table SOFTWARE_CONFIG 	change `hostId` `clientId` varchar(255) NOT NULL, \
 				add `name` varchar(100) NOT NULL, \
 				add `version` varchar(100) NOT NULL, \
 				add `subVersion` varchar(100) NOT NULL, \
@@ -1227,55 +1227,55 @@ def updateMySQLBackend():
 				add INDEX( `clientId` ), \
 				add INDEX( `name`, `version`, `subVersion`, `language`, `architecture` );")
 
-		mysql.query(u"UPDATE SOFTWARE_CONFIG as sc \
+		mysql.execute(u"UPDATE SOFTWARE_CONFIG as sc \
 				LEFT JOIN (select windowsSoftwareId, name, version, subVersion, language, architecture from SOFTWARE group by windowsSoftwareId) \
 				as s on s.windowsSoftwareId = sc.softwareId \
 				set sc.name = s.name, sc.version = s.version, sc.subVersion = s.subVersion, sc.architecture = s.architecture \
 				where s.windowsSoftwareId is not null;")
 		
-		mysql.query(u"delete from SOFTWARE_CONFIG where `name` = '';")
-		mysql.query(u"alter table SOFTWARE_CONFIG drop `softwareId`;")
+		mysql.execute(u"delete from SOFTWARE_CONFIG where `name` = '';")
+		mysql.execute(u"alter table SOFTWARE_CONFIG drop `softwareId`;")
 		
 	if 'LICENSE_CONTRACT' in tables.keys() and not 'type' in tables['LICENSE_CONTRACT']:
 		logger.notice(u"Updating database table LICENSE_CONTRACT from opsi 3.4 to 4.0")
 		# LICENSE_CONTRACT
-		mysql.query(u"alter table LICENSE_CONTRACT add `type` varchar(30) NOT NULL;")
-		mysql.query(u"alter table LICENSE_CONTRACT add `description` varchar(100) NOT NULL;")
-		mysql.query(u"alter table LICENSE_CONTRACT modify `conclusionDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"alter table LICENSE_CONTRACT modify `notificationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"alter table LICENSE_CONTRACT modify `expirationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"update LICENSE_CONTRACT set `type`='LicenseContract' where 1=1")
+		mysql.execute(u"alter table LICENSE_CONTRACT add `type` varchar(30) NOT NULL;")
+		mysql.execute(u"alter table LICENSE_CONTRACT add `description` varchar(100) NOT NULL;")
+		mysql.execute(u"alter table LICENSE_CONTRACT modify `conclusionDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.execute(u"alter table LICENSE_CONTRACT modify `notificationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.execute(u"alter table LICENSE_CONTRACT modify `expirationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.execute(u"update LICENSE_CONTRACT set `type`='LicenseContract' where 1=1")
 		
-		mysql.query(u"alter table LICENSE_CONTRACT add INDEX( `type` );")
+		mysql.execute(u"alter table LICENSE_CONTRACT add INDEX( `type` );")
 		
 	if 'SOFTWARE_LICENSE' in tables.keys() and not 'type' in tables['SOFTWARE_LICENSE']:
 		logger.notice(u"Updating database table SOFTWARE_LICENSE from opsi 3.4 to 4.0")
 		# SOFTWARE_LICENSE
-		mysql.query(u"alter table SOFTWARE_LICENSE add `type` varchar(30) NOT NULL;")
-		mysql.query(u"alter table SOFTWARE_LICENSE modify `expirationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
-		mysql.query(u"alter table SOFTWARE_LICENSE modify `boundToHost` varchar(255);")
-		mysql.query(u"update SOFTWARE_LICENSE set `type`='RetailSoftwareLicense' where `licenseType`='RETAIL'")
-		mysql.query(u"update SOFTWARE_LICENSE set `type`='OEMSoftwareLicense' where `licenseType`='OEM'")
-		mysql.query(u"update SOFTWARE_LICENSE set `type`='VolumeSoftwareLicense' where `licenseType`='VOLUME'")
-		mysql.query(u"update SOFTWARE_LICENSE set `type`='ConcurrentSoftwareLicense' where `licenseType`='CONCURRENT'")
-		mysql.query(u"alter table SOFTWARE_LICENSE drop `licenseType`;")
+		mysql.execute(u"alter table SOFTWARE_LICENSE add `type` varchar(30) NOT NULL;")
+		mysql.execute(u"alter table SOFTWARE_LICENSE modify `expirationDate` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00';")
+		mysql.execute(u"alter table SOFTWARE_LICENSE modify `boundToHost` varchar(255);")
+		mysql.execute(u"update SOFTWARE_LICENSE set `type`='RetailSoftwareLicense' where `licenseType`='RETAIL'")
+		mysql.execute(u"update SOFTWARE_LICENSE set `type`='OEMSoftwareLicense' where `licenseType`='OEM'")
+		mysql.execute(u"update SOFTWARE_LICENSE set `type`='VolumeSoftwareLicense' where `licenseType`='VOLUME'")
+		mysql.execute(u"update SOFTWARE_LICENSE set `type`='ConcurrentSoftwareLicense' where `licenseType`='CONCURRENT'")
+		mysql.execute(u"alter table SOFTWARE_LICENSE drop `licenseType`;")
 		
-		mysql.query(u"alter table SOFTWARE_LICENSE add INDEX( `type` );")
-		mysql.query(u"alter table SOFTWARE_LICENSE add INDEX( `boundToHost` );")
+		mysql.execute(u"alter table SOFTWARE_LICENSE add INDEX( `type` );")
+		mysql.execute(u"alter table SOFTWARE_LICENSE add INDEX( `boundToHost` );")
 		
 	if 'LICENSE_POOL' in tables.keys() and not 'type' in tables['LICENSE_POOL']:
 		logger.notice(u"Updating database table LICENSE_POOL from opsi 3.4 to 4.0")
 		# LICENSE_POOL
-		mysql.query(u"alter table LICENSE_POOL add `type` varchar(30) NOT NULL;")
-		mysql.query(u"update LICENSE_POOL set `type`='LicensePool' where 1=1")
+		mysql.execute(u"alter table LICENSE_POOL add `type` varchar(30) NOT NULL;")
+		mysql.execute(u"update LICENSE_POOL set `type`='LicensePool' where 1=1")
 		
-		mysql.query(u"alter table LICENSE_POOL add INDEX( `type` );")
+		mysql.execute(u"alter table LICENSE_POOL add INDEX( `type` );")
 	
 	if 'WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL' in tables.keys():
 		# AUDIT_SOFTWARE_TO_LICENSE_POOL
 		logger.notice(u"Updating table WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL to AUDIT_SOFTWARE_TO_LICENSE_POOL")
 		
-		mysql.query(u'''CREATE TABLE `AUDIT_SOFTWARE_TO_LICENSE_POOL` (
+		mysql.execute(u'''CREATE TABLE `AUDIT_SOFTWARE_TO_LICENSE_POOL` (
 					`licensePoolId` VARCHAR(100) NOT NULL,
 					FOREIGN KEY ( `licensePoolId` ) REFERENCES LICENSE_POOL( `licensePoolId` ),
 					`name` varchar(100) NOT NULL,
@@ -1292,10 +1292,10 @@ def updateMySQLBackend():
 			if not res2:
 				continue
 			res2 = res2[0]
-			mysql.query(u"insert into AUDIT_SOFTWARE_TO_LICENSE_POOL (`licensePoolId`, `name`, `version`, `subVersion`, `language`, `architecture`) VALUES ('%s', '%s', '%s', '%s', '%s', '%s');" \
+			mysql.execute(u"insert into AUDIT_SOFTWARE_TO_LICENSE_POOL (`licensePoolId`, `name`, `version`, `subVersion`, `language`, `architecture`) VALUES ('%s', '%s', '%s', '%s', '%s', '%s');" \
 					% (res['licensePoolId'], res2['name'].replace("'", "\\'"), res2['version'].replace("'", "\\'"), res2['subVersion'].replace("'", "\\'"), res2['language'], res2['architecture']) )
 		
-		mysql.query(u"drop table WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL;")
+		mysql.execute(u"drop table WINDOWS_SOFTWARE_ID_TO_LICENSE_POOL;")
 	
 	
 	for res in mysql.getSet(u"SELECT * FROM `LICENSE_CONTRACT`"):
