@@ -73,12 +73,3 @@ access to filter="(objectClass=univentionHost)"
 	by self write
 	by * none break
 
-
-
-
-
-
-
-
-
-
