@@ -1,15 +1,5 @@
 @!@
 if baseConfig['ldap/server/type']=="master":
-	print 'include /usr/share/univention-ldap/schema/opsi.schema'
+	print 'include         /usr/share/univention-ldap/schema/opsi.schema'
 
 @!@
-
-
-
-
-
-
-
-
-
-
