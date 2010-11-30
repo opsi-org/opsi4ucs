@@ -11,6 +11,7 @@ access to dn.sub="cn=opsi,@%@ldap/base@%@"
 
 # Protect attribute opsiHostKey
 access to attrs=opsiHostKey
+	by dn="cn=admin,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=opsiadmin,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Backup Hosts,cn=groups,@%@ldap/base@%@" write
 	by group/univentionGroup/uniqueMember="cn=DC Slave Hosts,cn=groups,@%@ldap/base@%@" write
