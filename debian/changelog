@@ -1,7 +1,13 @@
+opsi4ucs (4.0-6) stable; urgency=low
+
+  * Fix opsiHostKey readable-Security-Bug
+  * Fix link to configed in UCS overview page
+
+ -- Jan Schneider <j.schneider@uib.de>  Wed, 01 Dec 2010 16:20:08 +0100
+
 opsi4ucs (4.0-5) stable; urgency=low
 
   * Split 60opsi in 11opsi-schema and 60opsi-acls
-  * Fix opsiHostKey readable-Security-Bug
 
  -- Jan Schneider <j.schneider@uib.de>  Fri, 19 Nov 2010 17:23:20 +0100
 
