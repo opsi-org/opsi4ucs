@@ -2429,6 +2429,17 @@ def initializeBackends():
 				multiValue     = False
 			)
 		)
+	if not 'clientconfig.depot.protocol' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'clientconfig.depot.protocol',
+				description    = u'Protocol for file transfer',
+				possibleValues = [ 'cifs', 'webdav' ],
+				defaultValues  = [ 'cifs' ],
+				editable       = False,
+				multiValue     = False
+			)
+		)
 	if not 'clientconfig.windows.domain' in configIdents:
 		configs.append(
 			UnicodeConfig(
