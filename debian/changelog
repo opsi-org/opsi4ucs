@@ -1,3 +1,9 @@
+opsi4ucs (4.0-7) stable; urgency=low
+
+  * Added objectClass opsiProductGroup in opsi4ucs-ldap-schema
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 07 Dec 2010 16:31:22 +0000
+
 opsi4ucs (4.0-6) stable; urgency=low
 
   * Fix opsiHostKey readable-Security-Bug
