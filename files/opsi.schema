@@ -875,6 +875,12 @@ objectclass ( 1.3.6.1.4.1.23807.19.2.1
 	SUP opsiGroup
 	STRUCTURAL
 	DESC 'Opsi HostGroup' )
+
+objectclass ( 1.3.6.1.4.1.23807.21.2.1
+	NAME 'opsiProductGroup'
+	SUP opsiGroup
+	STRUCTURAL
+	DESC 'Opsi ProductGroup' )
 	
 ## $OID: 1.3.6.1.4.1.23807.20 (ObjectToGroups) $
 #	
