@@ -259,6 +259,31 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
+udm shares/share list $@ --filter "(name=opsi_depot)" | grep '^DN:' | grep $FQDN 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding samba share opsi_depot"
+	udm shares/share create $@ \
+		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
+		--set name=opsi_depot \
+		--set host=$FQDN \
+		--set path=/var/lib/opsi/depot \
+		--set owner=992 \
+		--set group=992 \
+		--set sambaName=opsi_depot \
+		--set sambaWriteable=0 \
+		--set sambaBrowseable=1 \
+		--set sambaPublic=0 \
+		--set sambaOplocks=0 \
+		--set sambaLevel2Oplocks=0 \
+		--ignore_exists
+fi
+if [ ! -e "/var/lib/opsi/depot" -a -e "/opt/pcbin/install" ]; then
+	ln -s /opt/pcbin/install /var/lib/opsi/depot
+fi
+
+set +e
 udm shares/share list $@ --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
