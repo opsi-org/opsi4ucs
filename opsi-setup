@@ -136,6 +136,7 @@ def configureSamba():
 	lines = f.readlines()
 	f.close()
 	newlines = []
+	optPcbinShareFound = False
 	depotShareFound = False
 	configShareFound = False
 	workbenchShareFound = False
@@ -147,6 +148,8 @@ def configureSamba():
 			confChanged = True
 			continue
 		if   (lines[i].lower().strip() == '[opt_pcbin]'):
+			optPcbinShareFound = True
+		elif (lines[i].lower().strip() == '[opsi_depot]'):
 			depotShareFound = True
 		elif (lines[i].lower().strip() == '[opsi_config]'):
 			configShareFound = True
@@ -154,24 +157,38 @@ def configureSamba():
 			workbenchShareFound = True
 		newlines.append(lines[i])
 	
-	if not depotShareFound:
+	if not optPcbinShareFound and (getSysConfig()['distribution'].lower().find('suse linux enterprise server') == -1):
 		logger.notice(u"   Adding share [opt_pcbin]")
 		confChanged = True
-		if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-			newlines.append(u"[opsi_depot]\n")
-		else:
-			newlines.append(u"[opt_pcbin]\n")
+		newlines.append(u"[opt_pcbin]\n")
 		newlines.append(u"   available = yes\n")
 		newlines.append(u"   comment = opsi depot share\n")
-		if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-			newlines.append(u"   path = /var/lib/opsi/depot\n")
-		else:
-			newlines.append(u"   path = /opt/pcbin\n")
+		newlines.append(u"   path = /opt/pcbin\n")
 		newlines.append(u"   oplocks = no\n")
 		newlines.append(u"   level2 oplocks = no\n")
 		newlines.append(u"   writeable = yes\n")
 		newlines.append(u"   invalid users = root\n")
 		newlines.append(u"\n")
+	
+	if not depotShareFound:
+		logger.notice(u"   Adding share [opsi_depot]")
+		confChanged = True
+		newlines.append(u"[opsi_depot]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi depot share (ro)\n")
+		newlines.append(u"   path = /var/lib/opsi/depot\n")
+		newlines.append(u"   oplocks = no\n")
+		newlines.append(u"   level2 oplocks = no\n")
+		newlines.append(u"   writeable = no\n")
+		newlines.append(u"   invalid users = root\n")
+		newlines.append(u"\n")
+		link = '/var/lib/opsi/depot'
+		source = '/opt/pcbin/install'
+		if not os.path.exists(link) and os.path.exists(source):
+			try:
+				os.symlink(source, link)
+			except Exception, e:
+				logger.error(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
 		
 	if not configShareFound:
 		logger.notice(u"   Adding share [opsi_config]")
@@ -497,6 +514,7 @@ def setRights(path=u'/'):
 					os.chown(authorizedKeys, clientUserUid, fileAdminGroupGid)
 			
 def update(fromVersion = None):
+	# 3.x => 4.x
 	if os.path.exists(u'/var/lib/opsi/products'):
 		logger.notice(u"Found /var/lib/opsi/products, moving to /var/lib/opsi/repository")
 		if not os.path.exists(u'/var/lib/opsi/repository'):
@@ -508,15 +526,42 @@ def update(fromVersion = None):
 		except Exception, e:
 			logger.error(e)
 	
-	from OPSI.Backend.BackendManager import BackendManager
-	backend = BackendManager(
-		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
-		backendConfigDir   = u'/etc/opsi/backends',
-		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
-		depotbackend       = False
-	)
-	backend.backend_createBase()
+	isConfigServer = False
+	try:
+		bdc = BackendDispatchConfigFile(u'/etc/opsi/backendManager/dispatch.conf')
+		dispatchConfig = bdc.parse()
+		for entry in dispatchConfig:
+			(regex, backends) = entry
+			if not re.search(regex, 'backend_createBase'):
+				continue
+			if not 'jsonrpc' in backends:
+				isConfigServer = True
+			break
+	except Exception, e:
+		logger.info(e)
 	
+	if isConfigServer:
+		from OPSI.Backend.BackendManager import BackendManager
+		backend = BackendManager(
+			dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+			backendConfigDir   = u'/etc/opsi/backends',
+			extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+			depotbackend       = False
+		)
+		backend.backend_createBase()
+		backend.backend_exit()
+	
+	# 4.0 => 4.0.1
+	link = '/var/lib/opsi/depot'
+	source = '/opt/pcbin/install'
+	if not os.path.exists(link) and os.path.exists(source):
+		try:
+			os.symlink(source, link)
+		except Exception, e:
+			logger.error(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
+	
+	if isConfigServer:
+		initializeConfigs()
 	
 def updateLDAPBackend():
 	backendConfigFile = u'/etc/opsi/backends/ldap.conf'
@@ -1304,18 +1349,23 @@ def updateMySQLBackend():
 			res['licenseContractId'] = forceLicenseContractId(res['licenseContractId'])
 			logger.warning(u"Changing license contract id '%s' to '%s'" % (deleteLicenseContractId, res['licenseContractId']))
 			
-			data = {}
-			for tab in ('SOFTWARE_LICENSE', ):
-				data[tab] = []
-				for res2 in mysql.getSet(u"SELECT * FROM `%s` where licenseContractId = '%s'" % (tab, deleteLicenseContractId)):
-					res2['licenseContractId'] = res['licenseContractId']
-					data[tab].append(res2)
-				mysql.delete(tab, "licenseContractId = '%s'" % deleteLicenseContractId)
-			
+			data = {
+				'SOFTWARE_LICENSE': [],
+				'LICENSE_ON_CLIENT': [],
+				'SOFTWARE_LICENSE_TO_LICENSE_POOL': []
+			}
+			for res2 in mysql.getSet(u"SELECT * FROM `SOFTWARE_LICENSE` where licenseContractId = '%s'" % deleteLicenseContractId):
+				res2['licenseContractId'] = res['licenseContractId']
+				data['SOFTWARE_LICENSE'].append(res2)
+				for tab in ('LICENSE_ON_CLIENT', 'SOFTWARE_LICENSE_TO_LICENSE_POOL'):
+					for res3 in mysql.getSet(u"SELECT * FROM `%s` where softwareLicenseId = '%s'" % (tab, res2['softwareLicenseId'])):
+						data[tab].append(res3)
+					mysql.delete(tab, "softwareLicenseId = '%s'" % res2['softwareLicenseId'])
+			mysql.delete('SOFTWARE_LICENSE', "licenseContractId = '%s'" % deleteLicenseContractId)
 			mysql.delete('LICENSE_CONTRACT', "licenseContractId = '%s'" % deleteLicenseContractId)
 			mysql.insert('LICENSE_CONTRACT', res)
-			for (tab, ins) in data.items():
-				for i in ins:
+			for tab in ('SOFTWARE_LICENSE', 'SOFTWARE_LICENSE_TO_LICENSE_POOL', 'LICENSE_ON_CLIENT'):
+				for i in data[tab]:
 					mysql.insert(tab, i)
 			
 	for res in mysql.getSet(u"SELECT * FROM `LICENSE_POOL`"):
@@ -2008,14 +2058,27 @@ def configureMySQLBackend():
 			logger.notice(u"Database '%s' created" % config['database'])
 			messageBox.addText(u"Database '%s' created\n" % config['database'])
 			
-			logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
-			messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
-			db.query(u'USE %s;' % config['database'])
-			db.query(u'GRANT ALL ON %s .* TO %s@%s IDENTIFIED BY \'%s\'' \
-					% (config['database'], config['username'], config['address'], config['password']));
-			db.query(u'FLUSH PRIVILEGES;')
-			logger.notice(u"User '%s' created and privileges set" % config['username'])
-			messageBox.addText(u"User '%s' created and privileges set\n" % config['username'])
+			def createUsers(hosts):
+				for host in forceUnicodeList(hosts):
+					logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
+					messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
+					db.query(u'USE %s;' % config['database'])
+					db.query(u'GRANT ALL ON %s .* TO %s@%s IDENTIFIED BY \'%s\'' \
+						% (config['database'], config['username'], host, config['password']));
+					db.query(u'FLUSH PRIVILEGES;')
+					logger.notice(u"User '%s' created and privileges set" % config['username'])
+					messageBox.addText(u"User '%s' created and privileges set\n" % config['username'])
+						
+						
+
+			if config['address'] in (	"localhost", "127.0.0.1",
+							socket.getfqdn(socket.gethostname()),
+							socket.gethostname(),
+							socket.gethostbyname(socket.gethostname())):
+				createUsers((config['address']))
+			else:
+				createUsers((socket.gethostbyaddr(socket.gethostname()),socket.getfqdn(socket.gethostname())))
+				
 			
 			# Disconnect from database
 			db.close()
@@ -2385,10 +2448,22 @@ def initializeBackends():
 	if getSysConfig()['hardwareAddress']:
 		configServer.setHardwareAddress(getSysConfig()['hardwareAddress'])
 	backend.host_updateObjects([configServer])
+	backend.backend_exit()
+	initializeConfigs(configServer=configServer)
+	
+def initializeConfigs(configServer= None):
+	from OPSI.Backend.BackendManager import BackendManager
+	backend = BackendManager(
+		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+		backendConfigDir   = u'/etc/opsi/backends',
+		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+		depotbackend       = False
+	)
+	backend.backend_createBase()
 	
 	configs = []
 	configIdents = backend.config_getIdents(returnType = 'unicode')
-	if not 'clientconfig.configserver.url' in configIdents:
+	if not 'clientconfig.configserver.url' in configIdents and configServer:
 		configs.append(
 			UnicodeConfig(
 				id             = u'clientconfig.configserver.url',
@@ -2399,7 +2474,7 @@ def initializeBackends():
 				multiValue     = True
 			)
 		)
-	if not 'clientconfig.depot.id' in configIdents:
+	if not 'clientconfig.depot.id' in configIdents and configServer:
 		configs.append(
 			UnicodeConfig(
 				id             = u'clientconfig.depot.id',
@@ -2456,7 +2531,7 @@ def initializeBackends():
 			UnicodeConfig(
 				id             = u'opsi-linux-bootimage.append',
 				description    = u'Extra options to append to kernel command line',
-				possibleValues = [ u'acpi=off', u'irqpoll', u'noapic' ],
+				possibleValues = [ u'acpi=off', u'irqpoll', u'noapic', 'pci=nomsi', 'vga=normal', 'reboot=b' ],
 				defaultValues  = [ u'' ],
 				editable       = True,
 				multiValue     = True
@@ -2470,7 +2545,33 @@ def initializeBackends():
 				defaultValues  = [ False ]
 			)
 		)
-	
+	if not 'software-on-demand.active' in configIdents:
+		configs.append(
+			BoolConfig(
+				id             = u'software-on-demand.active',
+				description    = u'Activate software-on-demand',
+				defaultValues  = [ False ]
+			)
+		)
+	if not 'software-on-demand.show-details' in configIdents:
+		configs.append(
+			BoolConfig(
+				id             = u'software-on-demand.show-details',
+				description    = u'Show more details for software-on-demand',
+				defaultValues  = [ False ]
+			)
+		)
+	if not 'software-on-demand.product-group-ids' in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id             = u'software-on-demand.product-group-ids',
+				description    = u'Product group ids containing products which are allowed to be installed on demand',
+				possibleValues = [ u'software-on-demand' ],
+				defaultValues  = [ u'software-on-demand' ],
+				editable       = True,
+				multiValue     = True
+			)
+		)
 	if not 'product_sort_algorithm' in configIdents:
 		configs.append(
 			UnicodeConfig(
@@ -2485,7 +2586,7 @@ def initializeBackends():
 	
 	if configs:
 		backend.config_createObjects(configs)
-
+	backend.backend_exit()
 
 def editConfigDefaults():
 	from OPSI.Backend.BackendManager import BackendManager
@@ -2614,6 +2715,14 @@ def cleanupBackend():
 	if deleteProducts:
 		backend.product_deleteObjects(deleteProducts)
 	
+	logger.notice(u"Cleaning up product on clients")
+	deleteProductOnClients = []
+	for productOnClient in backend.productOnClient_getObjects(installationStatus = 'not_installed', actionRequest = 'none'):
+		logger.info(u"Marking productOnClient %s for deletion" % productOnClient)
+		deleteProductOnClients.append(productOnClient)
+	if deleteProductOnClients:
+		backend.productOnClient_deleteObjects(deleteProductOnClients)
+	
 	logger.notice(u"Cleaning up product properties")
 	productPropertyIdents = []
 	deleteProductProperties = []
@@ -2660,7 +2769,7 @@ def usage():
 	print u"   --register-depot           register depot at config server"
 	print u"   --set-rights [path]        set default rights on opsi files (in [path] only)"
 	print u"   --init-current-config      init current backend configuration"
-	#print u"   --update-from=<version>    update from opsi version <version>"
+	print u"   --update-from=<version>    update from opsi version <version>"
 	print u"   --update-mysql             update mysql backend"
 	print u"   --update-ldap              update ldap backend"
 	print u"   --update-file              update file backend"
@@ -2678,8 +2787,8 @@ def main():
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
 			['help', 'log-file=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
-			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-file', 'edit-config-defaults', 'cleanup-backend'])
-			#, 'update-from='])
+			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-file', 'edit-config-defaults', 'cleanup-backend',
+			 'update-from='])
 		
 	except Exception, e:
 		usage()
@@ -2717,8 +2826,8 @@ def main():
 			task = 'edit-config-defaults'
 		elif (opt == "--cleanup-backend"):
 			task = 'cleanup-backend'
-		#elif (opt == "--update-from"):
-		#	updateFrom = arg
+		elif (opt == "--update-from"):
+			updateFrom = arg
 		elif (opt == "--auto-configure-samba"):
 			autoConfigureSamba = True
 		elif (opt == "--auto-configure-dhcpd"):
@@ -2738,7 +2847,7 @@ def main():
 	if autoConfigureDhcpd:
 		configureDHCPD()
 	
-	if (task == 'set-rights'):
+	if   (task == 'set-rights'):
 		setRights(path)
 	
 	elif (task == 'init-current-config'):
@@ -2769,6 +2878,9 @@ def main():
 	
 	elif (task == 'cleanup-backend'):
 		cleanupBackend()
+	
+	elif (updateFrom):
+		update(updateFrom)
 	
 	elif not autoConfigureSamba and not autoConfigureDhcpd:
 		usage()
