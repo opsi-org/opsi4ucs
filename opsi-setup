@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # = = = = = = = = = = = = = = = = = = = = = = =
-# =       Copyright (C) 2010 uib GmbH         =
+# =       Copyright (C) 2011 uib GmbH         =
 # =           http://www.uib.de               =
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
@@ -26,27 +26,23 @@ logger = Logger()
 logger.setConsoleLevel(LOG_NOTICE)
 logger.setConsoleColor(True)
 
-LOG_FILE         = u'/tmp/opsi-config.log'
+LOG_FILE         = u'/tmp/opsi-setup.log'
 SMB_CONF         = u'/etc/samba/smb.conf'
 SMB_INIT         = u'/etc/init.d/samba'
-DHCPD_CONF       = u'/etc/dhcp3/dhcpd.conf'
-DHCPD_INIT       = u'/etc/init.d/dhcp3-server'
+DHCPD_CONF       = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
+DHCPD_INIT       = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
 SUDOERS          = u'/etc/sudoers'
 OPSICONFD_USER   = u'opsiconfd'
 ADMIN_GROUP      = u'opsiadmin'
 CLIENT_USER      = u'pcpatch'
 FILE_ADMIN_GROUP = u'pcpatch'
-
+OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
+ 
+ 
 if os.path.exists(u'/etc/init.d/smbd'):
 	SMB_INIT = u'/etc/init.d/smbd'
 if os.path.exists(u'/etc/init.d/smb'):
 	SMB_INIT = u'/etc/init.d/smb'
-
-if os.path.exists(u'/etc/init.d/dhcpd'):
-	DHCPD_INIT = u'/etc/init.d/dhcpd'
-
-if os.path.exists(u'/etc/dhcpd.conf'):
-	DHCPD_CONF = u'/etc/dhcpd.conf'
 
 sysConfig = {}
 
@@ -69,9 +65,9 @@ def getSysConfig():
 		
 	logger.notice(u"Getting current system config")
 	try:
-		sysConfig['fqdn'] = forceHostId(socket.getfqdn())
+		sysConfig['fqdn'] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
 	except:
-		raise Exception(u"Failed to get fully qualified domain name, got '%s'" % socket.getfqdn())
+		raise Exception(u"Failed to get fully qualified domain name, got '%s'" % getfqdn(conf=OPSI_GLOBAL_CONF))
 	
 	sysConfig['hostname'] = sysConfig['fqdn'].split(u'.')[0]
 	sysConfig['domain'] = u'.'.join(sysConfig['fqdn'].split(u'.')[1:])
@@ -165,6 +161,7 @@ def configureSamba():
 		newlines.append(u"   comment = opsi depot share\n")
 		newlines.append(u"   path = /opt/pcbin\n")
 		newlines.append(u"   oplocks = no\n")
+		newlines.append(u"   follow symlinks = yes\n")
 		newlines.append(u"   level2 oplocks = no\n")
 		newlines.append(u"   writeable = yes\n")
 		newlines.append(u"   invalid users = root\n")
@@ -331,6 +328,9 @@ def configureDHCPD():
 		shutil.copy(SUDOERS, SUDOERS + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
 		
 		logger.notice(u"   Adding sudoers entry for dhcpd restart")
+		distributor = getSysConfig()['distributor']
+		if (distributor.lower().find('redhat') != -1) or (distributor.lower().find('centos') != -1) or (distributor.lower().find('scientificsl') != -1) or (distributor.lower().find('sme') != -1):
+			lines.append(u"Defaults:opsiconfd !requiretty\n")
 		lines.append(u"opsiconfd ALL=NOPASSWD: %s restart\n" % DHCPD_INIT)
 		logger.notice(u"   Writing new %s" % SUDOERS)
 		f = open(SUDOERS, 'w')
@@ -442,6 +442,15 @@ def setRights(path=u'/'):
 		except Exception, e:
 			logger.error(e)
 	
+	if basedir.startswith('/opt/pcbin/install'):
+		found = False
+		for dirname in dirnames:
+			if dirname.startswith('/opt/pcbin/install'):
+				found = True
+				break
+		if not found:
+			dirnames.append('/opt/pcbin/install')
+		
 	for dirname in dirnames:
 		if not dirname.startswith(basedir) and not basedir.startswith(dirname):
 			continue
@@ -524,7 +533,7 @@ def update(fromVersion = None):
 		try:
 			os.rmdir(u'/var/lib/opsi/products')
 		except Exception, e:
-			logger.error(e)
+			logger.warning(e)
 	
 	isConfigServer = False
 	try:
@@ -538,18 +547,21 @@ def update(fromVersion = None):
 				isConfigServer = True
 			break
 	except Exception, e:
-		logger.info(e)
+		logger.warning(e)
 	
 	if isConfigServer:
-		from OPSI.Backend.BackendManager import BackendManager
-		backend = BackendManager(
-			dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
-			backendConfigDir   = u'/etc/opsi/backends',
-			extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
-			depotbackend       = False
-		)
-		backend.backend_createBase()
-		backend.backend_exit()
+		try:
+			from OPSI.Backend.BackendManager import BackendManager
+			backend = BackendManager(
+				dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
+				backendConfigDir   = u'/etc/opsi/backends',
+				extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
+				depotbackend       = False
+			)
+			backend.backend_createBase()
+			backend.backend_exit()
+		except Exception, e:
+			logger.warning(e)
 	
 	# 4.0 => 4.0.1
 	link = '/var/lib/opsi/depot'
@@ -558,10 +570,11 @@ def update(fromVersion = None):
 		try:
 			os.symlink(source, link)
 		except Exception, e:
-			logger.error(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
+			logger.warning(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
 	
 	if isConfigServer:
 		initializeConfigs()
+	configureSamba()
 	
 def updateLDAPBackend():
 	backendConfigFile = u'/etc/opsi/backends/ldap.conf'
@@ -607,7 +620,7 @@ def updateLDAPBackend():
 		logger.info(u"Found config server: %s" % obj.getDn())
 		try:
 			obj.readFromDirectory(ldapSession)
-			hostId = forceHostId(obj.getCn())
+			#hostId = forceHostId(obj.getCn())
 			obj.removeObjectClass('opsiHost')
 			obj.removeObjectClass('opsiDepotserver')
 			obj.removeObjectClass('opsiConfigserver')
@@ -629,7 +642,7 @@ def updateLDAPBackend():
 		logger.info(u"Found depot server: %s" % obj.getDn())
 		try:
 			obj.readFromDirectory(ldapSession)
-			hostId = forceHostId(obj.getCn())
+			#hostId = forceHostId(obj.getCn())
 			obj.removeObjectClass('opsiHost')
 			obj.removeObjectClass('opsiDepotserver')
 			obj.addObjectClass('OpsiHost')
@@ -649,7 +662,7 @@ def updateLDAPBackend():
 		logger.info(u"Found client: %s" % obj.getDn())
 		try:
 			obj.readFromDirectory(ldapSession)
-			hostId = forceHostId(obj.getCn())
+			#hostId = forceHostId(obj.getCn())
 			obj.removeObjectClass('opsiHost')
 			obj.removeObjectClass('opsiClient')
 			obj.addObjectClass('OpsiHost')
@@ -699,7 +712,16 @@ def updateLDAPBackend():
 					multiValue = False
 					if   (key == 'opsiDepotserverReference'):
 						configId = u'clientconfig.depot.id'
-						value = forceHostId(value.split(',')[0].split('=')[1])
+						serverObj = LDAPObject(value)
+						value = None
+						if serverObj.exists(ldapSession):
+							serverObj.readFromDirectory(ldapSession)
+							try:
+								value = forceHostId(serverObj.getAttribute('opsiHostId', default = None, valuesAsList = False))
+							except Exception, e:
+								logger.debug(e)
+						if not value:
+							continue
 					elif (key == 'opsiDepotDrive'):
 						configId = u'clientconfig.depot.drive'
 					elif (key == 'opsiNextBootServiceURL'):
@@ -738,8 +760,17 @@ def updateLDAPBackend():
 			obj.readFromDirectory(ldapSession)
 			for value in obj.getAttribute('uniqueMember', default = [], valuesAsList = True):
 				try:
-					objectId = forceHostId(value.split(',')[0].split('=')[1])
-					objectToGroups.append( ObjectToGroup(groupId = groupId, groupType = 'HostGroup', objectId = objectId) )
+					hostObj = LDAPObject(value)
+					value = None
+					if hostObj.exists(ldapSession):
+						hostObj.readFromDirectory(ldapSession)
+						try:
+							value = forceHostId(hostObj.getAttribute('opsiHostId', default = None, valuesAsList = False))
+						except Exception, e:
+							logger.debug(e)
+					if not value:
+						continue
+					objectToGroups.append( ObjectToGroup(groupId = groupId, groupType = 'HostGroup', objectId = value) )
 				except Exception, e:
 					logger.error(u"Failure while processing group member %s of group %s: %s" % (value, obj.getDn(), e))
 			obj.deleteFromDirectory(ldapSession)
@@ -1369,9 +1400,9 @@ def updateMySQLBackend():
 					mysql.insert(tab, i)
 			
 	for res in mysql.getSet(u"SELECT * FROM `LICENSE_POOL`"):
-		if (res['licensePoolId'] != forceLicensePoolId(res['licensePoolId'])):
+		if (res['licensePoolId'] != res['licensePoolId'].strip()) or (res['licensePoolId'] != forceLicensePoolId(res['licensePoolId'])):
 			deleteLicensePoolId = res['licensePoolId']
-			res['licensePoolId'] = forceLicensePoolId(res['licensePoolId'])
+			res['licensePoolId'] = forceLicensePoolId(res['licensePoolId'].strip())
 			logger.warning(u"Changing license pool id '%s' to '%s'" % (deleteLicensePoolId, res['licensePoolId']))
 			
 			data = {}
@@ -1389,9 +1420,9 @@ def updateMySQLBackend():
 					mysql.insert(tab, i)
 			
 	for res in mysql.getSet(u"SELECT * FROM `SOFTWARE_LICENSE`"):
-		if (res['softwareLicenseId'] != forceSoftwareLicenseId(res['softwareLicenseId'])):
+		if (res['softwareLicenseId'] != res['softwareLicenseId'].strip()) or (res['softwareLicenseId'] != forceSoftwareLicenseId(res['softwareLicenseId'])):
 			deleteSoftwareLicenseId = res['softwareLicenseId']
-			res['softwareLicenseId'] = forceSoftwareLicenseId(res['softwareLicenseId'])
+			res['softwareLicenseId'] = forceSoftwareLicenseId(res['softwareLicenseId'].strip())
 			logger.warning(u"Changing software license id '%s' to '%s'" % (deleteSoftwareLicenseId, res['softwareLicenseId']))
 			
 			data = {}
@@ -1932,19 +1963,19 @@ def updateFileBackend():
 							parentGroupIdList.append(ini.get(section, option))
 						continue
 					
-					if (ini.get(section, option) != 0):
+					if (ini.get(section, option) == 0):
 						logger.debug2(u"Ignoring objectId '%s' in '%s' (value is 0)" % (option, section))
 						continue
 					
 					otg = {
-						'groupId'   :  section, #already forced above
+						'groupId'   : section,
 						'groupType' : 'HostGroup',
 						'objectId'  : forceObjectId(option)
 					}
 					
 					updatedObjectToGroups.append(ObjectToGroup.fromHash(otg))
 				
-				updatedGroups.append(Group.fromHash(g))
+				updatedGroups.append(HostGroup.fromHash(g))
 			except Exception, e:
 				logger.error(u"Exception while creating Group from '%s': %s" % (section, e))
 		
@@ -2059,7 +2090,7 @@ def configureMySQLBackend():
 			messageBox.addText(u"Database '%s' created\n" % config['database'])
 			
 			def createUsers(hosts):
-				for host in forceUnicodeList(hosts):
+				for host in forceUniqueList(flattenSequence(hosts)):
 					logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
 					messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
 					db.query(u'USE %s;' % config['database'])
@@ -2072,12 +2103,12 @@ def configureMySQLBackend():
 						
 
 			if config['address'] in (	"localhost", "127.0.0.1",
-							socket.getfqdn(socket.gethostname()),
+							getfqdn(name=socket.gethostname()),
 							socket.gethostname(),
 							socket.gethostbyname(socket.gethostname())):
 				createUsers((config['address']))
 			else:
-				createUsers((socket.gethostbyaddr(socket.gethostname()),socket.getfqdn(socket.gethostname())))
+				createUsers((socket.gethostbyaddr(socket.gethostname()),getfqdn(name=socket.gethostname())))
 				
 			
 			# Disconnect from database
@@ -2194,14 +2225,18 @@ def registerDepot():
 		if depots:
 			# Already exists
 			depot = depots[0]
-			if not depot.depotWebdavUrl: depot.depotWebdavUrl = u''
-			if not depot.masterDepotId:  depot.masterDepotId = u''
+			if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u''
+			if not depot.masterDepotId:   depot.masterDepotId = u''
+			if not depot.hardwareAddress: depot.hardwareAddress = getSysConfig()['hardwareAddress'] or u''
+			if not depot.ipAddress:       depot.ipAddress = getSysConfig()['ipAddress'] or u''
+			if not depot.networkAddress:  depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
+			if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
 		else:
-			depotLocalUrl  = u'file:///opt/pcbin/install'
-			depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-				depotLocalUrl = u'file:///var/lib/opsi/depot'
-				depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
+			#depotLocalUrl  = u'file:///opt/pcbin/install'
+			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
+			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
+			depotLocalUrl = u'file:///var/lib/opsi/depot'
+			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 			
 			depot = OpsiDepotserver(
 					id                  = getSysConfig()['fqdn'],
@@ -2410,11 +2445,11 @@ def initializeBackends():
 		depot = backend.host_getObjects(type = 'OpsiDepotserver', id = getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating config server '%s'" % getSysConfig()['fqdn'])
-			depotLocalUrl  = u'file:///opt/pcbin/install'
-			depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-				depotLocalUrl = u'file:///var/lib/opsi/depot'
-				depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
+			#depotLocalUrl  = u'file:///opt/pcbin/install'
+			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
+			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
+			depotLocalUrl = u'file:///var/lib/opsi/depot'
+			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 			
 			configServer = backend.host_createOpsiConfigserver(
 				id                  = getSysConfig()['fqdn'],
@@ -2438,7 +2473,7 @@ def initializeBackends():
 			logger.notice(u"Converting depot server '%s' to config server" % getSysConfig()['fqdn'])
 			configServer = OpsiConfigserver.fromHash(depot[0].toHash())
 			backend.host_createObjects(configServer)
-	
+
 	configServer = backend.host_getObjects(type = 'OpsiConfigserver', id = getSysConfig()['fqdn'])
 	if not configServer:
 		raise Exception(u"Config server '%s' not found" % getSysConfig()['fqdn'])
@@ -2447,11 +2482,21 @@ def initializeBackends():
 		configServer.setIpAddress(getSysConfig()['ipAddress'])
 	if getSysConfig()['hardwareAddress']:
 		configServer.setHardwareAddress(getSysConfig()['hardwareAddress'])
-	backend.host_updateObjects([configServer])
+
+	#make sure the config server is present in all backends or we get reference error later on
+	backend.host_insertObject(configServer)
 	backend.backend_exit()
-	initializeConfigs(configServer=configServer)
+	initializeConfigs(configServer = configServer)
 	
-def initializeConfigs(configServer= None):
+	link = '/var/lib/opsi/depot'
+	source = '/opt/pcbin/install'
+	if not os.path.exists(link) and os.path.exists(source):
+		try:
+			os.symlink(source, link)
+		except Exception, e:
+			logger.warning(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
+	
+def initializeConfigs(configServer = None):
 	from OPSI.Backend.BackendManager import BackendManager
 	backend = BackendManager(
 		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
@@ -2715,6 +2760,20 @@ def cleanupBackend():
 	if deleteProducts:
 		backend.product_deleteObjects(deleteProducts)
 	
+	logger.notice(u"Cleaning up product on depots")
+	productIdents = []
+	for product in backend.product_getObjects():
+		if not product.getIdent(returnType = 'unicode') in productIdents:
+			productIdents.append(product.getIdent(returnType = 'unicode'))
+	deleteProductOnDepots = []
+	for productOnDepot in backend.productOnDepot_getObjects():
+		productIdent = u"%s;%s;%s" % (productOnDepot.productId, productOnDepot.productVersion, productOnDepot.packageVersion)
+		if not productIdent in productIdents:
+			logger.info(u"Marking product on depot %s with missing product reference for deletion" % productOnDepot)
+			deleteProductOnDepots.append(productOnDepot)
+	if deleteProductOnDepots:
+		backend.productOnDepot_deleteObjects(deleteProductOnDepots)
+	
 	logger.notice(u"Cleaning up product on clients")
 	deleteProductOnClients = []
 	for productOnClient in backend.productOnClient_getObjects(installationStatus = 'not_installed', actionRequest = 'none'):
@@ -2723,12 +2782,29 @@ def cleanupBackend():
 	if deleteProductOnClients:
 		backend.productOnClient_deleteObjects(deleteProductOnClients)
 	
+	deleteProductOnClients = []
+	productIds = []
+	for product in backend.product_getObjects():
+		if not product.getId() in productIds:
+			productIds.append(product.getId())
+	for productOnClient in backend.productOnClient_getObjects():
+		if not productOnClient.productId in productIds:
+			logger.info(u"Marking productOnClient %s for deletion" % productOnClient)
+			deleteProductOnClients.append(productOnClient)
+	if deleteProductOnClients:
+		backend.productOnClient_deleteObjects(deleteProductOnClients)
+	
 	logger.notice(u"Cleaning up product properties")
 	productPropertyIdents = []
 	deleteProductProperties = []
+	productPropertiesToCleanup = {}
 	for productProperty in backend.productProperty_getObjects():
-		if not productProperty.productId in productIds:
-			logger.info(u"Marking productProperty %s of non existent product '%s' for deletion" % (productProperty, productProperty.productId))
+		productIdent = u"%s;%s;%s" % (productProperty.productId, productProperty.productVersion, productProperty.packageVersion)
+		if not productProperty.editable and productProperty.possibleValues:
+			productPropertyIdent = u"%s;%s" % (productIdent, productProperty.propertyId)
+			productPropertiesToCleanup[productPropertyIdent] = productProperty
+		if not productIdent in productIdents:
+			logger.info(u"Marking productProperty %s of non existent product '%s' for deletion" % (productProperty, productIdent))
 			deleteProductProperties.append(productProperty)
 		else:
 			productPropertyIdent = u'%s;%s' % (productProperty.productId, productProperty.propertyId)
@@ -2747,6 +2823,69 @@ def cleanupBackend():
 	if deleteProductPropertyStates:
 		backend.productPropertyState_deleteObjects(deleteProductPropertyStates)
 	
+	for depot in backend.host_getObjects(type = 'OpsiDepotserver'):
+		objectIds = [ depot.id ]
+		for clientToDepot in backend.configState_getClientToDepotserver(depotIds = depot.id):
+			if not clientToDepot['clientId'] in objectIds:
+				objectIds.append(clientToDepot['clientId'])
+		productOnDepotIdents = {}
+		for productOnDepot in backend.productOnDepot_getObjects(depotId = depot.id):
+			productIdent = u"%s;%s;%s" % (productOnDepot.productId, productOnDepot.productVersion, productOnDepot.packageVersion)
+			productOnDepotIdents[productOnDepot.productId] = productIdent
+		if not productOnDepotIdents:
+			continue
+		deleteProductPropertyStates = []
+		updateProductPropertyStates = []
+		for productPropertyState in backend.productPropertyState_getObjects(
+						objectId   = objectIds,
+						productId  = productOnDepotIdents.keys(),
+						propertyId = []):
+			productIdent = productOnDepotIdents.get(productPropertyState.productId)
+			if not productIdent:
+				continue
+			productPropertyIdent = u"%s;%s" % (productIdent, productPropertyState.propertyId)
+			productProperty = productPropertiesToCleanup.get(productPropertyIdent)
+			if not productProperty:
+				continue
+			changed = False
+			newValues = []
+			removeValues = []
+			changedValues = []
+			for v in productPropertyState.values:
+				if v in productProperty.possibleValues:
+					newValues.append(v)
+					continue
+				if (productProperty.getType() == 'BoolProductProperty') and forceBool(v) in productProperty.possibleValues:
+					newValues.append(forceBool(v))
+					changedValues.append(v)
+					changed = True
+					continue
+				if (productProperty.getType() == 'UnicodeProductProperty'):
+					newValue = None
+					for pv in productProperty.possibleValues:
+						if (forceUnicodeLower(pv) == forceUnicodeLower(v)):
+							newValue = pv
+							break
+					if newValue:
+						newValues.append(newValue)
+						changedValues.append(v)
+						changed = True
+						continue
+				removeValues.append(v)
+				changed = True
+			if changed:
+				if not newValues:
+					logger.info(u"Marking productPropertyState %s for deletion: no value in possible values (%s)" % (productPropertyState, removeValues))
+					deleteProductPropertyStates.append(productPropertyState)
+				else:
+					productPropertyState.setValues(newValues)
+					logger.info(u"Marking productPropertyState %s for update: values not in possible values: %s, values corrected: %s" % (productPropertyState, removeValues, changedValues))
+					updateProductPropertyStates.append(productPropertyState)
+		if deleteProductPropertyStates:
+			backend.productPropertyState_deleteObjects(deleteProductPropertyStates)
+		if updateProductPropertyStates:
+			backend.productPropertyState_updateObjects(updateProductPropertyStates)
+	
 	logger.notice(u"Cleaning up config states")
 	deleteConfigStates = []
 	configIds = backend.config_getIdents()
@@ -2756,6 +2895,19 @@ def cleanupBackend():
 			deleteConfigStates.append(configState)
 	if deleteConfigStates:
 		backend.configState_deleteObjects(deleteConfigStates)
+	
+	logger.notice(u"Cleaning up audit softwares")
+	idents = []
+	for aso in backend.auditSoftwareOnClient_getHashes():
+		ident = '%(name)s;%(version)s;%(subVersion)s;%(language)s;%(architecture)s' % aso
+		if not ident in idents:
+			idents.append(ident)
+	
+	for aso in backend.auditSoftware_getHashes():
+		ident = '%(name)s;%(version)s;%(subVersion)s;%(language)s;%(architecture)s' % aso
+		if not ident in idents:
+			logger.info(u"Deleting unreferenced audit software '%s'" % ident)
+			backend.auditSoftware_delete(aso['name'], aso['version'], aso['subVersion'], aso['language'], aso['architecture'])
 	
 	
 def usage():
@@ -2889,7 +3041,7 @@ def main():
 if (__name__ == "__main__"):
 	logger.setLogFormat(u'[%l] [%D] %M (%F|%N)')
 	logger.setLogFile(LOG_FILE)
-	logger.setFileLevel(LOG_DEBUG)
+	logger.setFileLevel(LOG_INFO)
 	exception = None
 	try:
 		main()
