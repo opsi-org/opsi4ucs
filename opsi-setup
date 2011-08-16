@@ -2907,6 +2907,21 @@ def cleanupBackend():
 			logger.info(u"Deleting unreferenced audit software '%s'" % ident)
 			backend.auditSoftware_delete(aso['name'], aso['version'], aso['subVersion'], aso['language'], aso['architecture'])
 	
+	logger.notice(u"Cleaning up audit software on clients")
+	idents = []
+	for aso in backend.auditSoftware_getHashes():
+		ident = '%(name)s;%(version)s;%(subVersion)s;%(language)s;%(architecture)s' % aso
+		if not ident in idents:
+			idents.append(ident)
+	
+	for aso in backend.auditSoftwareOnClient_getHashes():
+		ident = '%(name)s;%(version)s;%(subVersion)s;%(language)s;%(architecture)s' % aso
+		if not ident in idents:
+			logger.info(u"Deleting audit software on client '%s'" % ident)
+			backend.auditSoftwareOnClient_delete(aso['name'], aso['version'], aso['subVersion'], aso['language'], aso['architecture'], aso['clientId'])
+	
+	
+	
 	
 def usage():
 	print u"\nUsage: %s [options]" % os.path.basename(sys.argv[0])
