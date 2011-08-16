@@ -1,3 +1,9 @@
+opsi4ucs (4.0.1-2) stable; urgency=low
+
+  * opsi-setup: fix creation of db user
+
+ -- Jan Schneider <j.schneider@uib.de>  Tue, 16 Aug 2011 10:35:36 +0200
+
 opsi4ucs (4.0.1-1) stable; urgency=low
 
   * opsi-setup

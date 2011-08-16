@@ -12,7 +12,7 @@ from OPSI.Object import *
 from OPSI.System import *
 from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import *
-from OPSI.Util import * #findFiles, randomString, blowfishDecrypt, objectToBeautifiedText
+from OPSI.Util import *
 from OPSI.UI import *
 from OPSI.Backend.MySQL import *
 from OPSI.Backend.LDAP import *
@@ -2089,27 +2089,25 @@ def configureMySQLBackend():
 			logger.notice(u"Database '%s' created" % config['database'])
 			messageBox.addText(u"Database '%s' created\n" % config['database'])
 			
-			def createUsers(hosts):
-				for host in forceUniqueList(flattenSequence(hosts)):
-					logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
-					messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
-					db.query(u'USE %s;' % config['database'])
-					db.query(u'GRANT ALL ON %s .* TO %s@%s IDENTIFIED BY \'%s\'' \
-						% (config['database'], config['username'], host, config['password']));
-					db.query(u'FLUSH PRIVILEGES;')
-					logger.notice(u"User '%s' created and privileges set" % config['username'])
-					messageBox.addText(u"User '%s' created and privileges set\n" % config['username'])
-						
-						
-
-			if config['address'] in (	"localhost", "127.0.0.1",
-							getfqdn(name=socket.gethostname()),
-							socket.gethostname(),
-							socket.gethostbyname(socket.gethostname())):
-				createUsers((config['address']))
+			def createUser(host):
+				logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
+				messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
+				db.query(u'USE %s;' % config['database'])
+				db.query(u'GRANT ALL ON %s .* TO %s@%s IDENTIFIED BY \'%s\'' \
+					% (config['database'], config['username'], host, config['password']));
+				db.query(u'FLUSH PRIVILEGES;')
+				logger.notice(u"User '%s' created and privileges set" % config['username'])
+				messageBox.addText(u"User '%s' created and privileges set\n" % config['username'])
+			
+			sysconf = getSysConfig()
+			if config['address'] in ("localhost", "127.0.0.1", sysconf['hostname'], sysconf['fqdn']):
+				createUser("localhost")
+				if config['address'] not in ("localhost", "127.0.0.1"):
+					createUser(config['address'])
 			else:
-				createUsers((socket.gethostbyaddr(socket.gethostname()),getfqdn(name=socket.gethostname())))
-				
+				createUser(sysConfig['ipAddress'])
+				createUser(sysConfig['fqdn'])
+				createUser(sysConfig['hostname'])
 			
 			# Disconnect from database
 			db.close()
