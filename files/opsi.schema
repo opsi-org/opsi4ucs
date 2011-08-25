@@ -1,6 +1,6 @@
 # Private Enterprise Number - UIB GmbH: 23807
 
-# $OID: 1.3.6.1.4.1.23807.1 (Hosts) $
+# $OID: 1.3.6.1.4.1.23807.1 (Host) $
 
 attributetype ( 1.3.6.1.4.1.23807.1.1.1
 	NAME 'opsiHostId'
