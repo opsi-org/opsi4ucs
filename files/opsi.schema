@@ -1,20 +1,27 @@
 # Private Enterprise Number - UIB GmbH: 23807
 
-# $OID: 1.3.6.1.4.1.23807.1 (Hosts) $
+# $OID: 1.3.6.1.4.1.23807.1 (Host) $
 
 attributetype ( 1.3.6.1.4.1.23807.1.1.1
 	NAME 'opsiHostId'
 	DESC 'Opsi host-id'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
 
 attributetype ( 1.3.6.1.4.1.23807.1.1.2
 	NAME 'opsiHostKey'
 	DESC 'Opsi host-key'
 	EQUALITY caseExactMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+	SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.23807.1.1.3
+	NAME 'opsiPcpatchPassword'
+	DESC 'Opsi pcpatch password'
+	EQUALITY caseExactMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
 
 attributetype ( 1.3.6.1.4.1.23807.1.1.4
@@ -189,7 +196,7 @@ objectclass ( 1.3.6.1.4.1.23807.1.2.4
 	DESC 'Opsi client'
 	MAY ( opsiHostKey $ opsiOneTimePassword $ opsiCreatedTimestamp $ opsiLastSeenTimestamp ) )
 
-# $OID: 1.3.6.1.4.1.23807.3 (Products) $
+# $OID: 1.3.6.1.4.1.23807.3 (Product) $
 
 attributetype ( 1.3.6.1.4.1.23807.3.1.1
 	NAME 'opsiProductReference'
@@ -205,8 +212,7 @@ attributetype ( 1.3.6.1.4.1.23807.3.1.2
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
 
-
-attributetype ( 1.3.6.1.4.1.23807.3.1.4 
+attributetype ( 1.3.6.1.4.1.23807.3.1.4
 	NAME 'opsiProductLicenseRequired'
 	DESC 'is a license required to install the product?'
 	EQUALITY booleanMatch
@@ -225,7 +231,7 @@ attributetype ( 1.3.6.1.4.1.23807.3.1.6
 	DESC 'product name'
 	SINGLE-VALUE )
 	
-attributetype ( 1.3.6.1.4.1.23807.3.1.7	
+attributetype ( 1.3.6.1.4.1.23807.3.1.7
 	NAME 'opsiProductClassProvided'
 	SUP distinguishedName
 	DESC 'product-class provided' )
@@ -366,9 +372,9 @@ objectclass ( 1.3.6.1.4.1.23807.3.2.4
 	DESC 'Opsi net-boot product'
 	MAY ( opsiPxeConfigTemplate ) )
 
-# $OID: 1.3.6.1.4.1.23807.4 (ProductClasses) $
+# $OID: 1.3.6.1.4.1.23807.4 (ProductClass) $
 
-attributetype ( 1.3.6.1.4.1.23807.4.1.1	
+attributetype ( 1.3.6.1.4.1.23807.4.1.1
 	NAME 'opsiProductClassReference'
 	SUP distinguishedName
 	DESC 'referenced product class objects'
@@ -379,10 +385,10 @@ objectclass ( 1.3.6.1.4.1.23807.4.2.1
 	SUP top
 	STRUCTURAL
 	DESC 'Opsi product class'
-	MUST ( cn ) 
+	MUST ( cn )
 	MAY ( description ) )
 
-# $OID: 1.3.6.1.4.1.23807.5 (ProductDependencies) $
+# $OID: 1.3.6.1.4.1.23807.5 (ProductDependency) $
 
 attributetype ( 1.3.6.1.4.1.23807.5.1.1
 	NAME 'opsiProductAction'
@@ -446,7 +452,6 @@ attributetype ( 1.3.6.1.4.1.23807.5.1.9
 	DESC 'Opsi-Paket version'
 	SINGLE-VALUE )
 
-
 objectclass ( 1.3.6.1.4.1.23807.5.2.1
 	NAME 'opsiDependency'
 	SUP top
@@ -462,14 +467,8 @@ objectclass ( 1.3.6.1.4.1.23807.5.2.2
 	DESC 'Opsi product dependency'
 	MUST ( opsiProductVersion $ opsiPackageVersion $ opsiProductId ) )
 
-#objectclass ( 1.3.6.1.4.1.23807.5.2.2
-#	NAME 'opsiProductDependency'
-#	SUP opsiDependency
-#	STRUCTURAL
-#	DESC 'Opsi product dependency'
-#	MUST (opsiRequiredProductReference) )
+# $OID: 1.3.6.1.4.1.23807.6 (ProductClassDependency) $
 
-# $OID: 1.3.6.1.4.1.23807.6 (ProductClassDependencies) $
 objectclass ( 1.3.6.1.4.1.23807.6.2.1
 	NAME 'opsiProductClassDependency'
 	SUP opsiDependency
@@ -477,8 +476,8 @@ objectclass ( 1.3.6.1.4.1.23807.6.2.1
 	DESC 'Opsi product class dependency'
 	MUST (opsiRequiredProductClassReference) )
 
+# $OID: 1.3.6.1.4.1.23807.7 (Config) $
 
-# $OID: 1.3.6.1.4.1.23807.7 (ConfigClass) $
 attributetype ( 1.3.6.1.4.1.23807.7.1.1
 	NAME 'opsiConfigId'
 	DESC 'Opsi Config-id'
@@ -515,8 +514,6 @@ attributetype ( 1.3.6.1.4.1.23807.7.1.6
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
 	SINGLE-VALUE )
 
-
-
 objectclass ( 1.3.6.1.4.1.23807.7.2.1
 	NAME 'opsiConfig'
 	SUP top
@@ -537,7 +534,6 @@ objectclass ( 1.3.6.1.4.1.23807.7.2.3
 	STRUCTURAL
 	DESC 'Opsi Bool Config' )
 
-
 attributetype ( 1.3.6.1.4.1.23807.14.1.1
 	NAME 'opsiObjectId'
 	DESC 'Object ID'
@@ -553,18 +549,16 @@ attributetype ( 1.3.6.1.4.1.23807.14.1.2
 	SUBSTR caseExactSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
 
-
 objectclass ( 1.3.6.1.4.1.23807.14.2.1
 	NAME 'opsiConfigState'
 	SUP top
 	STRUCTURAL
 	DESC 'Opsi Config State'
-	MUST ( cn $ opsiConfigId $ opsiObjectId ) 
+	MUST ( cn $ opsiConfigId $ opsiObjectId )
 	MAY ( opsiValue ) )
 
-#15 ProductProperty
+# $OID: 1.3.6.1.4.1.23807.15 (ProductProperty) $
 
-#1.3.6.1.4.1.23807.13.2.1
 attributetype ( 1.3.6.1.4.1.23807.15.1.1
 	NAME 'opsiPropertyId'
 	DESC 'opsi Property ID'
@@ -572,7 +566,6 @@ attributetype ( 1.3.6.1.4.1.23807.15.1.1
 	SUBSTR caseIgnoreSubstringsMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
-
 
 objectclass ( 1.3.6.1.4.1.23807.15.2.1
 	NAME 'opsiProductProperty'
@@ -594,15 +587,14 @@ objectclass ( 1.3.6.1.4.1.23807.15.2.3
 	STRUCTURAL
 	DESC 'Opsi Bool Product Property' )
 
-# $OID: 1.3.6.1.4.1.23807.8 (Groups) $
-
+# $OID: 1.3.6.1.4.1.23807.8 (Group) $
 
 attributetype ( 1.3.6.1.4.1.23807.8.1.1
 	NAME 'opsiParentGroupId'
 	DESC 'Opsi ParentGroup-id'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
 
 attributetype ( 1.3.6.1.4.1.23807.8.1.2
@@ -610,7 +602,7 @@ attributetype ( 1.3.6.1.4.1.23807.8.1.2
 	DESC 'Opsi Group-id'
 	EQUALITY caseIgnoreMatch
 	SUBSTR caseIgnoreSubstringsMatch
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
 
 attributetype ( 1.3.6.1.4.1.23807.8.1.3
@@ -626,8 +618,7 @@ objectclass ( 1.3.6.1.4.1.23807.8.2.1
 	MUST ( cn $ opsiGroupId )
 	MAY ( description $ opsiDescription $ opsiNotes $ opsiParentGroupId $ opsiMemberObjectId $ uniqueMember ) )
 
-
-# $OID: 1.3.6.1.4.1.23807.9 (productStates) $
+# $OID: 1.3.6.1.4.1.23807.9 (ProductState) $
 
 attributetype ( 1.3.6.1.4.1.23807.9.1.1
 	NAME 'opsiProductInstallationStatus'
@@ -656,15 +647,15 @@ attributetype ( 1.3.6.1.4.1.23807.9.1.5
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
 	SINGLE-VALUE )
 
-objectclass ( 1.3.6.1.4.1.23807.9.2.1 
+objectclass ( 1.3.6.1.4.1.23807.9.2.1
 	NAME 'opsiProductState'
-	SUP top 
+	SUP top
 	STRUCTURAL
 	DESC 'product state'
 	MUST ( cn $ opsiHostReference $ opsiProductReference $ opsiProductInstallationStatus )
 	MAY ( opsiProductVersion $ opsiPackageVersion $ lastStateChange $ opsiProductActionRequestForced $ opsiProductActionProgress ) )
 
-# $OID: 1.3.6.1.4.1.23807.10 (ProductPropertyDefinitions) $
+# $OID: 1.3.6.1.4.1.23807.10 (ProductPropertyDefinition) $
 
 attributetype ( 1.3.6.1.4.1.23807.10.1.1
 	NAME 'opsiProductPropertyName'
@@ -705,7 +696,8 @@ objectclass ( 1.3.6.1.4.1.23807.10.2.1
 	MUST ( cn $ opsiProductReference $ opsiProductPropertyName ) 
 	MAY  ( description $ opsiProductPropertyDefaultValue $ opsiProductPropertyPossibleValue ) )
 
-# $OID: 1.3.6.1.4.1.23807.11 (NetworkConfigs) $
+# $OID: 1.3.6.1.4.1.23807.11 (NetworkConfig) $
+
 attributetype ( 1.3.6.1.4.1.23807.11.1.1
 	NAME 'opsiConfigDrive'
 	EQUALITY caseIgnoreIA5Match
@@ -761,8 +753,7 @@ objectclass ( 1.3.6.1.4.1.23807.11.2.1
 		opsiConfigDrive $ opsiUtilsDrive $ opsiDepotDrive $ description $ opsiWinDomain $
 		opsiNextBootServiceURL $ opsiNextBootServerType ) )
 
-
-# $OID: 1.3.6.1.4.1.23807.12 (GeneralConfigs) $
+# $OID: 1.3.6.1.4.1.23807.12 (GeneralConfig) $
 
 objectclass ( 1.3.6.1.4.1.23807.12.2.1
 	NAME 'opsiGeneralConfig'
@@ -865,10 +856,7 @@ objectclass ( 1.3.6.1.4.1.23807.18.2.1
 	MUST ( cn $ opsiProductId $ opsiPropertyId $ opsiObjectId )
 	MAY ( opsiProductPropertyValue ) )
 
-
-# $OID: 1.3.6.1.4.1.23807.19 (HostGroups) $
-
-
+# $OID: 1.3.6.1.4.1.23807.19 (Group) $
 
 objectclass ( 1.3.6.1.4.1.23807.19.2.1
 	NAME 'opsiHostGroup'
@@ -881,9 +869,9 @@ objectclass ( 1.3.6.1.4.1.23807.21.2.1
 	SUP opsiGroup
 	STRUCTURAL
 	DESC 'Opsi ProductGroup' )
-	
-## $OID: 1.3.6.1.4.1.23807.20 (ObjectToGroups) $
-#	
+
+## $OID: 1.3.6.1.4.1.23807.20 (ObjectToGroup) $
+#
 #objectclass ( 1.3.6.1.4.1.23807.20.2.1
 #	NAME 'opsiObjectToGroup'
 #	SUP top
