@@ -64,6 +64,8 @@ def getSysConfig():
 		logger.warning(u"Failed to get distributor/distribution: %s" % e)
 		
 	logger.notice(u"Getting current system config")
+	if ipAddress:
+		sysConfig['ipAddress'] = ipAddress
 	try:
 		sysConfig['fqdn'] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
 	except:
@@ -71,9 +73,10 @@ def getSysConfig():
 	
 	sysConfig['hostname'] = sysConfig['fqdn'].split(u'.')[0]
 	sysConfig['domain'] = u'.'.join(sysConfig['fqdn'].split(u'.')[1:])
-	sysConfig['ipAddress'] = socket.gethostbyname(sysConfig['fqdn'])
-	if sysConfig['ipAddress'].split(u'.')[0] in ('127', '169'):
-		sysConfig['ipAddress'] = None
+	if not sysConfig['ipAddress']:
+		sysConfig['ipAddress'] = socket.gethostbyname(sysConfig['fqdn'])
+		if sysConfig['ipAddress'].split(u'.')[0] in ('127', '169'):
+			sysConfig['ipAddress'] = None
 	sysConfig['hardwareAddress'] = None
 	
 	for device in getEthernetDevices():
@@ -2931,6 +2934,7 @@ def usage():
 	print u"   -l          log-level 0..9"
 	print u""
 	print u"   --log-file <path>          path to log file"
+	print u"   --ip-address <ip>          force to this ip address (do not lookup by name)"
 	print u"   --register-depot           register depot at config server"
 	print u"   --set-rights [path]        set default rights on opsi files (in [path] only)"
 	print u"   --init-current-config      init current backend configuration"
@@ -2951,7 +2955,7 @@ def main():
 	
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
-			['help', 'log-file=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
+			['help', 'log-file=', 'ip-address=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
 			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-file', 'edit-config-defaults', 'cleanup-backend',
 			 'update-from='])
 		
@@ -2963,6 +2967,8 @@ def main():
 	updateFrom = None
 	autoConfigureSamba = False
 	autoConfigureDhcpd = False
+	global ipAddress
+	ipAddress = None
 	
 	for (opt, arg) in opts:
 		if opt in ("-h", "--help"):
@@ -2973,6 +2979,8 @@ def main():
 			logger.setFileLevel(LOG_DEBUG)
 		elif (opt == "-l"):
 			logger.setConsoleLevel(int(arg))
+		elif (opt == "--ip-address"):
+			ipAddress = forceIpAddress(arg)
 		elif (opt == "--init-current-config"):
 			task = 'init-current-config'
 		elif (opt == "--set-rights"):
