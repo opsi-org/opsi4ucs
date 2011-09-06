@@ -21,6 +21,10 @@ from OPSI.Backend.JSONRPC import *
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 
 import os, sys, socket, re, shutil, getopt, pwd, grp, stat, codecs, time, MySQLdb, ldap
+if (sys.version_info >= (2,6)):
+	import json
+else:
+	import simplejson as json
 
 logger = Logger()
 logger.setConsoleLevel(LOG_NOTICE)
@@ -73,7 +77,7 @@ def getSysConfig():
 	
 	sysConfig['hostname'] = sysConfig['fqdn'].split(u'.')[0]
 	sysConfig['domain'] = u'.'.join(sysConfig['fqdn'].split(u'.')[1:])
-	if not sysConfig['ipAddress']:
+	if not sysConfig.has_key('ipAddress'):
 		sysConfig['ipAddress'] = socket.gethostbyname(sysConfig['fqdn'])
 		if sysConfig['ipAddress'].split(u'.')[0] in ('127', '169'):
 			sysConfig['ipAddress'] = None
@@ -586,6 +590,7 @@ def updateLDAPBackend():
 	logger.info(u"Loading backend config '%s'" % backendConfigFile)
 	execfile(backendConfigFile, l)
 	config = l['config']
+	config.update(backendConfig)
 	baseDn = l['baseDn']
 	logger.info(u"Current ldap backend config: %s" % config)
 	
@@ -1044,6 +1049,7 @@ def updateMySQLBackend():
 	logger.info(u"Loading backend config '%s'" % backendConfigFile)
 	execfile(backendConfigFile, l)
 	config = l['config']
+	config.update(backendConfig)
 	logger.info(u"Current mysql backend config: %s" % config)
 	
 	logger.notice(u"Connection to database '%s' on '%s' as user '%s'" % (config['database'], config['address'], config['username']))
@@ -1458,6 +1464,7 @@ def updateFileBackend():
 	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
 	execfile(backendConfigFile, l)
 	config = l['config']
+	config.update(backendConfig)
 	logger.info(u"Current file backend config: %s" % config)
 	
 	#test for version 40
@@ -2035,6 +2042,7 @@ def configureMySQLBackend():
 	logger.info(u"Loading backend config '%s'" % backendConfigFile)
 	execfile(backendConfigFile, l)
 	config = l['config']
+	config.update(backendConfig)
 	logger.info(u"Current mysql backend config: %s" % config)
 	
 	consoleLevel = logger.getConsoleLevel()
@@ -2176,6 +2184,7 @@ def registerDepot():
 	logger.info(u"Loading backend config '%s'" % backendConfigFile)
 	execfile(backendConfigFile, l)
 	config = l['config']
+	config.update(backendConfig)
 	logger.info(u"Current jsonrpc backend config: %s" % config)
 	
 	
@@ -2933,20 +2942,21 @@ def usage():
 	print u"   -h, --help  show this help"
 	print u"   -l          log-level 0..9"
 	print u""
-	print u"   --log-file <path>          path to log file"
-	print u"   --ip-address <ip>          force to this ip address (do not lookup by name)"
-	print u"   --register-depot           register depot at config server"
-	print u"   --set-rights [path]        set default rights on opsi files (in [path] only)"
-	print u"   --init-current-config      init current backend configuration"
-	print u"   --update-from=<version>    update from opsi version <version>"
-	print u"   --update-mysql             update mysql backend"
-	print u"   --update-ldap              update ldap backend"
-	print u"   --update-file              update file backend"
-	print u"   --configure-mysql          configure mysql backend"
-	print u"   --edit-config-defaults     edit global config defaults"
-	print u"   --cleanup-backend          cleanup backend"
-	print u"   --auto-configure-samba     patch smb.conf"
-	print u"   --auto-configure-dhcpd     patch dhcpd.conf"
+	print u"   --log-file <path>             path to log file"
+	print u"   --backend-config <json hash>  overwrite backend config hash values"
+	print u"   --ip-address <ip>             force to this ip address (do not lookup by name)"
+	print u"   --register-depot              register depot at config server"
+	print u"   --set-rights [path]           set default rights on opsi files (in [path] only)"
+	print u"   --init-current-config         init current backend configuration"
+	print u"   --update-from=<version>       update from opsi version <version>"
+	print u"   --update-mysql                update mysql backend"
+	print u"   --update-ldap                 update ldap backend"
+	print u"   --update-file                 update file backend"
+	print u"   --configure-mysql             configure mysql backend"
+	print u"   --edit-config-defaults        edit global config defaults"
+	print u"   --cleanup-backend             cleanup backend"
+	print u"   --auto-configure-samba        patch smb.conf"
+	print u"   --auto-configure-dhcpd        patch dhcpd.conf"
 	print u""
 	
 def main():
@@ -2955,7 +2965,7 @@ def main():
 	
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
-			['help', 'log-file=', 'ip-address=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
+			['help', 'log-file=', 'ip-address=', 'backend-config=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
 			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-file', 'edit-config-defaults', 'cleanup-backend',
 			 'update-from='])
 		
@@ -2969,6 +2979,8 @@ def main():
 	autoConfigureDhcpd = False
 	global ipAddress
 	ipAddress = None
+	global backendConfig
+	backendConfig = {}
 	
 	for (opt, arg) in opts:
 		if opt in ("-h", "--help"):
@@ -2981,6 +2993,8 @@ def main():
 			logger.setConsoleLevel(int(arg))
 		elif (opt == "--ip-address"):
 			ipAddress = forceIpAddress(arg)
+		elif (opt == "--backend-config"):
+			backendConfig = json.loads(arg)
 		elif (opt == "--init-current-config"):
 			task = 'init-current-config'
 		elif (opt == "--set-rights"):
