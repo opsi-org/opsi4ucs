@@ -582,9 +582,11 @@ def update(fromVersion = None):
 	if isConfigServer:
 		initializeConfigs()
 	configureSamba()
-	
-def updateLDAPBackend():
-	backendConfigFile = u'/etc/opsi/backends/ldap.conf'
+
+def updateUniventionBackend():
+	return updateLDAPBackend(backendConfigFile = u'/etc/opsi/backends/univention.conf')
+
+def updateLDAPBackend(backendConfigFile = u'/etc/opsi/backends/ldap.conf'):
 	
 	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
 	logger.info(u"Loading backend config '%s'" % backendConfigFile)
@@ -2951,6 +2953,7 @@ def usage():
 	print u"   --update-from=<version>       update from opsi version <version>"
 	print u"   --update-mysql                update mysql backend"
 	print u"   --update-ldap                 update ldap backend"
+	print u"   --update-univention           update univention backend"
 	print u"   --update-file                 update file backend"
 	print u"   --configure-mysql             configure mysql backend"
 	print u"   --edit-config-defaults        edit global config defaults"
@@ -2966,7 +2969,7 @@ def main():
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
 			['help', 'log-file=', 'ip-address=', 'backend-config=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
-			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-file', 'edit-config-defaults', 'cleanup-backend',
+			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-univention', 'update-file', 'edit-config-defaults', 'cleanup-backend',
 			 'update-from='])
 		
 	except Exception, e:
@@ -3007,6 +3010,8 @@ def main():
 			task = 'update-mysql'
 		elif (opt == "--update-ldap"):
 			task = 'update-ldap'
+		elif (opt == "--update-univention"):
+			task = 'update-univention'
 		elif (opt == "--update-file"):
 			task = 'update-file'
 		elif (opt == "--edit-config-defaults"):
@@ -3050,6 +3055,10 @@ def main():
 	
 	elif (task == 'update-ldap'):
 		updateLDAPBackend()
+		update()
+	
+	elif (task == 'update-univention'):
+		updateUniventionBackend()
 		update()
 	
 	elif (task == 'update-file'):
