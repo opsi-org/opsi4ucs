@@ -2757,6 +2757,7 @@ def cleanupBackend():
 	logger.notice(u"Cleaning up products")
 	productIds = []
 	productIdents = []
+	
 	for productOnDepot in backend.productOnDepot_getObjects():
 		productIdent = u"%s;%s;%s" % (productOnDepot.productId, productOnDepot.productVersion, productOnDepot.packageVersion)
 		if not productIdent in productIdents:
@@ -2774,13 +2775,19 @@ def cleanupBackend():
 	
 	logger.notice(u"Cleaning up product on depots")
 	productIdents = []
+	depotIds = []
+	for depot in backend.host_getObjects(type=["OpsiConfigserver","OpsiDepotserver"]):
+		depotIds.append(depot.id)
 	for product in backend.product_getObjects():
 		if not product.getIdent(returnType = 'unicode') in productIdents:
 			productIdents.append(product.getIdent(returnType = 'unicode'))
 	deleteProductOnDepots = []
 	for productOnDepot in backend.productOnDepot_getObjects():
 		productIdent = u"%s;%s;%s" % (productOnDepot.productId, productOnDepot.productVersion, productOnDepot.packageVersion)
-		if not productIdent in productIdents:
+		if not productOnDepot.depotId in depotIds:
+			logger.info(u"Marking product on depot %s for deletion, because opsiDepot-Server '%s' not found" % (productOnDepot, productOnDepot.depotId))
+			deleteProductOnDepots.append(productOnDepot)
+		elif not productIdent in productIdents:
 			logger.info(u"Marking product on depot %s with missing product reference for deletion" % productOnDepot)
 			deleteProductOnDepots.append(productOnDepot)
 	if deleteProductOnDepots:
@@ -2788,9 +2795,17 @@ def cleanupBackend():
 	
 	logger.notice(u"Cleaning up product on clients")
 	deleteProductOnClients = []
-	for productOnClient in backend.productOnClient_getObjects(installationStatus = 'not_installed', actionRequest = 'none'):
-		logger.info(u"Marking productOnClient %s for deletion" % productOnClient)
-		deleteProductOnClients.append(productOnClient)
+	clientIds = []
+	for client in backend.host_getObjects(type=["OpsiClient"]):
+		clientIds.append(client.id)
+	for productOnClient in backend.productOnClient_getObjects():
+		if productOnClient not in clientIds:
+			logger.info(u"Marking productOnClient %s for deletion, client doesn't exists" % productOnClient)
+			deleteProductOnClients.append(productOnClient)
+		elif productOnClient.installationStatus == 'not_installed' and productOnClient.actionRequest == 'none':
+			logger.info(u"Marking productOnClient %s for deletion" % productOnClient)
+			deleteProductOnClients.append(productOnClient)
+		
 	if deleteProductOnClients:
 		backend.productOnClient_deleteObjects(deleteProductOnClients)
 	

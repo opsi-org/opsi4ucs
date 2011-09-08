@@ -1,3 +1,10 @@
+opsi4ucs (4.0.1.2-1) stable; urgency=low
+
+  * opsi-setup
+    - cleanup-backend fix: productOnClient and productOnDepot
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 08 Sep 2011 13:52:53 +0200
+
 opsi4ucs (4.0.1.1-1) stable; urgency=low
 
   * opsi-setup:
