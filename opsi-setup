@@ -2799,7 +2799,7 @@ def cleanupBackend():
 	for client in backend.host_getObjects(type=["OpsiClient"]):
 		clientIds.append(client.id)
 	for productOnClient in backend.productOnClient_getObjects():
-		if productOnClient not in clientIds:
+		if productOnClient.clientId not in clientIds:
 			logger.info(u"Marking productOnClient %s for deletion, client doesn't exists" % productOnClient)
 			deleteProductOnClients.append(productOnClient)
 		elif productOnClient.installationStatus == 'not_installed' and productOnClient.actionRequest == 'none':
