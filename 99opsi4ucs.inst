@@ -366,7 +366,8 @@ if [ "$OPSI_ROLE" = "depotserver" ]; then
 			"smb://${HOSTNAME}/opt_pcbin/install" \
 			"webdavs://${FQDN}:4447/depot" \
 			"file:///var/lib/opsi/repository" \
-			"webdavs://${FQDN}:4447/repository"
+			"webdavs://${FQDN}:4447/repository" \
+			"isMasterDepot:True"
 	fi
 fi
 #sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
