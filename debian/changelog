@@ -1,7 +1,12 @@
-opsi4ucs (4.0.1.5-1) lucid; urgency=low
+opsi4ucs (4.0.1.6-1) stable; urgency=low
+
+  * 99opsi4ucs.inst: Add isMasterDepot Attribute
+
+ -- Erol Ueluekmen <erol@erollinux.uib.local>  Sat, 24 Sep 2011 15:49:21 +0200
+
+opsi4ucs (4.0.1.5-1) stable; urgency=low
 
   * Added attribute opsiPcpatchPassword to schema and delared it as MAY in opsiConfigserver class
-  * 99opsi4ucs.inst: Add isMasterDepot Attribute
 
  -- Erol Ueluekmen <erol@erollinux.uib.local>  Fri, 23 Sep 2011 15:49:21 +0200
 
