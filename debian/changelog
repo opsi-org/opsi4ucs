@@ -6,7 +6,7 @@ opsi4ucs (4.0.1.6-1) stable; urgency=low
 
 opsi4ucs (4.0.1.5-1) stable; urgency=low
 
-  * Added attribute opsiPcpatchPassword to schema and delared it as MAY in opsiConfigserver class
+  * Added attribute opsiPcpatchPassword to schema and declared it as MAY in opsiConfigserver class
 
  -- Erol Ueluekmen <erol@erollinux.uib.local>  Fri, 23 Sep 2011 15:49:21 +0200
 
