@@ -1,4 +1,5 @@
 /etc/opsi/backends/univention.conf
 /etc/opsi/backendManager/dispatch.conf.univention
+/etc/opsi/backendManager/dispatch.conf.jsonrpc
 /etc/univention/templates/files/var/www/ucs-overview/en.html.d/40opsi-en.html
 /etc/univention/templates/files/var/www/ucs-overview/de.html.d/40opsi-de.html
