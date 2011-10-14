@@ -369,7 +369,27 @@ if [ "$OPSI_ROLE" = "depotserver" ]; then
 			"webdavs://${FQDN}:4447/repository" \
 			"isMasterDepot:True"
 	fi
+	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
+	
+	dn=$(ldapsearch -x uid=$(hostname)\$ dn -LLL | ldapsearch-wrapper | sed -n -e 's/^dn: //p')
+	opsiHostKey=$(ldapsearch -x -D "$dn" -w $(cat /etc/machine.secret) opsiHostKey -b "$dn" -LLL | ldapsearch-wrapper | sed -n -e 's/^opsiHostKey: //p')
+	
+	cp /etc/opsi/backends/jsonrpc.conf /etc/opsi/backends/jsonrpc.conf.sav
+	echo "# -*- coding: utf-8 -*-" > /etc/opsi/backends/jsonrpc.conf
+	echo "" >> /etc/opsi/backends/jsonrpc.conf
+	echo "module = 'JSONRPC'" >> /etc/opsi/backends/jsonrpc.conf
+	echo "config = {" >> /etc/opsi/backends/jsonrpc.conf
+	echo "'username': u'$FQDN'," >> /etc/opsi/backends/jsonrpc.conf
+	echo "'password': u'$opsiHostKey'," >> /etc/opsi/backends/jsonrpc.conf
+	echo "'deflate': True," >> /etc/opsi/backends/jsonrpc.conf
+	echo "'address': u'$config_server'" >> /etc/opsi/backends/jsonrpc.conf
+	echo "}" >> /etc/opsi/backends/jsonrpc.conf
+	
 fi
+
+opsi-setup --init-current-config
+opsi-setup --set-rights
+
 #sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
 
 # --- Commit changes ------------------------------------------------------------------------------------------------------------

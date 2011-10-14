@@ -1,3 +1,10 @@
+opsi4ucs (4.0.1.7-1) stable; urgency=low
+
+  * 99opsi4ucs.inst: Automatic configuration from depot-server for work over jsonrpc
+  * Added dispatch.conf.jsonrpc
+
+ -- Erol Ueluekmen <erol@erollinux.uib.local>  Fri, 14 Oct 2011 15:01:47 +0200
+
 opsi4ucs (4.0.1.6-1) stable; urgency=low
 
   * 99opsi4ucs.inst: Add isMasterDepot Attribute
