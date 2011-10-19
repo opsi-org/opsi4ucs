@@ -17,16 +17,12 @@
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-# run join script
-if [ "$(univention-baseconfig get server/role)" = "domaincontroller_master" ]; then
-	/usr/lib/univention-install/99opsi4ucs.inst || true
-fi
+VERBOSE=true
 
 case "$1" in
 	configure)
-		if [ ! -f /etc/opsi/backendManager/dispatch.conf ]; then
-			ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
-		fi 
+		# run join script
+		/usr/lib/univention-install/99opsi4ucs.inst || true
 	;;
 	
 	abort-upgrade|abort-remove|abort-deconfigure)
