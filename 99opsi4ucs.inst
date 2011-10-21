@@ -6,7 +6,7 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=2
+VERSION=3
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -349,8 +349,8 @@ fi
 
 ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
 
-opsi-setup --init-current-config
-opsi-setup --set-rights
+#opsi-setup --init-current-config
+#opsi-setup --set-rights
 
 if [ "$OPSI_ROLE" = "depotserver" ]; then
 	set +e
