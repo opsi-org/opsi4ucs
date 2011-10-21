@@ -387,7 +387,7 @@ if [ "$OPSI_ROLE" = "depotserver" ]; then
 	
 fi
 
-opsi-setup --init-current-config
+#opsi-setup --init-current-config
 opsi-setup --set-rights
 
 #sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
