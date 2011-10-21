@@ -1,3 +1,10 @@
+opsi4ucs (4.0.1.8-1) stable; urgency=low
+
+  * 99opsi4ucs.inst: Fix: UCS-Master can be opsi-depotserver and must not be opsi-configserver
+  * opsi4ucs postinst: Only run 99opsi4ucs.inst when installing package on UCS-Master or UCS-Backup
+
+ -- Erol Ueluekmen <erol@erollinux.uib.local>  Fr, 21 Oct 2011 10:01:47 +0200
+
 opsi4ucs (4.0.1.7-1) stable; urgency=low
 
   * 99opsi4ucs.inst: Automatic configuration from depot-server for work over jsonrpc

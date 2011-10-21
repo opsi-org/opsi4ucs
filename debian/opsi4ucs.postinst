@@ -19,10 +19,14 @@
 
 VERBOSE=true
 
+UCSROLE=$(univention-baseconfig get server/role)
+
 case "$1" in
 	configure)
 		# run join script
-		/usr/lib/univention-install/99opsi4ucs.inst || true
+		if [ "$UCSROLE" = "domaincontroller_master" -o "$UCSROLE" = "domaincontroller_backup" ]; then
+			/usr/lib/univention-install/99opsi4ucs.inst || true
+		fi
 	;;
 	
 	abort-upgrade|abort-remove|abort-deconfigure)
