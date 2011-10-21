@@ -3,26 +3,26 @@ opsi4ucs (4.0.1.8-1) stable; urgency=low
   * 99opsi4ucs.inst: Fix: UCS-Master can be opsi-depotserver and must not be opsi-configserver
   * opsi4ucs postinst: Only run 99opsi4ucs.inst when installing package on UCS-Master or UCS-Backup
 
- -- Erol Ueluekmen <erol@erollinux.uib.local>  Fr, 21 Oct 2011 10:01:47 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 21 Oct 2011 11:59:33 +0200
 
 opsi4ucs (4.0.1.7-1) stable; urgency=low
 
   * 99opsi4ucs.inst: Automatic configuration from depot-server for work over jsonrpc
   * Added dispatch.conf.jsonrpc
 
- -- Erol Ueluekmen <erol@erollinux.uib.local>  Fri, 14 Oct 2011 15:01:47 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 14 Oct 2011 15:01:47 +0200
 
 opsi4ucs (4.0.1.6-1) stable; urgency=low
 
   * 99opsi4ucs.inst: Add isMasterDepot Attribute
 
- -- Erol Ueluekmen <erol@erollinux.uib.local>  Sat, 24 Sep 2011 15:49:21 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Sat, 24 Sep 2011 15:49:21 +0200
 
 opsi4ucs (4.0.1.5-1) stable; urgency=low
 
   * Added attribute opsiPcpatchPassword to schema and declared it as MAY in opsiConfigserver class
 
- -- Erol Ueluekmen <erol@erollinux.uib.local>  Fri, 23 Sep 2011 15:49:21 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 23 Sep 2011 15:49:21 +0200
 
 opsi4ucs (4.0.1.4-1) stable; urgency=low
 
