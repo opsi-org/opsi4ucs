@@ -2516,7 +2516,7 @@ def initializeBackends():
 				masterDepotId       = None,
 			)
 		
-	if configServer.id == getSysConfig()['fqdn']:
+	if configServer[0].id == getSysConfig()['fqdn']:
 		configServer = backend.host_getObjects(type = 'OpsiConfigserver')
 		if not configServer:
 			raise Exception(u"Config server '%s' not found" % getSysConfig()['fqdn'])
