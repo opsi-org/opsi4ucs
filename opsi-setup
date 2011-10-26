@@ -2515,19 +2515,19 @@ def initializeBackends():
 				isMasterDepot       = True,
 				masterDepotId       = None,
 			)
+	if configServer:	
+		if configServer[0].id == getSysConfig()['fqdn']:
+			configServer = backend.host_getObjects(type = 'OpsiConfigserver')
+			if not configServer:
+				raise Exception(u"Config server '%s' not found" % getSysConfig()['fqdn'])
+			configServer = configServer[0]
+			if getSysConfig()['ipAddress']:
+				configServer.setIpAddress(getSysConfig()['ipAddress'])
+			if getSysConfig()['hardwareAddress']:
+				configServer.setHardwareAddress(getSysConfig()['hardwareAddress'])
 		
-	if configServer[0].id == getSysConfig()['fqdn']:
-		configServer = backend.host_getObjects(type = 'OpsiConfigserver')
-		if not configServer:
-			raise Exception(u"Config server '%s' not found" % getSysConfig()['fqdn'])
-		configServer = configServer[0]
-		if getSysConfig()['ipAddress']:
-			configServer.setIpAddress(getSysConfig()['ipAddress'])
-		if getSysConfig()['hardwareAddress']:
-			configServer.setHardwareAddress(getSysConfig()['hardwareAddress'])
-	
-		#make sure the config server is present in all backends or we get reference error later on
-		backend.host_insertObject(configServer)
+			#make sure the config server is present in all backends or we get reference error later on
+			backend.host_insertObject(configServer)
 	backend.backend_exit()
 	initializeConfigs(configServer = configServer)
 	
