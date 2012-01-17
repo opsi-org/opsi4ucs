@@ -1,3 +1,10 @@
+opsi4ucs (4.0.1.9-1) experimental; urgency=low
+
+  * Install Dependecies for ucs 3.0
+  * EXPERIMENTAL
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 17 Jan 2012 17:44:51 +0100
+
 opsi4ucs (4.0.1.8-1) stable; urgency=low
 
   * 99opsi4ucs.inst: Fix: UCS-Master can be opsi-depotserver and must not be opsi-configserver
