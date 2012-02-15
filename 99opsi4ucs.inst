@@ -6,7 +6,7 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=3
+VERSION=4
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -367,6 +367,7 @@ if [ "$OPSI_ROLE" = "depotserver" ]; then
 			"webdavs://${FQDN}:4447/depot" \
 			"file:///var/lib/opsi/repository" \
 			"webdavs://${FQDN}:4447/repository" \
+			"" "" "" null null "" 0 \
 			"isMasterDepot:True"
 	fi
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
