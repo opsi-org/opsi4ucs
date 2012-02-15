@@ -1,3 +1,9 @@
+opsi4ucs (4.0.1.10) stable; urgency=low
+
+  * 99opsi4ucs: Depotserver isMasterDepot (multidepot-fix)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 15 Feb 2012 17:05:49 +0100
+
 opsi4ucs (4.0.1.9-1) experimental; urgency=low
 
   * Install Dependecies for ucs 3.0
