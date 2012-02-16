@@ -109,7 +109,7 @@ def getSysConfig():
 	
 	sysConfig['winDomain'] = u''
 	if os.path.exists(SMB_CONF):
-		f = open(SMB_CONF)
+		f = codecs.open(SMB_CONF, 'r', 'utf-8')
 		for line in f.readlines():
 			match = re.search('^\s*workgroup\s*=\s*(\S+)\s*$', line)
 			if match:
@@ -135,7 +135,7 @@ def getSysConfig():
 def configureSamba():
 	logger.notice(u"Configuring samba")
 	
-	f = open(SMB_CONF)
+	f = codecs.open(SMB_CONF, 'r', 'utf-8')
 	lines = f.readlines()
 	f.close()
 	newlines = []
@@ -226,7 +226,7 @@ def configureSamba():
 		shutil.copy(SMB_CONF, SMB_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
 		
 		logger.notice(u"   Writing new smb.conf")
-		f = open(SMB_CONF, 'w')
+		f = codecs.open(SMB_CONF, 'w', 'utf-8')
 		lines = f.writelines(newlines)
 		f.close()
 		
@@ -323,7 +323,7 @@ def configureDHCPD():
 	logger.notice(u"Configuring sudoers")
 	
 	found = False
-	f = open(SUDOERS)
+	f = codecs.open(SUDOERS, 'r', 'utf-8')
 	lines = []
 	for line in f.readlines():
 		if (line.find('%s restart' % DHCPD_INIT) != -1):
@@ -340,7 +340,7 @@ def configureDHCPD():
 			lines.append(u"Defaults:opsiconfd !requiretty\n")
 		lines.append(u"opsiconfd ALL=NOPASSWD: %s restart\n" % DHCPD_INIT)
 		logger.notice(u"   Writing new %s" % SUDOERS)
-		f = open(SUDOERS, 'w')
+		f = codecs.open(SUDOERS, 'w', 'utf-8')
 		f.writelines(lines)
 		f.close()
 	
@@ -367,8 +367,8 @@ def configureClientUser():
 		logger.notice(u"   Creating RSA private key for user %s in '%s'" % (CLIENT_USER, idRsa))
 		execute(u"%s -N '' -t rsa -f %s" % ( which('ssh-keygen'), idRsa))
 	if not os.path.exists(authorizedKeys):
-		f = open(idRsaPub, 'r')
-		f2 = open(authorizedKeys, 'w')
+		f = codecs.open(idRsaPub, 'r', 'utf-8')
+		f2 = codecs.open(authorizedKeys, 'w', 'utf-8')
 		f2.write(f.read())
 		f2.close()
 		f.close()
@@ -2437,7 +2437,7 @@ def registerDepot():
 	
 def initializeBackends():
 	if not os.path.exists(u'/etc/opsi/passwd'):
-		f = open(u'/etc/opsi/passwd', 'w')
+		f = codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8')
 		f.close()
 		opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
 		adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
@@ -2515,7 +2515,7 @@ def initializeBackends():
 				isMasterDepot       = True,
 				masterDepotId       = None,
 			)
-	if configServer:	
+	if configServer:
 		if configServer[0].id == getSysConfig()['fqdn']:
 			configServer = backend.host_getObjects(type = 'OpsiConfigserver')
 			if not configServer:

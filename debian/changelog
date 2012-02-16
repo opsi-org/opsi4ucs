@@ -1,6 +1,7 @@
 opsi4ucs (4.0.1.10) stable; urgency=low
 
   * 99opsi4ucs: Depotserver isMasterDepot (multidepot-fix)
+  * opsi-setup: fix reading problems with sudoers-file and smb.conf
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 15 Feb 2012 17:05:49 +0100
 
