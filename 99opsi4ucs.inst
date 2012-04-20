@@ -6,7 +6,7 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=4
+VERSION=5
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -19,23 +19,23 @@ touch /usr/lib/univention-install/.index.txt
 test -n "`grep "opsi4ucs v${VERSION} successful" /usr/lib/univention-install/.index.txt`" && exit 1
 
 TFTPROOT="/var/lib/univention-client-boot"
-SERVER_ROLE=`ucr get server/role`
+SERVER_ROLE=$(ucr get server/role)
 OPSI_ROLE="configserver"
-ROOT_DN=`ucr get ldap/base`
-LDAP_MASTER=`ucr get ldap/master`
-LDAP_USER=`ucr get ldap/hostdn`
-LDAP_SECRET=`cat /etc/machine.secret`
-HOSTNAME=`uname -n`
-DOMAIN=`ucr get domainname`
-FQDN=`hostname --fqdn`
-IPADDRESS=`getent hosts $FQDN | head -n1 | cut -d' ' -f1`
+ROOT_DN=$(ucr get ldap/base)
+LDAP_MASTER=$(ucr get ldap/master)
+LDAP_USER=$(ucr get ldap/hostdn)
+LDAP_SECRET=$(cat /etc/machine.secret)
+HOSTNAME=$(uname -n)
+DOMAIN=$(ucr get domainname)
+FQDN=$(hostname --fqdn)
+IPADDRESS=$(getent hosts $FQDN | head -n1 | cut -d' ' -f1)
 NETMASK=""
 GATEWAY=""
 SUBNET=""
 BROADCAST=""
-WINDOMAIN=`ucr get windows/domain`
-UCS_VERSION=`ucr get version/version`
-UCS_PATCHLEVEL=`ucr get version/patchlevel`
+WINDOMAIN=$(ucr get windows/domain)
+UCS_VERSION=$(ucr get version/version)
+UCS_PATCHLEVEL=$(ucr get version/patchlevel)
 
 if   [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	$VERBOSE && echo -e "\nRunning on UCS Master"
@@ -97,9 +97,16 @@ fi
 
 # --- Determine opsi role -------------------------------------------------------------------------------------------------------
 set +e
-config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
+# old version
+# config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
+config_server="$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 set -e
-[ "$config_server" != "" -a "$config_server" != "$FQDN" ] && OPSI_ROLE="depotserver"
+if [ "$config_server" != "" -a "$config_server" != "$FQDN" ]; then 
+	OPSI_ROLE="depotserver"
+elif [ "$config_server" != ""]
+	$VERBOSE && echo "No Server marked as OpsiConfigserver, trying to set $FQDN as OpsiConfigserver for $ROOT_DN"
+	udm computers/$SERVER_ROLE modify "$@" --dn $(ucr get ldap/hostdn) --append service=OpsiConfigserver
+fi
 
 
 # --- Show system information ---------------------------------------------------------------------------------------------------
@@ -133,7 +140,7 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #ret=$?
 #set -e
 #if [ $ret = 0 ]; then
-#	udm settings/extended_attribute create $@ --ignore_exists \
+#	udm settings/extended_attribute create "$@" --ignore_exists \
 #		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
 #		--set "name=opsiHostId" --set "module=computers/windows" \
 #		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
@@ -148,23 +155,23 @@ udm settings/extended_attribute remove $@ \
 $VERBOSE && echo "Adding system users and groups..."
 
 set +e
-udm groups/group list $@ --filter "(name=OPSI Depot Servers)" | grep '^DN:' 1>/dev/null
+udm groups/group list "$@" --filter "(name=OPSI Depot Servers)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group OPSI Depot Servers"
-	udm groups/group create $@ \
+	udm groups/group create "$@" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="OPSI Depot Servers" \
 		--set description="opsi depot servers" \
 		--ignore_exists
 fi
-udm groups/group modify $@ \
+udm groups/group modify "$@" \
 	--dn "cn=OPSI Depot Servers,cn=groups,$ROOT_DN" \
 	--append hosts="$LDAP_USER"
 
 set +e
-udm groups/group list $@ --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
+udm groups/group list "$@" --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
@@ -178,12 +185,12 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-udm groups/group list $@ --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
+udm groups/group list "$@" --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group opsiadmin"
-	udm groups/group create $@ \
+	udm groups/group create "$@" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="opsiadmin" \
 		--set description="opsi config admin group" \
@@ -191,7 +198,7 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-udm users/user list $@ --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
+udm users/user list "$@" --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
@@ -200,7 +207,7 @@ if [ $ret != 0 ]; then
 	
 	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
 	
-	udm users/user create $@ \
+	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
 		--set username="pcpatch" \
 		--set description="opsi-pseudo user" \
@@ -213,7 +220,7 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
-udm groups/group modify $@ \
+udm groups/group modify "$@" \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 
@@ -226,18 +233,18 @@ rm /tmp/.group.tmp.opsi4ucs
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Creating container for samba shares"
-udm container/cn create $@ \
+udm container/cn create "$@" \
 	--ignore_exists \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
 set +e
-udm shares/share list $@ --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
+udm shares/share list "$@" --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opt_pcbin"
-	udm shares/share create $@ \
+	udm shares/share create "$@" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opt_pcbin \
 		--set host=$FQDN \
@@ -259,12 +266,12 @@ if [ $ret != 0 ]; then
 fi
 
 set +e
-udm shares/share list $@ --filter "(name=opsi_depot)" | grep '^DN:' | grep $FQDN 1>/dev/null
+udm shares/share list "$@" --filter "(name=opsi_depot)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opsi_depot"
-	udm shares/share create $@ \
+	udm shares/share create "$@" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_depot \
 		--set host=$FQDN \
@@ -284,12 +291,12 @@ if [ ! -e "/var/lib/opsi/depot" -a -e "/opt/pcbin/install" ]; then
 fi
 
 set +e
-udm shares/share list $@ --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
+udm shares/share list "$@" --filter "(name=opsi_workbench)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opsi_workbench"
-	udm shares/share create $@ \
+	udm shares/share create "$@" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_workbench \
 		--set host=$FQDN \
@@ -353,38 +360,8 @@ ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManage
 #opsi-setup --set-rights
 
 if [ "$OPSI_ROLE" = "depotserver" ]; then
-	set +e
-	opsi-admin -S -d method host_getIdents unicode "{\"id\":\"${FQDN}\"}" | grep $FQDN 1>/dev/null 2>/dev/null
-	ret=$?
-	set -e
-	if [ $ret != 0 ]; then
-		$VERBOSE && echo "Creating depotserver"
-		opsi-admin --no-depot -d method host_createOpsiDepotserver \
-			"$FQDN" \
-			null \
-			"file:///opt/pcbin/install" \
-			"smb://${HOSTNAME}/opt_pcbin/install" \
-			"webdavs://${FQDN}:4447/depot" \
-			"file:///var/lib/opsi/repository" \
-			"webdavs://${FQDN}:4447/repository" \
-			null null null null null null null true
-	fi
-	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
-	
-	dn=$(ldapsearch -x uid=$(hostname)\$ dn -LLL | ldapsearch-wrapper | sed -n -e 's/^dn: //p')
-	opsiHostKey=$(ldapsearch -x -D "$dn" -w $(cat /etc/machine.secret) opsiHostKey -b "$dn" -LLL | ldapsearch-wrapper | sed -n -e 's/^opsiHostKey: //p')
-	
-	cp /etc/opsi/backends/jsonrpc.conf /etc/opsi/backends/jsonrpc.conf.sav
-	echo "# -*- coding: utf-8 -*-" > /etc/opsi/backends/jsonrpc.conf
-	echo "" >> /etc/opsi/backends/jsonrpc.conf
-	echo "module = 'JSONRPC'" >> /etc/opsi/backends/jsonrpc.conf
-	echo "config = {" >> /etc/opsi/backends/jsonrpc.conf
-	echo "'username': u'$FQDN'," >> /etc/opsi/backends/jsonrpc.conf
-	echo "'password': u'$opsiHostKey'," >> /etc/opsi/backends/jsonrpc.conf
-	echo "'deflate': True," >> /etc/opsi/backends/jsonrpc.conf
-	echo "'address': u'$config_server'" >> /etc/opsi/backends/jsonrpc.conf
-	echo "}" >> /etc/opsi/backends/jsonrpc.conf
-	
+	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server$"
+	opsi-setup --registerdepot --configserver $config_server$ "$@"
 fi
 
 opsi-setup --init-current-config

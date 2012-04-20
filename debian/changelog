@@ -1,3 +1,12 @@
+opsi4ucs (4.0.1.11-1) experimental; urgency=low
+
+  * opsi-setup: registerdepot non-interactive mode added for univention-join-scripts
+  * 99opsi4ucs.inst:
+      - added new opsi-setup implementation for joinscript
+      - added new attribute OpsiConfigserver for univentionService
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 20 Apr 2012 14:07:57 +0200
+
 opsi4ucs (4.0.1.10-1) stable; urgency=low
 
   * 99opsi4ucs: Depotserver isMasterDepot (multidepot-fix)
