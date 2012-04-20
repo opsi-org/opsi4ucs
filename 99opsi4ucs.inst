@@ -23,6 +23,7 @@ SERVER_ROLE=$(ucr get server/role)
 OPSI_ROLE="configserver"
 ROOT_DN=$(ucr get ldap/base)
 LDAP_MASTER=$(ucr get ldap/master)
+LDAP_PORT=$(ucr get ldap/port)
 LDAP_USER=$(ucr get ldap/hostdn)
 LDAP_SECRET=$(cat /etc/machine.secret)
 HOSTNAME=$(uname -n)
@@ -98,7 +99,7 @@ fi
 # --- Determine opsi role -------------------------------------------------------------------------------------------------------
 set +e
 # old version
-# config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
+# config_server=$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
 config_server="$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 $VERBOSE && echo "Found configserver: $config_server" 
 set -e
