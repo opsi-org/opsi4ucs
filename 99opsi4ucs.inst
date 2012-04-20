@@ -102,11 +102,11 @@ set +e
 config_server="$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 $VERBOSE && echo "Found configserver: $config_server" 
 set -e
-if [ "$config_server" != "" -a "$config_server" != "$FQDN" ]; then 
-	OPSI_ROLE="depotserver"
-elif [ "$config_server" == ".$DOMAIN" ]; then
+if [ "$config_server" == ".$DOMAIN" ]; then
 	$VERBOSE && echo "No Server marked as OpsiConfigserver, trying to set $FQDN as OpsiConfigserver for $ROOT_DN"
 	udm computers/$SERVER_ROLE modify "$@" --dn $(ucr get ldap/hostdn) --append service=OpsiConfigserver
+elif [ "$config_server" != ".$DOMAIN" -a "$config_server" != "$FQDN" ]; then
+	OPSI_ROLE="depotserver"
 fi
 
 
