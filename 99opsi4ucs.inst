@@ -99,8 +99,8 @@ fi
 # --- Determine opsi role -------------------------------------------------------------------------------------------------------
 set +e
 # old version
-# config_server=$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
-config_server="$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
+# config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
+config_server="$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 $VERBOSE && echo "Found configserver: $config_server" 
 set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
