@@ -363,7 +363,8 @@ ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManage
 
 if [ "$OPSI_ROLE" = "depotserver" ]; then
 	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server"
-	opsi-setup --register-depot --configserver $config_server$ $@
+	$VERBOSE && echo "$@"
+	#opsi-setup --register-depot --configserver $config_server$ $@
 else
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
