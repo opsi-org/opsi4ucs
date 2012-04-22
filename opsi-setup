@@ -3057,9 +3057,6 @@ def usage():
 	print u"   --cleanup-backend             cleanup backend"
 	print u"   --auto-configure-samba        patch smb.conf"
 	print u"   --auto-configure-dhcpd        patch dhcpd.conf"
-	print u"   --binddn                      bindn for univention-join-script integration"
-	print u"   --bindpw                      bindpw univention-join-script integration"
-	print u"   --configserver                configserver univention-join-script integration"
 	print u""
 	
 def main():
@@ -3070,7 +3067,7 @@ def main():
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
 			['help', 'log-file=', 'ip-address=', 'backend-config=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
 			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-univention', 'update-file', 'edit-config-defaults', 'cleanup-backend',
-			 'update-from=', 'binddn', 'bindpw', 'configserver'])
+			 'update-from=', 'binddata='])
 		
 	except Exception, e:
 		usage()
@@ -3128,15 +3125,22 @@ def main():
 			autoConfigureSamba = True
 		elif (opt == "--auto-configure-dhcpd"):
 			autoConfigureDhcpd = True
-		elif (opt == "--binddn"):
-			for entry in arg.split(","):
-				if entry.startswith("uid"):
-					username = entry.split("=")[1]
+		elif (opt == "--binddata"):
+			# Not documented option for automatic use from register-depot task in univention-join-script
+			i = 0
+			arglist = arg.split(" ")
+			for entry in arglist:
+				i += 1
+				if "configserver" in entry:
+					configserver = arglist[i]
+				elif "binddn" in entry:
+					temp = arglist[i]
+					if "=" in temp:
+						username = temp.split("=")[1].split(",")[0]
+				elif "bindpw" in entry:
+					password = arglist[i]
+				if i == len(entry) -1:
 					break
-		elif (opt == "--bindpw"):
-			password = arg
-		elif (opt == "--configserver"):
-			configserver = arg
 	
 	path = u'/'
 	if (len(args) > 0):
