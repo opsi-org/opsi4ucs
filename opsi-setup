@@ -3147,10 +3147,6 @@ def main():
 	if (len(args) > 0):
 		if (task == 'set-rights') and (len(args) == 1):
 			path = os.path.abspath(forceFilename(args[0]))
-		elif (task == 'register-depot'):
-			print "username: ",username
-			print "password: ",password
-			print "configserver: ",configserver
 		else:
 			usage()
 			raise Exception(u"Too many arguments")
