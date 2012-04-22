@@ -3131,6 +3131,8 @@ def main():
 			arglist = arg.split(" ")
 			for entry in arglist:
 				i += 1
+				if i == len(entry) - 2:
+					break
 				if "configserver" in entry:
 					configserver = arglist[i]
 				elif "binddn" in entry:
@@ -3139,8 +3141,7 @@ def main():
 						username = temp.split("=")[1].split(",")[0]
 				elif "bindpw" in entry:
 					password = arglist[i]
-				if i == len(entry) -1:
-					break
+				
 	
 	path = u'/'
 	if (len(args) > 0):
