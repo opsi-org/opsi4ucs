@@ -3130,21 +3130,18 @@ def main():
 			i = 0
 			arglist = arg.split(" ")
 			for entry in arglist:
-				i += 1
 				if "configserver" in entry:
-					configserver = arglist[i]
-					i += 1
+					configserver = arglist[i + 1]
 				elif "binddn" in entry:
-					temp = arglist[i]
+					temp = arglist[i + 1]
 					if "=" in temp:
 						username = temp.split("=")[1].split(",")[0]
-					i += 1
 				elif "bindpw" in entry:
-					password = arglist[i]
-					i += 1
+					password = arglist[i + 1]
 				if i >= len(arglist) - 2:
 					break
-				
+				else:
+					i += 1
 	
 	path = u'/'
 	if (len(args) > 0):
