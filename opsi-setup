@@ -2217,6 +2217,7 @@ def registerDepot(username = None, password = None, configserver = None):
 			if not depot.ipAddress:       depot.ipAddress = getSysConfig()['ipAddress'] or u''
 			if not depot.networkAddress:  depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
 			if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
+			if not depot.masterDepotId:   depot.masterDepotId = None
 		else:
 			#depotLocalUrl  = u'file:///opt/pcbin/install'
 			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
@@ -2242,6 +2243,7 @@ def registerDepot(username = None, password = None, configserver = None):
 					isMasterDepot       = True,
 					masterDepotId       = None,
 			)
+		
 		
 	else:
 		consoleLevel = logger.getConsoleLevel()
@@ -2433,6 +2435,8 @@ def registerDepot(username = None, password = None, configserver = None):
 			logger.setConsoleLevel(consoleLevel)
 	
 	logger.notice(u"Creating depot '%s'" % depot.id)
+	print isinstance(depot, OpsiDepotserver)
+	print jsonrpcBackend
 	jsonrpcBackend.host_createObjects([ depot ])
 	
 	logger.notice(u"Getting depot '%s'" % depot.id)
