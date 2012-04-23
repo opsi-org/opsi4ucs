@@ -2435,8 +2435,6 @@ def registerDepot(username = None, password = None, configserver = None):
 			logger.setConsoleLevel(consoleLevel)
 	
 	logger.notice(u"Creating depot '%s'" % depot.id)
-	print isinstance(depot, OpsiDepotserver)
-	print jsonrpcBackend
 	jsonrpcBackend.host_createObjects([ depot ])
 	
 	logger.notice(u"Getting depot '%s'" % depot.id)
