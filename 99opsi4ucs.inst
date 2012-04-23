@@ -362,6 +362,7 @@ ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManage
 #opsi-setup --set-rights
 
 if [ "$OPSI_ROLE" = "depotserver" ]; then
+	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
 	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server"
 	credentials="$@"
 	opsi-setup --register-depot -l5 --binddata "--configserver $config_server $credentials"
