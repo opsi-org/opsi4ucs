@@ -361,12 +361,15 @@ ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManage
 #opsi-setup --init-current-config
 #opsi-setup --set-rights
 
-if [ "$OPSI_ROLE" = "depotserver" ]; then
+if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
 	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server"
 	credentials="$@"
 	opsi-setup --register-depot -l5 --binddata "--configserver $config_server $credentials"
 else
+	if [ "$OPSI_ROLE" = "depotserver" ]; then
+		$VERBOSE && echo "Automatic Registration of Server as opsi-Depotserver could not be done, because serverole: $SERVER_ROLE was detected, please execute opsi-setup --register-depot after installation."
+	fi
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
 fi
