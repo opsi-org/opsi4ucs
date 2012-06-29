@@ -357,8 +357,13 @@ if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	set -e
 	if [ $ret != 0 ]; then
 		$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
-		echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-			| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
+		if [ $UCS_3 = "1" ]; then
+			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+				| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -y "$(cat /etc/ldap.secret)" >/dev/null
+		else
+			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+				| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
+		fi
 	fi
 fi
 
