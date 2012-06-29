@@ -197,6 +197,7 @@ udm groups/group modify "$@" \
 $VERBOSE && echo "Adding system users and group: $fileadmingroup"
 udm groups/group list "$@" --filter "(name=$fileadmingroup)" | grep '^DN:' 1>/dev/null
 ret=$?
+$VERBOSE && echo "Ergebnis: $ret"
 set -e
 
 if [ $ret != 0 ]; then
