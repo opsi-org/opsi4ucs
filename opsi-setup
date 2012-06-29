@@ -28,28 +28,6 @@ else:
 
 logger = Logger()
 
-DISTRIBUTOR = 'unknown'
-try:
-	f = os.popen('lsb_release -i 2>/dev/null')
-	DISTRIBUTOR = f.read().split(':')[1].strip()
-	f.close()
-except Exception, e:
-	pass
-DISTRIBUTION = 'unknown'
-try:
-	f = os.popen('lsb_release -d 2>/dev/null')
-	DISTRIBUTION = f.read().split(':')[1].strip()
-	f.close()
-except Exception, e:
-	pass
-DISTRELEASE = 'unknown'
-try:
-	f = os.popen('lsb_release -r 2>/dev/null')
-	DISTRELEASE = f.read().split(':')[1].strip()
-	f.close()
-except Exception, e:
-	pass
-
 logger.setConsoleLevel(LOG_NOTICE)
 logger.setConsoleColor(True)
 
@@ -62,8 +40,19 @@ SUDOERS          = u'/etc/sudoers'
 OPSICONFD_USER   = u'opsiconfd'
 ADMIN_GROUP      = u'opsiadmin'
 CLIENT_USER      = u'pcpatch'
-FILE_ADMIN_GROUP = u'pcpatch'
+
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
+
+try:
+	fileBackendConfigFile = u"/etc/opsi/backends/file.conf"
+	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+	logger.info(u"Loading backend config '%s'" % fileBackendConfigFile)
+	execfile(fileBackendConfigFile, l)
+	FILE_ADMIN_GROUP = l.get("config", {}).get("fileadmingroup",u"pcpatch")
+except:
+	FILE_ADMIN_GROUP = u'pcpatch'
+
+
 
 if (DISTRIBUTOR.lower() == "univention" and DISTRELEASE.startswith("3")):
 	FILE_ADMIN_GROUP = u'opsifileadmins'
