@@ -65,7 +65,7 @@ CLIENT_USER      = u'pcpatch'
 FILE_ADMIN_GROUP = u'pcpatch'
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
 
-if (DISTRIBUTOR.lower() == "univention" and DISTRELEASE.startwith("3")):
+if (DISTRIBUTOR.lower() == "univention" and DISTRELEASE.startswith("3")):
 	FILE_ADMIN_GROUP = u'opsifileadmins'
  
 if os.path.exists(u'/etc/init.d/smbd'):
