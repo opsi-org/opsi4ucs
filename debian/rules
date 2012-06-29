@@ -16,7 +16,7 @@
 # This has to be exported to make some magic below work.
 #export DH_OPTIONS
 
-ifeq (Squeeze,$(shell lsb_release -cs))
+ifeq (Horn-Lehe,$(shell lsb_release -cs))
 override_dh_auto_install:
 	dh_auto_install
 	install -m 0644 conffiles/security/packetfilter.d/44opsi.sh  debian/opsi4ucs/etc/security/packetfilter.d/
