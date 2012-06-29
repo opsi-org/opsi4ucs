@@ -48,6 +48,18 @@ else
 	$VERBOSE && echo -e "\nRunning on $SERVER_ROLE"
 fi
 
+## --- Determine UCS > 3.0 -------------------------------------------------------------------------------------------------------
+set +e
+dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "3.0-0"
+ret=$?
+set -e
+if [ $ret = 0 ]; then
+	UCS_3="1"
+	fileadmingroup="opsifileadmins"
+else
+	UCS_3="0"
+	fileadmingroup="pcpatch"	
+fi
 
 # --- Test ldap connection ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
@@ -100,7 +112,11 @@ fi
 set +e
 # old version
 # config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
-config_server="$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
+if [ $UCS3 == 1 ];then
+	config_server="$(univention-ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
+else
+	config_server="$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
+fi
 $VERBOSE && echo "Found configserver: $config_server" 
 set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
@@ -131,18 +147,7 @@ $VERBOSE && echo "     Subnet           : $SUBNET"
 $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
-## --- Determine UCS > 3.0 -------------------------------------------------------------------------------------------------------
-set +e
-dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "3.0-0"
-ret=$?
-set -e
-if [ $ret = 0 ]; then
-	UCS_3="1"
-	fileadmingroup="opsifileadmins"
-else
-	UCS_3="0"
-	fileadmingroup="pcpatch"	
-fi
+
 
 ## --- Create extended attribute -------------------------------------------------------------------------------------------------
 ## This is disabled for now because:
@@ -336,7 +341,11 @@ fi
 # --- Configure dhcp ------------------------------------------------------------------------------------------------------------
 if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	set +e
-	ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
+	if [ $UCS3 == 1 ]; then
+		univention-ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
+	else
+		ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
+	fi
 	ret=$?
 	set -e
 	if [ $ret != 0 ]; then
