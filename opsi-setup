@@ -51,11 +51,6 @@ try:
 	FILE_ADMIN_GROUP = l.get("config", {}).get("fileadmingroup",u"pcpatch")
 except:
 	FILE_ADMIN_GROUP = u'pcpatch'
-
-
-
-if (DISTRIBUTOR.lower() == "univention" and DISTRELEASE.startswith("3")):
-	FILE_ADMIN_GROUP = u'opsifileadmins'
  
 if os.path.exists(u'/etc/init.d/smbd'):
 	SMB_INIT = u'/etc/init.d/smbd'
