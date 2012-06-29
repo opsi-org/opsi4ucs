@@ -195,7 +195,7 @@ udm groups/group modify "$@" \
 	--append hosts="$LDAP_USER"
 
 
-udm groups/group list "$@" --filter "(name=pcpatch)" | grep '^DN:' 1>/dev/null
+udm groups/group list "$@" --filter "(name=$fileadmingroup)" | grep '^DN:' 1>/dev/null
 ret=$?
 set -e
 
