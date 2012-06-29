@@ -370,6 +370,12 @@ fi
 
 # --- Configure tftp ------------------------------------------------------------------------------------------------------------
 update-inetd --remove tftp
+if [ ! -d "$TFTPROOT" ]; then
+	$VERBOSE && echo "Creating $TFTPROOT"
+	mkdir $TFTPROOT
+	$VERBOSE && echo "Setting rights for $TFTPROOT"
+	chmod 755 $TFTPROOT
+fi
 TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
 update-inetd --add "${TFTPLINE}"
 /etc/init.d/openbsd-inetd reload
