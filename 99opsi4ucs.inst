@@ -432,7 +432,11 @@ ucr commit /var/www/ucs-overview/de.html
 ucr commit /var/www/ucs-overview/en.html
 
 $VERBOSE && echo "Restarting services"
-/etc/init.d/dhcp3-server restart || true
+if [ $UCS_3 = "1" ]; then
+	/etc/init.d/univention-dhcp restart || true
+else
+	/etc/init.d/dhcp3-server restart || true
+fi
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
 
