@@ -27,6 +27,29 @@ else:
 	import simplejson as json
 
 logger = Logger()
+
+DISTRIBUTOR = 'unknown'
+try:
+	f = os.popen('lsb_release -i 2>/dev/null')
+	DISTRIBUTOR = f.read().split(':')[1].strip()
+	f.close()
+except Exception, e:
+	pass
+DISTRIBUTION = 'unknown'
+try:
+	f = os.popen('lsb_release -d 2>/dev/null')
+	DISTRIBUTION = f.read().split(':')[1].strip()
+	f.close()
+except Exception, e:
+	pass
+DISTRELEASE = 'unknown'
+try:
+	f = os.popen('lsb_release -r 2>/dev/null')
+	DISTRELEASE = f.read().split(':')[1].strip()
+	f.close()
+except Exception, e:
+	pass
+
 logger.setConsoleLevel(LOG_NOTICE)
 logger.setConsoleColor(True)
 
@@ -41,7 +64,9 @@ ADMIN_GROUP      = u'opsiadmin'
 CLIENT_USER      = u'pcpatch'
 FILE_ADMIN_GROUP = u'pcpatch'
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
- 
+
+if (DISTRIBUTOR.lower() == "Univention" and DISTRELEASE.startwith("3")):
+	FILE_ADMIN_GROUP = u'opsifileadmins'
  
 if os.path.exists(u'/etc/init.d/smbd'):
 	SMB_INIT = u'/etc/init.d/smbd'
