@@ -192,7 +192,7 @@ if [ $ret != 0 ]; then
 fi
 udm groups/group modify "$@" \
 	--dn "cn=OPSI Depot Servers,cn=groups,$ROOT_DN" \
-	--append hosts="$LDAP_USER"
+	--append hosts="$LDAP_USER" \
 	--ignore_exists
 
 $VERBOSE && echo "Adding system users and group: $fileadmingroup"
