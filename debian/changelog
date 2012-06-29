@@ -1,3 +1,12 @@
+opsi4ucs (4.0.2.1-1) testing; urgency=low
+
+  * Featurepack-Release 4.0.2 for ucs.
+  * First Release for UCS 3 Support:
+      - uninvetion-ldap-backend is not support since ucs3 (default backend: file)
+  * Fixes 99opsi4ucs.inst-Joinscript
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 29 Jun 2012 10:13:10 +0200
+
 opsi4ucs (4.0.1.11-1) experimental; urgency=low
 
   * opsi-setup: registerdepot non-interactive mode added for univention-join-scripts
