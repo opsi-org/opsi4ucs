@@ -64,7 +64,11 @@ fi
 # --- Test ldap connection ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
 set +e
-ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
+if [ $UCS3 == 1 ]; then
+	univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
+else
+	ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
+fi
 ret=$?
 set -e
 if [ $ret != 0 ]; then
