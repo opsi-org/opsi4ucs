@@ -23,7 +23,6 @@ SERVER_ROLE=$(ucr get server/role)
 OPSI_ROLE="configserver"
 ROOT_DN=$(ucr get ldap/base)
 LDAP_MASTER=$(ucr get ldap/master)
-LDAP_PORT=$(ucr get ldap/port)
 LDAP_USER=$(ucr get ldap/hostdn)
 LDAP_SECRET=$(cat /etc/machine.secret)
 HOSTNAME=$(uname -n)
@@ -56,9 +55,11 @@ set -e
 if [ $ret = 0 ]; then
 	UCS_3="1"
 	fileadmingroup="opsifileadmins"
+	LDAP_PORT=$(ucr get ldap/master/port)
 else
 	UCS_3="0"
-	fileadmingroup="pcpatch"	
+	fileadmingroup="pcpatch"
+	LDAP_PORT=$(ucr get ldap/port)
 fi
 
 # --- Test ldap connection ------------------------------------------------------------------------------------------------------
@@ -359,7 +360,7 @@ if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 		$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
 		if [ $UCS_3 = "1" ]; then
 			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-				| ldapmodify -x -h "$LDAP_MASTER" -ZZ -D "cn=admin,$ROOT_DN" -y "/etc/ldap.secret" >/dev/null
+				| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "cn=admin,$ROOT_DN" -y "/etc/ldap.secret" >/dev/null
 		else
 			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
 				| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
