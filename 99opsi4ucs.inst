@@ -55,6 +55,7 @@ set -e
 if [ $ret = 0 ]; then
 	UCS_3="1"
 	fileadmingroup="opsifileadmins"
+	sed -i "s/pcpatch/opsifileadmins/g" /etc/opsi/backends/file.conf
 	LDAP_PORT=$(ucr get ldap/master/port)
 else
 	UCS_3="0"
