@@ -19,7 +19,7 @@
 
 VERBOSE=true
 
-UCSROLE=$(univention-baseconfig get server/role)
+UCSROLE=$(ucr get server/role)
 
 case "$1" in
 	configure)
