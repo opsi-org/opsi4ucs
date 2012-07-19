@@ -41,14 +41,11 @@ OPSICONFD_USER   = u'opsiconfd'
 ADMIN_GROUP      = u'opsiadmin'
 CLIENT_USER      = u'pcpatch'
 
+OPSI_CONF = u'/etc/opsi/opsi.conf'
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
 
 try:
-	fileBackendConfigFile = u"/etc/opsi/backends/file.conf"
-	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
-	logger.info(u"Loading backend config '%s'" % fileBackendConfigFile)
-	execfile(fileBackendConfigFile, l)
-	FILE_ADMIN_GROUP = l.get("config", {}).get("fileadmingroup",u"pcpatch")
+	FILE_ADMIN_GROUP = OpsiConfFile(OPSI_CONF).getOpsiFileAdminGroup()
 except:
 	FILE_ADMIN_GROUP = u'pcpatch'
  
