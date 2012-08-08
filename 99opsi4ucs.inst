@@ -209,7 +209,6 @@ if [ $ret != 0 ]; then
 	udm groups/group create $@ \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="$fileadmingroup" \
-		--set gidNumber="992" \
 		--set description="opsi file admin group" \
 		--ignore_exists
 fi
@@ -244,7 +243,6 @@ if [ $ret != 0 ]; then
 		--set description="opsi-pseudo user" \
 		--set unixhome="/var/lib/opsi" \
 		--set primaryGroup="cn=$fileadmingroup,cn=groups,$ROOT_DN" \
-		--set uidNumber="992" \
 		--set lastname="pcpatch" \
 		--set password="${pass}" \
 		--set overridePWLength=1 \
@@ -280,8 +278,8 @@ if [ $ret != 0 ]; then
 		--set name=opt_pcbin \
 		--set host=$FQDN \
 		--set path=/opt/pcbin \
-		--set owner=992 \
-		--set group=992 \
+		--set owner=pcpatch \
+		--set group= $fileadmingroup \
 		--set directorymode=0755 \
 		--set sambaName=opt_pcbin \
 		--set sambaWriteable=1 \
@@ -307,8 +305,8 @@ if [ $ret != 0 ]; then
 		--set name=opsi_depot \
 		--set host=$FQDN \
 		--set path=/var/lib/opsi/depot \
-		--set owner=992 \
-		--set group=992 \
+		--set owner=pcpatch \
+		--set group=$fileadmingroup \
 		--set sambaName=opsi_depot \
 		--set sambaWriteable=0 \
 		--set sambaBrowseable=1 \
@@ -332,8 +330,8 @@ if [ $ret != 0 ]; then
 		--set name=opsi_workbench \
 		--set host=$FQDN \
 		--set path=/home/opsiproducts \
-		--set owner=992 \
-		--set group=992 \
+		--set owner=pcpatch \
+		--set group=$fileadmingroup \
 		--set directorymode=0755 \
 		--set sambaName=opsi_workbench \
 		--set sambaWriteable=1 \
