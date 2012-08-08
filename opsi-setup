@@ -517,7 +517,7 @@ def setRights(path=u'/'):
 		
 		if startPath.startswith(u'/var/lib/opsi'):
 			os.chmod(u'/var/lib/opsi', 0750)
-			os.chown(u'/var/lib/opsi', clientUserUid, fileAdminGroupGid)
+			os.chown(u'/var/lib/opsi', OPSICONFD_USER, fileAdminGroupGid)
 			sshDir = u'/var/lib/opsi/.ssh'
 			if os.path.exists(sshDir):
 				os.chown(sshDir, clientUserUid, fileAdminGroupGid)
