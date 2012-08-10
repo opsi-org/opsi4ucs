@@ -372,6 +372,7 @@ update-inetd --remove tftp
 if [ ! -d "$TFTPROOT" ]; then
 	$VERBOSE && echo "Creating $TFTPROOT"
 	mkdir $TFTPROOT
+	ln -sf /tftpboot/linux/pxelinux.0 $TFTPROOT/
 	$VERBOSE && echo "Setting rights for $TFTPROOT"
 	chmod 755 $TFTPROOT
 	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
