@@ -267,6 +267,10 @@ udm container/cn create "$@" \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
+fileadminuser=$(udm users/user list "$@" --filter "(uid=pcpatch)" | grep '^DN:' | cut -d ":" -f 2)
+
+
+
 set +e
 udm shares/share list "$@" --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
@@ -278,7 +282,7 @@ if [ $ret != 0 ]; then
 		--set name=opt_pcbin \
 		--set host=$FQDN \
 		--set path=/opt/pcbin \
-		--set owner=pcpatch \
+		--set owner=$fileadminuser \
 		--set group= $fileadmingroup \
 		--set directorymode=0755 \
 		--set sambaName=opt_pcbin \
@@ -305,7 +309,7 @@ if [ $ret != 0 ]; then
 		--set name=opsi_depot \
 		--set host=$FQDN \
 		--set path=/var/lib/opsi/depot \
-		--set owner=pcpatch \
+		--set owner=$fileadminuser \
 		--set group=$fileadmingroup \
 		--set sambaName=opsi_depot \
 		--set sambaWriteable=0 \
@@ -330,7 +334,7 @@ if [ $ret != 0 ]; then
 		--set name=opsi_workbench \
 		--set host=$FQDN \
 		--set path=/home/opsiproducts \
-		--set owner=pcpatch \
+		--set owner=$fileadminuser \
 		--set group=$fileadmingroup \
 		--set directorymode=0755 \
 		--set sambaName=opsi_workbench \
