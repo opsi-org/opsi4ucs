@@ -201,7 +201,7 @@ set +e
 $VERBOSE && echo "Adding system users and group: $fileadmingroup"
 udm groups/group list "$@" --filter "(name=$fileadmingroup)" | grep '^DN:' 1>/dev/null
 ret=$?
-$VERBOSE && echo "Ergebnis: $ret"
+$VERBOSE && echo "Result: $ret"
 set -e
 
 if [ $ret != 0 ]; then
@@ -213,6 +213,21 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
+set +e
+udm groups/group list "$@" --filter "(name=opsiconfd)" | grep '^DN:' 1>/dev/null
+ret=$?
+$VERBOSE && echo "Result: $ret"
+set -e
+
+if [ $ret != 0 ]; then
+	$VERBOSE && echo "Adding group opsiconfdgroup"
+	udm groups/group create $@ \
+		--position="cn=groups,$ROOT_DN" \
+		--set name="opsiconfdgroup" \
+		--set description="opsi configuration daemon group" \
+		--ignore_exists
+		$VERBOSE && echo "Added group opsiconfd"
+fi
 
 set +e
 udm groups/group list "$@" --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
@@ -249,16 +264,61 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
+if [ $UCS_3 = "1" ]; then
+	set +e
+	udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' 1>/dev/null
+	ret=$?
+	set -e
+	if [ $ret != 0 ]; then
+		# User pcpatch does not exist in ldap
+		$VERBOSE && echo "Adding user opsiconfd"
+		
+		pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+		
+		udm users/user create "$@" \
+			--position="cn=users,$ROOT_DN" \
+			--set username="opsiconfd" \
+			--set description="opsi configuration daemon user" \
+			--set unixhome="/var/lib/opsi" \
+			--set primaryGroup="cn=opsiconfdgroup,cn=groups,$ROOT_DN" \
+			--set lastname="opsiconfd" \
+			--set password="${pass}" \
+			--set overridePWLength=1 \
+			--ignore_exists
+	fi
+	
+	udm groups/group modify "$@" \
+		--dn "cn=$filadmingroup,cn=groups,$ROOT_DN" \
+		--append users="uid=opsiconfd,cn=users,$ROOT_DN"
+	
+	udm groups/group modify "$@" \
+		--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
+		--append users="uid=opsiconfd,cn=users,$ROOT_DN"
+	
+	# Remove users/groups from passwd/group
+	userdel pcpatch >/dev/null 2>/dev/null || true
+	userdel opsiconfd >/dev/null 2>/dev/null || true
+	[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
+	cp /etc/group /tmp/.group.tmp.opsi4ucs
+	cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' | grep -v '^opsiconfd' >/etc/group || true
+	rm /tmp/.group.tmp.opsi4ucs
+else
+	userdel pcpatch >/dev/null 2>/dev/null || true
+	[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
+	cp /etc/group /tmp/.group.tmp.opsi4ucs
+	cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' >/etc/group || true
+	rm /tmp/.group.tmp.opsi4ucs
+fi
+
+
 udm groups/group modify "$@" \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
+	
 
-# Remove users/groups from passwd/group
-userdel pcpatch >/dev/null 2>/dev/null || true
-[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
-cp /etc/group /tmp/.group.tmp.opsi4ucs
-cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' >/etc/group || true
-rm /tmp/.group.tmp.opsi4ucs
+
+
+
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Creating container for samba shares"
