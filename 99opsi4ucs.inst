@@ -410,7 +410,7 @@ fi
 if [ $UCS_3 = "1" ]; then
 	
 	### Univention Samba4 Bug: https://forge.univention.org/bugzilla/show_bug.cgi?id=27950
-	ucr commit /etc/samba/shares.conf.d/opt_pcbin
+	/etc/init.d/samba4 reload
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opt_pcbin > /etc/samba/shares.conf.d/opt_pcbin_tmp
 	mv /etc/samba/shares.conf.d/opt_pcbin_tmp /etc/samba/shares.conf.d/opt_pcbin
 	
@@ -547,17 +547,6 @@ else
 fi
 
 #sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
-
-# --- opsi-auth pam-module
-cat << __EOF__ > /etc/univention/templates/files/etc/pam.d/opsi-auth
-@%@UCRWARNING=# @%@
-
-@!@
-@include common-account
-@include common-account
-@include common-session
-@!@
-__EOF__
 
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Commit changes"
