@@ -323,8 +323,11 @@ udm container/cn create "$@" \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
-fileadminuser=$(udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' | cut -d ":" -f 2)
+#fileadminuserdn=$(udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' | cut -d ":" -f 2)
+#fileadmingroupdn=$(udm groups/group list "$@" --filter "(cn=opsifileadmins)" | grep '^DN:' | cut -d ":" -f 2)
 
+USERID=$(getent passwd opsiconfd | cut -d ":" -f 3)
+GROUPID=$(getent group opsifileadmins | cut -d ":" -f 3)
 
 
 set +e
@@ -338,8 +341,8 @@ if [ $ret != 0 ]; then
 		--set name=opt_pcbin \
 		--set host=$FQDN \
 		--set path=/opt/pcbin \
-		--set owner=$fileadminuser \
-		--set group= $fileadmingroup \
+		--set owner=$USERID \
+		--set group= $GROUPID \
 		--set directorymode=0755 \
 		--set sambaName=opt_pcbin \
 		--set sambaWriteable=1 \
@@ -365,8 +368,8 @@ if [ $ret != 0 ]; then
 		--set name=opsi_depot \
 		--set host=$FQDN \
 		--set path=/var/lib/opsi/depot \
-		--set owner=$fileadminuser \
-		--set group=$fileadmingroup \
+		--set owner=$USERID \
+		--set group=$GROUPID \
 		--set sambaName=opsi_depot \
 		--set sambaWriteable=0 \
 		--set sambaBrowseable=1 \
@@ -390,8 +393,8 @@ if [ $ret != 0 ]; then
 		--set name=opsi_workbench \
 		--set host=$FQDN \
 		--set path=/home/opsiproducts \
-		--set owner=$fileadminuser \
-		--set group=$fileadmingroup \
+		--set owner=$USERID \
+		--set group=$GROUPID \
 		--set directorymode=0755 \
 		--set sambaName=opsi_workbench \
 		--set sambaWriteable=1 \
@@ -405,13 +408,17 @@ if [ $ret != 0 ]; then
 fi
 
 if [ $UCS_3 = "1" ]; then
+	
 	### Univention Samba4 Bug: https://forge.univention.org/bugzilla/show_bug.cgi?id=27950
+	ucr commit /etc/samba/shares.conf.d/opt_pcbin
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opt_pcbin > /etc/samba/shares.conf.d/opt_pcbin_tmp
 	mv /etc/samba/shares.conf.d/opt_pcbin_tmp /etc/samba/shares.conf.d/opt_pcbin
 	
+	ucr commit /etc/samba/shares.conf.d/opsi_depot
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot > /etc/samba/shares.conf.d/opsi_depot_tmp
 	mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
 	
+	ucr commit /etc/samba/shares.conf.d/opsi_workbench
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_workbench > /etc/samba/shares.conf.d/opsi_workbench_tmp
 	mv /etc/samba/shares.conf.d/opsi_workbench_tmp /etc/samba/shares.conf.d/opsi_workbench
 	
@@ -445,6 +452,7 @@ if [ $UCS_3 = "1" ]; then
 	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
 	#	fi
 	#fi
+	
 fi
 
 # --- Configure dhcp ------------------------------------------------------------------------------------------------------------
@@ -540,14 +548,29 @@ fi
 
 #sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
 
+# --- opsi-auth pam-module
+cat << __EOF__ > /etc/univention/templates/files/etc/pam.d/opsi-auth
+@%@UCRWARNING=# @%@
+
+@!@
+@include common-account
+@include common-account
+@include common-session
+@!@
+__EOF__
+
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Commit changes"
 ucr commit /var/www/ucs-overview/de.html
 ucr commit /var/www/ucs-overview/en.html
+if [ $UCS_3 = "1" ]; then
+	ucr commit /etc/pam.d/opsi-auth
+fi
 
 $VERBOSE && echo "Restarting services"
 if [ $UCS_3 = "1" ]; then
 	/etc/init.d/univention-dhcp restart || true
+	/etc/init.d/samba4 reload || true
 else
 	/etc/init.d/dhcp3-server restart || true
 fi
