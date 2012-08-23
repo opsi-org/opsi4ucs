@@ -58,6 +58,7 @@ install: build
 	install -m 0644 debian/opsi4ucs-ldap-schema.univention-baseconfig debian/opsi4ucs-ldap-schema/etc/univention/templates/info/opsi4ucs-ldap-schema.info
 	
 	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
+	cp -r conffiles/etc debian/opsi4ucs/etc/univention/templates/files/
 	install -m 0644 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
 	
 	#install -m 0755 opsi_reinstall_listener.py     debian/opsi4ucs/usr/lib/univention-directory-listener/system/

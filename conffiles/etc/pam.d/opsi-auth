@@ -1,0 +1,7 @@
+@%@UCRWARNING=# @%@
+
+@!@
+print '@include common-account'
+print '@include common-account'
+print '@include common-session'
+@!@
