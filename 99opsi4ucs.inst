@@ -411,6 +411,9 @@ if [ $UCS_3 = "1" ]; then
 	
 	### Univention Samba4 Bug: https://forge.univention.org/bugzilla/show_bug.cgi?id=27950
 	/etc/init.d/samba4 reload
+	$VERBOSE && echo "Waiting for samba shares"
+	sleep 5
+	$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opt_pcbin > /etc/samba/shares.conf.d/opt_pcbin_tmp
 	mv /etc/samba/shares.conf.d/opt_pcbin_tmp /etc/samba/shares.conf.d/opt_pcbin
 	
