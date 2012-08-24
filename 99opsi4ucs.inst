@@ -378,7 +378,7 @@ if [ $ret != 0 ]; then
 		--set sambaLevel2Oplocks=0 \
 		--ignore_exists
 fi
-if [ ! -e "/var/lib/opsi/depot" -a -e "/opt/pcbin/install" ]; then
+if [ ! -e "/var/lib/opsi/depot" -a ! -L "/var/lib/opsi/depot" -a -e "/opt/pcbin/install" ]; then
 	ln -s /opt/pcbin/install /var/lib/opsi/depot
 fi
 
@@ -557,6 +557,7 @@ ucr commit /var/www/ucs-overview/de.html
 ucr commit /var/www/ucs-overview/en.html
 if [ $UCS_3 = "1" ]; then
 	ucr commit /etc/pam.d/opsi-auth
+	dpkg-reconfigure opsiconfd
 fi
 
 $VERBOSE && echo "Restarting services"
