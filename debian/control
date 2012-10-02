@@ -5,15 +5,6 @@ Maintainer: uib GmbH <info@uib.de>
 Build-Depends: debhelper (>= 4.0.0)
 Standards-Version: 3.6.1
 
-Package: opsi4ucs-ldap-schema
-Section: opsi
-Architecture: all
-Depends: 
-Description: opsi software deployment ldap extension for ucs
- opsi4ucs integrates opsi into an ucs server.
- .
- http://www.opsi.org
-
 Package: opsi4ucs
 Section: opsi
 Architecture: all

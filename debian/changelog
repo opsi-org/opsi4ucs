@@ -1,3 +1,12 @@
+opsi4ucs (4.0.2.3-1) testing; urgency=low
+
+  * Join script modified:
+      - only patch dhcp if it's installed
+      - restart and patch samba4 only, if samba4 is installed
+  * don't build opsi4ucs-ldap-schema.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 02 Oct 2012 15:14:44 +0200
+
 opsi4ucs (4.0.2.2-1) experimental; urgency=low
 
   * For handling with new pcpatch-group added opsi.conf.
