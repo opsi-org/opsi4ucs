@@ -1,4 +1,0 @@
-etc/univention/templates/files/etc/ldap/slapd.conf.d
-etc/univention/templates/info
-usr/share/univention-ldap/schema
-
