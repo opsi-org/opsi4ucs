@@ -40,6 +40,7 @@ SUDOERS          = u'/etc/sudoers'
 OPSICONFD_USER   = u'opsiconfd'
 ADMIN_GROUP      = u'opsiadmin'
 CLIENT_USER      = u'pcpatch'
+FILE_ADMIN_GROUP = u'pcpatch'
 
 OPSI_CONF = u'/etc/opsi/opsi.conf'
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
@@ -2524,7 +2525,7 @@ def initializeBackends():
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 			
-			configServer = backend.host_createOpsiConfigserver(
+			backend.host_createOpsiConfigserver(
 				id                  = getSysConfig()['fqdn'],
 				opsiHostKey         = None,
 				depotLocalUrl       = depotLocalUrl,
@@ -2542,6 +2543,7 @@ def initializeBackends():
 				isMasterDepot       = True,
 				masterDepotId       = None,
 			)
+			configServer = backend.host_getObjects(type = 'OpsiConfigserver', id = getSysConfig()['fqdn'])
 		else:
 			logger.notice(u"Converting depot server '%s' to config server" % getSysConfig()['fqdn'])
 			configServer = OpsiConfigserver.fromHash(depot[0].toHash())
