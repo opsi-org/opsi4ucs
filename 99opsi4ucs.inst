@@ -6,7 +6,7 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=5
+VERSION=6
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -46,6 +46,20 @@ elif [ "$SERVER_ROLE" = "domaincontroller_backup" ]; then
 else
 	$VERBOSE && echo -e "\nRunning on $SERVER_ROLE"
 fi
+
+if [ -e "/etc/init.d/univention-dhcp"  ]; then
+	DHCPSERVER=1
+else
+	DHCPSERVER=0	
+fi
+
+if [ -e "/etc/init.d/samba4" ]; then
+	SAMBA4=1
+else
+	SAMBA4=0
+fi
+
+
 
 ## --- Determine UCS > 3.0 -------------------------------------------------------------------------------------------------------
 set +e
@@ -212,22 +226,6 @@ if [ $ret != 0 ]; then
 		--set description="opsi file admin group" \
 		--ignore_exists
 fi
-
-#set +e
-#udm groups/group list "$@" --filter "(name=opsiconfd)" | grep '^DN:' 1>/dev/null
-#ret=$?
-#$VERBOSE && echo "Result: $ret"
-#set -e
-#
-#if [ $ret != 0 ]; then
-#	$VERBOSE && echo "Adding group opsiconfdgroup"
-#	udm groups/group create $@ \
-#		--position="cn=groups,$ROOT_DN" \
-#		--set name="opsiconfdgroup" \
-#		--set description="opsi configuration daemon group" \
-#		--ignore_exists
-#		$VERBOSE && echo "Added group opsiconfd"
-#fi
 
 set +e
 udm groups/group list "$@" --filter "(name=opsiadmin)" | grep '^DN:' 1>/dev/null
@@ -407,7 +405,7 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
-if [ $UCS_3 = "1" ]; then
+if [ $UCS_3 = "1" -a -e "/etc/init.d/samba4" ]; then
 	
 	### Univention Samba4 Bug: https://forge.univention.org/bugzilla/show_bug.cgi?id=27950
 	/etc/init.d/samba4 reload
@@ -427,35 +425,6 @@ if [ $UCS_3 = "1" ]; then
 	
 	ucr set samba4/ntacl/backend=none
 	
-	#opsidepotdn=$(udm shares/share list "$@" --filter "(name=opsi_depot)" | grep '^DN: | grep $FQDN')
-	#optpcbindn=$(udm shares/share list "$@" --filter "(name=opt_pcbin)" | grep '^DN: | grep $FQDN')
-	#opsiworkbenchdn=$(udm shares/share list "$@" --filter "(name=opsi_workbench)" | grep '^DN: | grep $FQDN')
-	#
-	#USERID=$(getent passwd opsiconfd | cut -d ":" -f 3)
-	#GROUPID=$(getent group opsifileadmins | cut -d ":" -f 3)
-	#MACHINEDN=$(ucr get ldap/hostdn)
-	#
-	#if [ $USERID != "" -a $GROUPID != "" ]; then
-	#	if [ $opsidepotdn != "" ]; then
-	#		echo -e "$opsidepotdn\nchangetype: modify\nreplace: univentionShareUid\nuniventionShareUid: $USERID\n" \
-	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
-	#		echo -e "$opsidepotdn\nchangetype: modify\nreplace: univentionShareGid\nuniventionShareGid: $GROUPID\n" \
-	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
-	#	fi
-	#	if [ $optpcbindn != "" ]; then
-	#		echo -e "$optpcbindn\nchangetype: modify\nreplace: univentionShareUid\nuniventionShareUid: $USERID\n" \
-	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
-	#		echo -e "$optpcbindn\nchangetype: modify\nreplace: univentionShareGid\nuniventionShareGid: $GROUPID\n" \
-	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
-	#	fi
-	#	if [ $opsiworkbenchdn != "" ]; then
-	#		echo -e "$opsiworkbenchdn\nchangetype: modify\nreplace: univentionShareUid\nuniventionShareUid: $USERID\n" \
-	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
-	#		echo -e "$opsiworkbenchdn\nchangetype: modify\nreplace: univentionShareGid\nuniventionShareGid: $GROUPID\n" \
-	#			| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "$MACHINEDN" -y "/etc/machine.secret" >/dev/null
-	#	fi
-	#fi
-	
 fi
 
 # --- Configure dhcp ------------------------------------------------------------------------------------------------------------
@@ -469,13 +438,17 @@ if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	ret=$?
 	set -e
 	if [ $ret != 0 ]; then
-		$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
-		if [ $UCS_3 = "1" ]; then
-			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-				| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "cn=admin,$ROOT_DN" -y "/etc/ldap.secret" >/dev/null
+		if [ $DHCPSERVER = "1" ]; then
+			$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
+			if [ $UCS_3 = "1" ]; then
+				echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+					| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "cn=admin,$ROOT_DN" -y "/etc/ldap.secret" >/dev/null
+			else
+				echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+					| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
+			fi
 		else
-			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-				| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
+			$VERBOSE && echo "DHCP-Server installation not found, skipping patching dhcp-server."
 		fi
 	fi
 fi
@@ -562,10 +535,18 @@ fi
 
 $VERBOSE && echo "Restarting services"
 if [ $UCS_3 = "1" ]; then
-	/etc/init.d/univention-dhcp restart || true
-	/etc/init.d/samba4 reload || true
+	if [ $DHCPSERVER = "1" ]; then
+		/etc/init.d/univention-dhcp restart || true
+	elif [ -e "/etc/init.d/dhcp3-server" ]; then
+		/etc/init.d/dhcp3-server restart || true
+	fi
+	if [ $SAMBA4 = "1" ]; then
+		/etc/init.d/samba4 reload || true
+	fi
 else
-	/etc/init.d/dhcp3-server restart || true
+	if [ -e "/etc/init.d/dhcp3-server" ]; then
+		/etc/init.d/dhcp3-server restart || true
+	fi
 fi
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
