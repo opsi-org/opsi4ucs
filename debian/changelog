@@ -1,4 +1,4 @@
-opsi4ucs (4.0.2.3-1) testing; urgency=low
+opsi4ucs (4.0.2.3-1) stable; urgency=low
 
   * Join script modified:
       - only patch dhcp if it's installed
