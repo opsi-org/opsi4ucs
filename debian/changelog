@@ -1,3 +1,9 @@
+opsi4ucs (4.0.2.4-1) experimental; urgency=low
+
+  * join script: flush nscd cache (for ucs 3.1 support)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 31 Jan 2013 14:07:47 +0100
+
 opsi4ucs (4.0.2.3-1) stable; urgency=low
 
   * Join script modified:

@@ -6,7 +6,7 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=6
+VERSION=7
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -310,7 +310,11 @@ udm groups/group modify "$@" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
 	
 
-
+set +e
+$VERBOSE && echo "Trying to flush nscd cache."
+nscd -i passwd
+nscd -i group
+set -e
 
 
 
