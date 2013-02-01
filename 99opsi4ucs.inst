@@ -516,7 +516,7 @@ else
 		ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 	fi
 	set +e
-	$VERBOSE && echo "Trying to flush nscd cache."
+	$VERBOSE && echo "Check for opsi fileadmingroup."
 	getent group $fileadmingroup >/dev/null 2>/dev/null
 	if [ $? != 0 ]; then
 		for i in 1 2 3
@@ -525,9 +525,14 @@ else
 			if [ $? != 0 ]; then
 				break
 			else
+				$VERBOSE && echo "Check for opsi fileadmingroup failed, Waiting 5 sec to retry."
 				sleep 5
 			fi
-		done	
+		done
+		getent group $fileadmingroup >/dev/null 2>/dev/null
+		if [ $? != 0 ]; then
+			$VERBOSE && echo "Check for opsi fileadmingroup failed. Join-Script will be fail."
+		fi
 	fi
 	set -e
 	opsi-setup --init-current-config
