@@ -312,6 +312,14 @@ udm groups/group modify "$@" \
 
 set +e
 $VERBOSE && echo "Trying to flush nscd cache."
+getent group $fileadmingroup >/dev/null 2>/dev/null
+if [ $ret != 0 ]; then
+	for i in 1 2 3
+	do
+		sleep 5
+	done	
+fi
+
 nscd -i passwd
 nscd -i group
 set -e
