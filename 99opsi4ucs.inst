@@ -522,7 +522,7 @@ else
 		for i in 1 2 3
 		do
 			getent group $fileadmingroup >/dev/null 2>/dev/null
-			if [ $? != 0 ]; then
+			if [ $? == 0 ]; then
 				break
 			else
 				$VERBOSE && echo "Check for opsi fileadmingroup failed, Waiting 5 sec to retry."
