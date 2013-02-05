@@ -519,19 +519,10 @@ else
 	$VERBOSE && echo "Check for opsi fileadmingroup."
 	getent group $fileadmingroup >/dev/null 2>/dev/null
 	if [ $? != 0 ]; then
-		for i in 1 2 3
-		do
-			getent group $fileadmingroup >/dev/null 2>/dev/null
-			if [ $? == 0 ]; then
-				break
-			else
-				$VERBOSE && echo "Check for opsi fileadmingroup failed, Waiting 5 sec to retry."
-				sleep 5
-			fi
-		done
-		getent group $fileadmingroup >/dev/null 2>/dev/null
-		if [ $? != 0 ]; then
-			$VERBOSE && echo "Check for opsi fileadmingroup failed. Join-Script will be fail."
+		if [ -e "/usr/lib/univention-pam/ldap-group-to-file.py" ]; then
+			python /usr/lib/univention-pam/ldap-group-to-file.py >/dev/null 2>/dev/null || true
+		else
+			sleep 20
 		fi
 	fi
 	set -e
