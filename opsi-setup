@@ -434,6 +434,7 @@ def setRights(path=u'/'):
 	
 	depotDir = ''
 	dirnames = [u'/tftpboot/linux', u'/home/opsiproducts', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi']
+	specialfiles = [u'setup.py', u'show_drivers.py', u'create_driver_links.py', u'opsi-deploy-client-agent', u'opsi-deploy-client-agent-old', u'winexe']
 	if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 		dirnames = [u'/var/lib/tftpboot/opsi', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi', u'/var/lib/opsi/workbench']
 	if not path.startswith('/etc') and not path.startswith('/tftpboot'):
@@ -514,7 +515,10 @@ def setRights(path=u'/'):
 			elif os.path.isfile(f):
 				logger.debug(u"Setting rights on file '%s'" % f)
 				if isProduct:
-					os.chmod(f, (os.stat(f)[0] | 0660) & 0770)
+					if os.path.basename(f) in specialfiles:
+						os.chmod(f, 0770)
+					else:
+						os.chmod(f, (os.stat(f)[0] | 0660) & 0770)
 				else:
 					os.chmod(f, fmod)
 		
