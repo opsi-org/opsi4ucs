@@ -1,8 +1,9 @@
-opsi4ucs (4.0.2.4-1) experimental; urgency=low
+opsi4ucs (4.0.2.4-1) testing; urgency=low
 
-  * join script: flush nscd cache (for ucs 3.1 support)
+  * join script: execute /usr/lib/univention-pam/ldap-group-to-file.py to resync the groups  (for ucs 3.1 support)
+  * opsi-setup: set executebit for special opsi files in depot
 
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 31 Jan 2013 14:07:47 +0100
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 05 Feb 2013 11:07:47 +0100
 
 opsi4ucs (4.0.2.3-1) stable; urgency=low
 
