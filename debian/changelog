@@ -1,4 +1,4 @@
-opsi4ucs (4.0.2.4-1) testing; urgency=low
+opsi4ucs (4.0.3.1-1) testing; urgency=low
 
   * join script: execute /usr/lib/univention-pam/ldap-group-to-file.py to resync the groups  (for ucs 3.1 support)
   * opsi-setup: set executebit for special opsi files in depot

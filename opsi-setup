@@ -2527,9 +2527,19 @@ def renewOpsiconfdCert():
        			"expires"                	: u"2",
        		}
        		
+		country            		= ""
+		state             			= ""
+		locality          			= ""
+		organization       		= ""
+		organizationalUnit		= ""
+		commonName      		= None
+		emailAddress       		= ""
+		key					= None
+       		
        		if os.path.exists(OPSICONFD_CERTFILE):
        			data = open(OPSICONFD_CERTFILE).read()
        			cert = crypto.load_certificate(crypto.FILETYPE_PEM, data)
+       			key  = crypto.load_privatekey(crypto.FILETYPE_PEM, data)
 
        			certparams["country"]            = cert.get_subject().C
        			certparams["state"]              = cert.get_subject().ST
@@ -2583,15 +2593,24 @@ def renewOpsiconfdCert():
 			break
 			
 	except Exception, e:
-		logger.error(e)
-	finally:
-		ui.exit()
+		if ui:
+			ui.exit()
 		logger.setConsoleLevel(consoleLevel)
+		logger.error(e)
+		return
+	finally:
+		if ui:
+			ui.exit()
+		logger.setConsoleLevel(consoleLevel)
+			
 	
 	logger.notice(u"Creating new opsiconfd cert")
 	logger.notice(u"Generating new key pair")
-	k = crypto.PKey()
-	k.generate_key(crypto.TYPE_RSA, 1024)
+	if key:
+		k = key
+	else:
+		k = crypto.PKey()
+		k.generate_key(crypto.TYPE_RSA, 1024)
 	
 	logger.notice(u"Generating new self-signed cert")
 	cert = crypto.X509()
@@ -2614,7 +2633,7 @@ def renewOpsiconfdCert():
 	cert.set_issuer(cert.get_subject())
 	cert.set_pubkey(k)
 	cert.set_version(2)
-
+        
 	logger.notice(u"Signing Certificate")
 	cert.sign(k, 'sha1')
 	backupfile = ''.join((OPSICONFD_CERTFILE, ".bak"))
@@ -2643,7 +2662,8 @@ def renewOpsiconfdCert():
      	logger.notice(u"Restarting services")
      	execute("/etc/init.d/opsiconfd restart")
      	execute("/etc/init.d/opsipxeconfd restart")
-        
+ 
+	
 	
 	
 def initializeBackends():
