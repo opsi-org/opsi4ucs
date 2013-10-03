@@ -3002,7 +3002,53 @@ def cleanupBackend():
 		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
 		depotbackend       = False
 	)
-	
+
+	logger.notice(u"Parsing dispatch.conf")
+	usingMysqlBackend = False
+	try:
+		bdc = BackendDispatchConfigFile(u'/etc/opsi/backendManager/dispatch.conf')
+		dispatchConfig = bdc.parse()
+		for entry in dispatchConfig:
+			(regex, backends) = entry
+			if not re.search(regex, 'backend_createBase'):
+				continue
+			if 'mysql' in backends:
+				usingMysqlBackend = True
+				break
+
+
+		if usingMysqlBackend:
+			logger.notice(u"Mysql-backend detected. Trying to cleanup mysql-backend first")
+
+			backendConfigFile = u'/etc/opsi/backends/mysql.conf'
+
+			l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
+			logger.info(u"Loading backend config '%s'" % backendConfigFile)
+			execfile(backendConfigFile, l)
+			config = l['config']
+			#config.update(backendConfig)
+			logger.info(u"Current mysql backend config: %s" % config)
+
+			logger.notice(u"Connection to database '%s' on '%s' as user '%s'" % (config['database'], config['address'], config['username']))
+			mysql = MySQL(**config)
+
+			logger.notice("Cleaning up defaultValues in productProperties")
+			deleteIds = []
+			found = []
+			for res in mysql.getSet(u"SELECT * FROM PRODUCT_PROPERTY_VALUE WHERE isDefault like '1'"):
+				ident = "%s;%s;%s;%s;%s" % (res['propertyId'],res['productId'],res['productVersion'] ,res['productVersion'], res['value'])
+				if ident not in found:
+					found.append(ident)
+				else:
+					if res['value'] in ('0','1') and res['product_property_id'] not in deleteIds:
+						deleteIds.append(res['product_property_id'])
+			if res['product_property_id']:
+				for ID in deleteIds:
+					logger.notice(u"Deleting PropertyValue id: %s" % ID)
+					mysql.execute("DELETE FROM `PRODUCT_PROPERTY_VALUE` where `product_property_id` = '%s'" % ID )
+	except Exception, e:
+		logger.warning(e)
+
 	logger.notice(u"Cleaning up groups")
 	updatedGroups = []
 	groupIds = []
