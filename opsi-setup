@@ -51,7 +51,11 @@ try:
 	FILE_ADMIN_GROUP = OpsiConfFile(OPSI_CONF).getOpsiFileAdminGroup()
 except:
 	FILE_ADMIN_GROUP = u'pcpatch'
+<<<<<<< HEAD
  
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 if os.path.exists(u'/etc/init.d/smbd'):
 	SMB_INIT = u'/etc/init.d/smbd'
 if os.path.exists(u'/etc/init.d/smb'):
@@ -63,7 +67,11 @@ def getSysConfig():
 	global sysConfig
 	if sysConfig:
 		return sysConfig
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	sysConfig['distributor'] = u'unknown'
 	sysConfig['distribution'] = u'unknown'
 	try:
@@ -75,7 +83,11 @@ def getSysConfig():
 		f.close()
 	except Exception, e:
 		logger.warning(u"Failed to get distributor/distribution: %s" % e)
+<<<<<<< HEAD
 		
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	logger.notice(u"Getting current system config")
 	if ipAddress:
 		sysConfig['ipAddress'] = ipAddress
@@ -83,7 +95,11 @@ def getSysConfig():
 		sysConfig['fqdn'] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
 	except:
 		raise Exception(u"Failed to get fully qualified domain name, got '%s'" % getfqdn(conf=OPSI_GLOBAL_CONF))
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	sysConfig['hostname'] = sysConfig['fqdn'].split(u'.')[0]
 	sysConfig['domain'] = u'.'.join(sysConfig['fqdn'].split(u'.')[1:])
 	if not sysConfig.has_key('ipAddress'):
@@ -91,7 +107,11 @@ def getSysConfig():
 		if sysConfig['ipAddress'].split(u'.')[0] in ('127', '169'):
 			sysConfig['ipAddress'] = None
 	sysConfig['hardwareAddress'] = None
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	for device in getEthernetDevices():
 		devconf = getNetworkDeviceConfig(device)
 		if devconf['ipAddress'] and devconf['ipAddress'].split(u'.')[0] not in ('127', '169'):
@@ -101,6 +121,7 @@ def getSysConfig():
 				sysConfig['netmask']         = devconf['netmask']
 				sysConfig['hardwareAddress'] = devconf['hardwareAddress']
 				break
+<<<<<<< HEAD
 	
 	if not sysConfig['ipAddress']:
 		raise Exception(u"Failed to get a valid ip address for fqdn '%s'" % sysConfig['fqdn'])
@@ -108,6 +129,15 @@ def getSysConfig():
 	if not sysConfig.get('netmask'):
 		sysConfig['netmask'] = u'255.255.255.0'
 	
+=======
+
+	if not sysConfig['ipAddress']:
+		raise Exception(u"Failed to get a valid ip address for fqdn '%s'" % sysConfig['fqdn'])
+
+	if not sysConfig.get('netmask'):
+		sysConfig['netmask'] = u'255.255.255.0'
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	sysConfig['broadcast'] = u''
 	sysConfig['subnet']    = u''
 	for i in range(4):
@@ -115,7 +145,11 @@ def getSysConfig():
 		if sysConfig['subnet']:    sysConfig['subnet']    += u'.'
 		sysConfig['subnet']    += u'%d' % ( int(sysConfig['ipAddress'].split(u'.')[i]) & int(sysConfig['netmask'].split(u'.')[i]) )
 		sysConfig['broadcast'] += u'%d' % ( int(sysConfig['ipAddress'].split(u'.')[i]) | int(sysConfig['netmask'].split(u'.')[i]) ^ 255 )
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	sysConfig['winDomain'] = u''
 	if os.path.exists(SMB_CONF):
 		f = codecs.open(SMB_CONF, 'r', 'utf-8')
@@ -125,7 +159,11 @@ def getSysConfig():
 				sysConfig['winDomain'] = match.group(1).upper()
 				break
 		f.close()
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	logger.notice(u"System information:")
 	logger.notice(u"   distributor  : %s" % sysConfig['distributor'])
 	logger.notice(u"   distribution : %s" % sysConfig['distribution'])
@@ -137,23 +175,40 @@ def getSysConfig():
 	logger.notice(u"   hostname     : %s" % sysConfig['hostname'])
 	logger.notice(u"   domain       : %s" % sysConfig['domain'])
 	logger.notice(u"   win domain   : %s" % sysConfig['winDomain'])
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	return sysConfig
 
 
 def configureSamba():
 	logger.notice(u"Configuring samba")
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	f = codecs.open(SMB_CONF, 'r', 'utf-8')
 	lines = f.readlines()
 	f.close()
 	newlines = []
 	optPcbinShareFound = False
 	depotShareFound = False
+<<<<<<< HEAD
 	configShareFound = False
 	workbenchShareFound = False
 	confChanged = False
 	
+=======
+	depotShareRWFound = False
+	configShareFound = False
+	workbenchShareFound = False
+	opsiImagesFound = False
+	confChanged = False
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	for i in range(len(lines)):
 		if (lines[i].lower().strip() == '; load opsi shares') and ((i+1) < len(lines)) and (lines[i+1].lower().strip() == 'include = /etc/samba/share.conf'):
 			i += 1
@@ -163,11 +218,19 @@ def configureSamba():
 			optPcbinShareFound = True
 		elif (lines[i].lower().strip() == '[opsi_depot]'):
 			depotShareFound = True
+<<<<<<< HEAD
+=======
+		elif (lines[i].lower().strip() == '[opsi_depot_rw]'):			
+			depotShareRWFound
+		elif (lines[i].lower().strip() == '[opsi_images]'):			
+			opsiImagesFound = True
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		elif (lines[i].lower().strip() == '[opsi_config]'):
 			configShareFound = True
 		elif (lines[i].lower().strip() == '[opsi_workbench]'):
 			workbenchShareFound = True
 		newlines.append(lines[i])
+<<<<<<< HEAD
 	
 	if not optPcbinShareFound and (getSysConfig()['distribution'].lower().find('suse linux enterprise server') == -1):
 		logger.notice(u"   Adding share [opt_pcbin]")
@@ -176,6 +239,42 @@ def configureSamba():
 		newlines.append(u"   available = yes\n")
 		newlines.append(u"   comment = opsi depot share\n")
 		newlines.append(u"   path = /opt/pcbin\n")
+=======
+
+	if optPcbinShareFound:
+		logger.warning(u"Share opt_pcbin configuration found in '%s'. You should use opsi_depot_rw instead, if you need a writeable depot-Share." % SMB_CONF)
+
+	if not depotShareFound:
+		logger.notice(u"   Adding share [opsi_depot]")
+		confChanged = True
+		newlines.append(u"[opsi_depot]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi depot share (ro)\n")
+		newlines.append(u"   path = /var/lib/opsi/depot\n")
+		newlines.append(u"   oplocks = no\n")
+		newlines.append(u"   follow symlinks = yes\n")
+		newlines.append(u"   level2 oplocks = no\n")
+		newlines.append(u"   writeable = no\n")
+		newlines.append(u"   invalid users = root\n")
+		newlines.append(u"\n")
+		
+		depotDir = '/var/lib/opsi/depot'
+		if not os.path.exists(depotDir):
+			try:
+				os.mkdir(depotDir)
+				if os.path.exists("/opt/pcbin/install"):
+					logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
+			except Exception, e:
+				logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
+				
+	if not depotShareRWFound:
+		logger.notice(u"   Adding share [opsi_depot_rw]")
+		confChanged = True
+		newlines.append(u"[opsi_depot_rw]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi depot share (rw)\n")
+		newlines.append(u"   path = /var/lib/opsi/depot\n")
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		newlines.append(u"   oplocks = no\n")
 		newlines.append(u"   follow symlinks = yes\n")
 		newlines.append(u"   level2 oplocks = no\n")
@@ -183,6 +282,7 @@ def configureSamba():
 		newlines.append(u"   invalid users = root\n")
 		newlines.append(u"\n")
 	
+<<<<<<< HEAD
 	if not depotShareFound:
 		logger.notice(u"   Adding share [opsi_depot]")
 		confChanged = True
@@ -203,6 +303,24 @@ def configureSamba():
 			except Exception, e:
 				logger.error(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
 		
+=======
+	if not opsiImagesFound:
+		logger.notice(u"   Adding share [opsi_images]")
+		confChanged = True
+		newlines.append(u"[opsi_images]\n")
+		newlines.append(u"   available = yes\n")
+		newlines.append(u"   comment = opsi ntfs images share (rw)\n")
+		newlines.append(u"   path = /var/lib/opsi/ntfs-images\n")
+		newlines.append(u"   oplocks = no\n")
+		newlines.append(u"   level2 oplocks = no\n")
+		newlines.append(u"   writeable = yes\n")
+		newlines.append(u"   invalid users = root\n")
+		newlines.append(u"\n")
+		if not os.path.exists("/var/lib/opsi/ntfs-images"):
+			logger.debug(u"Path:  /var/lib/opsi/ntfs-images not found: creating.")
+			os.mkdir("/var/lib/opsi/ntfs-images")
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	if not configShareFound:
 		logger.notice(u"   Adding share [opsi_config]")
 		confChanged = True
@@ -213,7 +331,11 @@ def configureSamba():
 		newlines.append(u"   writeable = yes\n")
 		newlines.append(u"   invalid users = root\n")
 		newlines.append(u"\n")
+<<<<<<< HEAD
 		
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	if not workbenchShareFound:
 		logger.notice(u"   Adding share [opsi_workbench]")
 		confChanged = True
@@ -229,21 +351,34 @@ def configureSamba():
 		newlines.append(u"   create mask = 0660\n")
 		newlines.append(u"   directory mask = 0770\n")
 		newlines.append(u"\n")
+<<<<<<< HEAD
 		
 	if confChanged:
 		logger.notice(u"   Creating backup of %s" % SMB_CONF)
 		shutil.copy(SMB_CONF, SMB_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
 		
+=======
+
+	if confChanged:
+		logger.notice(u"   Creating backup of %s" % SMB_CONF)
+		shutil.copy(SMB_CONF, SMB_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		logger.notice(u"   Writing new smb.conf")
 		f = codecs.open(SMB_CONF, 'w', 'utf-8')
 		lines = f.writelines(newlines)
 		f.close()
+<<<<<<< HEAD
 		
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		logger.notice(u"   Reloading samba")
 		try:
 			execute(u'%s reload' % SMB_INIT)
 		except Exception, e:
 			logger.warning(e)
+<<<<<<< HEAD
 		
 	
 def configureDHCPD():
@@ -252,6 +387,16 @@ def configureDHCPD():
 	dhcpdConf = DHCPDConfFile(DHCPD_CONF)
 	dhcpdConf.parse()
 	
+=======
+
+
+def configureDHCPD():
+	logger.notice(u"Configuring dhcpd")
+
+	dhcpdConf = DHCPDConfFile(DHCPD_CONF)
+	dhcpdConf.parse()
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	confChanged = False
 	if dhcpdConf.getGlobalBlock().getParameters_hash().get('use-host-decl-names', False):
 		logger.info(u"   use-host-decl-names already enabled")
@@ -263,7 +408,11 @@ def configureDHCPD():
 				parentBlock 	= dhcpdConf.getGlobalBlock(),
 				key 		= 'use-host-decl-names',
 				value 		= True ) )
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	subnets = dhcpdConf.getGlobalBlock().getBlocks('subnet', recursive = True)
 	if not subnets:
 		confChanged = True
@@ -274,7 +423,11 @@ def configureDHCPD():
 				parentBlock 	= dhcpdConf.getGlobalBlock(),
 				type 		= 'subnet',
 				settings 	= ['subnet', getSysConfig()['subnet'], 'netmask', getSysConfig()['netmask']] ) )
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	for subnet in dhcpdConf.getGlobalBlock().getBlocks('subnet', recursive = True):
 		logger.info(u"   Found subnet %s/%s" % (subnet.settings[1], subnet.settings[3]))
 		groups = subnet.getBlocks('group')
@@ -315,6 +468,7 @@ def configureDHCPD():
 						key 		= 'filename',
 						value 		= filename ) )
 				logger.notice(u"         filename set to %s" % filename)
+<<<<<<< HEAD
 	
 	if confChanged:
 		logger.notice(u"   Creating backup of %s" % DHCPD_CONF)
@@ -323,14 +477,30 @@ def configureDHCPD():
 		logger.notice(u"   Writing new %s" % DHCPD_CONF)
 		dhcpdConf.generate()
 		
+=======
+
+	if confChanged:
+		logger.notice(u"   Creating backup of %s" % DHCPD_CONF)
+		shutil.copy(DHCPD_CONF, DHCPD_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+
+		logger.notice(u"   Writing new %s" % DHCPD_CONF)
+		dhcpdConf.generate()
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		logger.notice(u"   Restarting dhcpd")
 		try:
 			execute(u'%s restart' % DHCPD_INIT)
 		except Exception, e:
 			logger.warning(e)
+<<<<<<< HEAD
 	
 	logger.notice(u"Configuring sudoers")
 	
+=======
+
+	logger.notice(u"Configuring sudoers")
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	found = False
 	f = codecs.open(SUDOERS, 'r', 'utf-8')
 	lines = []
@@ -342,7 +512,11 @@ def configureDHCPD():
 	if not found:
 		logger.notice(u"   Creating backup of %s" % SUDOERS)
 		shutil.copy(SUDOERS, SUDOERS + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+<<<<<<< HEAD
 		
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		logger.notice(u"   Adding sudoers entry for dhcpd restart")
 		distributor = getSysConfig()['distributor']
 		if (distributor.lower().find('redhat') != -1) or (distributor.lower().find('centos') != -1) or (distributor.lower().find('scientificsl') != -1) or (distributor.lower().find('sme') != -1):
@@ -352,12 +526,61 @@ def configureDHCPD():
 		f = codecs.open(SUDOERS, 'w', 'utf-8')
 		f.writelines(lines)
 		f.close()
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
 	os.chown(DHCPD_CONF, opsiconfdUid, adminGroupGid)
 	os.chmod(DHCPD_CONF, 0664)
+<<<<<<< HEAD
 	
+=======
+
+
+def patchSudoersFileForOpsi():
+	#get opsifileadmins groupname!!!!
+	entries = [
+		"opsiconfd ALL=NOPASSWD: %s" % "/usr/bin/opsi-setup",
+		"%%s ALL=NOPASSWD: %s" % (FILE_ADMIN_GROUP, "/usr/bin/opsi-set-rights"),
+	]
+	modify = False
+
+	lines = []
+	for entry in entries:
+		found = False
+
+		f = codecs.open(SUDOERS, 'r', 'utf-8')
+		for line in f.readlines():
+			if (line.find(entry) != -1):
+				found = True
+			lines.append(line)
+		f.close()
+
+		if not found:
+			lines.append(entry)
+			modify = True
+
+	if modify:
+		logger.notice(u"   Creating backup of %s" % SUDOERS)
+		shutil.copy(SUDOERS, SUDOERS + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
+
+		logger.notice(u"   Adding sudoers entries for opsi")
+		distributor = getSysConfig()['distributor']
+		if (distributor.lower().find('redhat') != -1) or (distributor.lower().find('centos') != -1) or (distributor.lower().find('scientificsl') != -1) or (distributor.lower().find('sme') != -1):
+			lines.append(u"Defaults:opsiconfd !requiretty\n")
+
+		lines.append('\n')
+
+		logger.notice(u"   Writing new %s" % SUDOERS)
+		f = codecs.open(SUDOERS, 'w', 'utf-8')
+		f.writelines(lines)
+		f.close()
+
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 def configureClientUser():
 	logger.notice(u"Configuring client user %s" % CLIENT_USER)
 	
@@ -3002,6 +3225,7 @@ def cleanupBackend():
 		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
 		depotbackend       = False
 	)
+<<<<<<< HEAD
 
 	logger.notice(u"Parsing dispatch.conf")
 	usingMysqlBackend = False
@@ -3049,6 +3273,9 @@ def cleanupBackend():
 	except Exception, e:
 		logger.warning(e)
 
+=======
+	
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	logger.notice(u"Cleaning up groups")
 	updatedGroups = []
 	groupIds = []

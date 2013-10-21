@@ -1,0 +1,6 @@
+*-stamp
+*.log
+*debhelper*
+debian/opsi4ucs/
+debian/files
+debian/opsi4ucs.substvars

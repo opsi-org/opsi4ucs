@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+=======
+opsi4ucs (4.0.4.1-1) testing; urgency=low
+
+  * join Script: Fixing executable-Bit problem for opsi_depot Share
+  * Removing opt_pcbin-Share
+  * Adding opsi_depot_rw and opsi_images Share
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 04 Oct 2013 00:28:12 +0200
+
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 opsi4ucs (4.0.3.1-1) testing; urgency=low
 
   * join script: execute /usr/lib/univention-pam/ldap-group-to-file.py to resync the groups  (for ucs 3.1 support)

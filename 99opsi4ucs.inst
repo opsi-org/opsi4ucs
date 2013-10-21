@@ -1,12 +1,20 @@
 #! /bin/bash -e
 
 # = = = = = = = = = = = = = = = = = = = = = = =
+<<<<<<< HEAD
 # =        Copyright (C) 2010 uib GmbH        =
+=======
+# =        Copyright (C) 2013 uib GmbH        =
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 # =           http://www.uib.de               =
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
+<<<<<<< HEAD
 VERSION=7
+=======
+VERSION=8
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -168,6 +176,7 @@ $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
 
+<<<<<<< HEAD
 
 ## --- Create extended attribute -------------------------------------------------------------------------------------------------
 ## This is disabled for now because:
@@ -188,6 +197,8 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 #		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
 #		--set "ldapMapping=opsiHostId"
 #fi
+=======
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 udm settings/extended_attribute remove $@ \
 	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
@@ -330,6 +341,7 @@ udm shares/share list "$@" --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQD
 ret=$?
 set -e
 if [ $ret != 0 ]; then
+<<<<<<< HEAD
 	$VERBOSE && echo "Adding samba share opt_pcbin"
 	udm shares/share create "$@" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
@@ -340,6 +352,18 @@ if [ $ret != 0 ]; then
 		--set group=$GROUPID \
 		--set directorymode=0755 \
 		--set sambaName=opt_pcbin \
+=======
+	$VERBOSE && echo "Adding samba share opsi_depot_rw"
+	udm shares/share create "$@" \
+		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
+		--set name=opsi_depot_rw \
+		--set host=$FQDN \
+		--set path=/var/lib/opsi/depot \
+		--set owner=$USERID \
+		--set group=$GROUPID \
+		--set directorymode=0755 \
+		--set sambaName=opsi_depot_rw \
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 		--set sambaWriteable=1 \
 		--set sambaBrowseable=1 \
 		--set sambaPublic=0 \
@@ -402,6 +426,7 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
+<<<<<<< HEAD
 if [ $UCS_3 = "1" -a -e "/etc/init.d/samba4" ]; then
 	
 	### Univention Samba4 Bug: https://forge.univention.org/bugzilla/show_bug.cgi?id=27950
@@ -421,6 +446,30 @@ if [ $UCS_3 = "1" -a -e "/etc/init.d/samba4" ]; then
 	mv /etc/samba/shares.conf.d/opsi_workbench_tmp /etc/samba/shares.conf.d/opsi_workbench
 	
 	ucr set samba4/ntacl/backend=none
+=======
+# Fix for Executable Bit problem but only for opsi-depot Share
+# Changing ntacl-backend settings to native (default)
+# 
+
+if [ $UCS_3 = "1" ]; then
+	if [ -e /etc/init.d/samba4 ]; then
+		/etc/init.d/samba4 reload
+	fi
+	if [ -e /etc/init.d/samba ]; then
+		/etc/init.d/samba reload
+	fi
+	
+	$VERBOSE && echo "Waiting for samba shares"
+	sleep 5
+	$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
+	
+	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
+	echo admin users = administrator join-backup @$fileadmingroup > /etc/samba/shares.conf.d/opsi_depot_tmp
+	mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
+	ucr commit /etc/samba/shares.conf.d/opsi_depot
+	
+	ucr set samba4/ntacl/backend=native
+>>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	
 fi
 
