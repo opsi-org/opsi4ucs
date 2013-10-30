@@ -3,16 +3,10 @@ etc/univention/templates/files
 etc/opsi/backends
 etc/opsi/backendManager
 home/opsiproducts
-<<<<<<< HEAD
-opt/pcbin/install
-usr/lib/univention-install
-usr/bin
-=======
 usr/lib/univention-install
 usr/bin
 var/lib/opsi/depot
 var/lib/opsi/ntfs-images
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 var/lib/opsi/repository
 var/log/opsi
 var/log/opsi/clientconnect
