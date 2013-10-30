@@ -1,20 +1,12 @@
 #! /bin/bash -e
 
-# = = = = = = = = = = = = = = = = = = = = = = =
-<<<<<<< HEAD
-# =        Copyright (C) 2010 uib GmbH        =
-=======
-# =        Copyright (C) 2013 uib GmbH        =
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
-# =           http://www.uib.de               =
-# =          All rights reserved.             =
+# = = = = = = = = = = = = = = = = = = = = = = 	=
+# =        Copyright (C) 2013 uib GmbH    			=
+# =           http://www.uib.de                                      	=
+# =          All rights reserved.             			=
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-<<<<<<< HEAD
-VERSION=7
-=======
 VERSION=8
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -175,30 +167,7 @@ $VERBOSE && echo "     Subnet           : $SUBNET"
 $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
-
-<<<<<<< HEAD
-
-## --- Create extended attribute -------------------------------------------------------------------------------------------------
-## This is disabled for now because:
-##   If this custom attribute is defined a computers/windows object will become an opsiClient object on creation
-##   This opsiClient will be incomplete because some attributes like opsiHostKey will be empty
-##   The client then will show up in opsi-configed but will not be fully functional
-##
-#set +e
-#dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "2.2-1"
-#ret=$?
-#set -e
-#if [ $ret = 0 ]; then
-#	udm settings/extended_attribute create "$@" --ignore_exists \
-#		--position "cn=custom attributes,cn=univention,$ROOT_DN" \
-#		--set "name=opsiHostId" --set "module=computers/windows" \
-#		--set "objectClass=opsiClient" --set "shortDescription=opsi id" \
-#		--set "CLIName=opsiHostId" --set "tabName=opsi" \
-#		--set "default=<name>.$DOMAIN" --set "mayChange=1" \
-#		--set "ldapMapping=opsiHostId"
-#fi
-=======
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
+## --- Deleting existing opsi extended-attribute ------------------------------------------------------------------------
 udm settings/extended_attribute remove $@ \
 	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
@@ -337,22 +306,10 @@ GROUPID=$(getent group opsifileadmins | cut -d ":" -f 3)
 
 
 set +e
-udm shares/share list "$@" --filter "(name=opt_pcbin)" | grep '^DN:' | grep $FQDN 1>/dev/null
+udm shares/share list "$@" --filter "(name=opsi_depot_rw)" | grep '^DN:' | grep $FQDN 1>/dev/null
 ret=$?
 set -e
 if [ $ret != 0 ]; then
-<<<<<<< HEAD
-	$VERBOSE && echo "Adding samba share opt_pcbin"
-	udm shares/share create "$@" \
-		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
-		--set name=opt_pcbin \
-		--set host=$FQDN \
-		--set path=/opt/pcbin \
-		--set owner=$USERID \
-		--set group=$GROUPID \
-		--set directorymode=0755 \
-		--set sambaName=opt_pcbin \
-=======
 	$VERBOSE && echo "Adding samba share opsi_depot_rw"
 	udm shares/share create "$@" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
@@ -363,17 +320,6 @@ if [ $ret != 0 ]; then
 		--set group=$GROUPID \
 		--set directorymode=0755 \
 		--set sambaName=opsi_depot_rw \
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
-		--set sambaWriteable=1 \
-		--set sambaBrowseable=1 \
-		--set sambaPublic=0 \
-		--set sambaCreateMode=0774 \
-		--set sambaDirectoryMode=0775 \
-		--set sambaSecurityMode=0777 \
-		--set sambaDirectorySecurityMode=0777 \
-		--set sambaOplocks=0 \
-		--set sambaLevel2Oplocks=0 \
-		--ignore_exists
 fi
 
 set +e
@@ -426,27 +372,6 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
-<<<<<<< HEAD
-if [ $UCS_3 = "1" -a -e "/etc/init.d/samba4" ]; then
-	
-	### Univention Samba4 Bug: https://forge.univention.org/bugzilla/show_bug.cgi?id=27950
-	/etc/init.d/samba4 reload
-	$VERBOSE && echo "Waiting for samba shares"
-	sleep 5
-	$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
-	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opt_pcbin > /etc/samba/shares.conf.d/opt_pcbin_tmp
-	mv /etc/samba/shares.conf.d/opt_pcbin_tmp /etc/samba/shares.conf.d/opt_pcbin
-	
-	ucr commit /etc/samba/shares.conf.d/opsi_depot
-	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot > /etc/samba/shares.conf.d/opsi_depot_tmp
-	mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
-	
-	ucr commit /etc/samba/shares.conf.d/opsi_workbench
-	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_workbench > /etc/samba/shares.conf.d/opsi_workbench_tmp
-	mv /etc/samba/shares.conf.d/opsi_workbench_tmp /etc/samba/shares.conf.d/opsi_workbench
-	
-	ucr set samba4/ntacl/backend=none
-=======
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
 # 
@@ -464,12 +389,11 @@ if [ $UCS_3 = "1" ]; then
 	$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
 	
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
-	echo admin users = administrator join-backup @$fileadmingroup > /etc/samba/shares.conf.d/opsi_depot_tmp
+	echo "admin users = administrator join-backup @$fileadmingroup" > /etc/samba/shares.conf.d/opsi_depot_tmp
 	mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
 	ucr commit /etc/samba/shares.conf.d/opsi_depot
 	
 	ucr set samba4/ntacl/backend=native
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
 	
 fi
 
@@ -615,22 +539,3 @@ test -n "`grep \"opsi4ucs v${VERSION} successful\" /usr/lib/univention-install/.
 
 
 $VERBOSE && echo "Done"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

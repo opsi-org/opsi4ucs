@@ -8,11 +8,7 @@ Standards-Version: 3.6.1
 Package: opsi4ucs
 Section: opsi
 Architecture: all
-<<<<<<< HEAD
-Depends: python-opsi (>=4.0.2.2), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20100927), opsi-configed, samba | univention-samba4, dhcp3-server | univention-dhcp, sudo, wget
-=======
-Depends: python-opsi (>=4.0.4.1), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20130207), opsi-configed, samba | univention-samba4, dhcp3-server | univention-dhcp, sudo, wget
->>>>>>> remotes/opsi4ucs-executableBit-Fix-branch/executableBit-Fix
+Depends: python-opsi (>=4.0.4), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20130207), opsi-configed, samba | univention-samba4, dhcp3-server | univention-dhcp, sudo, wget
 Description: opsi software deployment for ucs
  opsi4ucs integrates opsi into an ucs server.
  .
