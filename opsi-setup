@@ -169,7 +169,7 @@ def configureSamba():
 		elif (lines[i].lower().strip() == '[opsi_depot]'):
 			depotShareFound = True
 		elif (lines[i].lower().strip() == '[opsi_depot_rw]'):
-			depotShareRWFound
+			depotShareRWFound = True
 		elif (lines[i].lower().strip() == '[opsi_images]'):
 			opsiImagesFound = True
 		elif (lines[i].lower().strip() == '[opsi_config]'):
@@ -513,11 +513,13 @@ def setRights(path=u'/'):
 	opsiconfdUid = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
 	fileAdminGroupGid = grp.getgrnam(FILE_ADMIN_GROUP)[2]
+	
+	distribution = getDistribution()
 
 	depotDir = ''
 	dirnames = [u'/tftpboot/linux', u'/home/opsiproducts', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi']
 	specialfiles = [u'setup.py', u'show_drivers.py', u'create_driver_links.py', u'opsi-deploy-client-agent', u'opsi-deploy-client-agent-old', u'winexe']
-	if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
+	if (distribution.lower().find('suse linux enterprise server') != -1):
 		dirnames = [u'/var/lib/tftpboot/opsi', u'/var/log/opsi', u'/etc/opsi', u'/var/lib/opsi', u'/var/lib/opsi/workbench']
 	if not path.startswith('/etc') and not path.startswith('/tftpboot'):
 		try:
@@ -677,7 +679,7 @@ def update(fromVersion=None):
 			logger.warning(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
 	"""
 	
-	# 4.0.2 => 4.0.3
+	# 4.0.3 => 4.0.4
 	depotDir = '/var/lib/opsi/depot'
 	if not os.path.exists(depotDir):
 		try:
@@ -1282,7 +1284,7 @@ def updateMySQLBackend():
 			if not 'vendorId' in tables[key]:
 				continue
 
-			logger.notice(u"Updating database table %s from opsi 3.4 to 4.0" % key)
+			logger.notice(u"Updating database table %s" % key)
 			for vendorId in ('NDIS', 'SSTP', 'AGIL', 'L2TP', 'PPTP', 'PPPO', 'PTIM'):
 				mysql.execute(u"update %s set `vendorId`=NULL where `vendorId`='%s';" % (key, vendorId))
 
@@ -1555,6 +1557,20 @@ def updateMySQLBackend():
 			for tab in ('SOFTWARE_LICENSE_TO_LICENSE_POOL', 'LICENSE_ON_CLIENT'):
 				for i in data[tab]:
 					mysql.insert(tab, i)
+	
+	#Increase productId Fields on existing database:
+	
+	logger.notice(u"Updating productId Columns")
+	for line in mysql.getSet(u"SHOW TABLES;"):
+		tableName = line.values()[0]
+		logger.debug(u" [ %s ]" % tableName)
+		for column in mysql.getSet(u'SHOW COLUMNS FROM `%s`;' % tableName):
+			fieldName = column['Field']
+			fieldType = column['Type']
+			if "productid" in fieldName.lower() and fieldType != "varchar(255)":
+				logger.debug("ALTER TABLE for Table: '%s' and Column: '%s" % (tableName, fieldName))
+				mysql.execute(u"alter table %s MODIFY COLUMN `%s` VARCHAR(255);" % (tableName, fieldName))
+	
 
 	mysqlBackend = MySQLBackend(**config)
 	mysqlBackend.backend_createBase()
@@ -2578,9 +2594,32 @@ def renewOpsiconfdCert():
 		which("ucr")
 		logger.notice(u"Don't use recreate method on UCS-Systems")
 		return
-	except:
+	except Exception:
 		pass
-	
+
+	certificateExisted = True
+	try:
+		certparams = loadConfigurationFromCertificate()
+	except UnreadableCertificateError as err:
+		logger.notice(
+			u'Using default values because reading old certificate '
+			u'failed: {0}'.format(err)
+		)
+		certparams = DEFAULT_CERTIFICATE_PARAMETERS
+		certparams["commonName"] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
+	except NoCertificateError:
+		certificateExisted = False
+		certparams = DEFAULT_CERTIFICATE_PARAMETERS
+		certparams["commonName"] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
+
+	if 'expires' not in certparams:
+		certparams['expires'] = "2"  # Not included in existing cert
+
+
+	consoleLevel = logger.getConsoleLevel()
+	logger.setConsoleLevel(LOG_NONE)
+	ui = UIFactory(type='snack')
+
 	try:
 		#loaddefaults
 		certparams = {
@@ -2620,43 +2659,44 @@ def renewOpsiconfdCert():
 		messageBox = None
 		while True:
 			values = [
-				{ "name": u"Country",          		"value": certparams["country"] },
-                        	{ "name": u"State",            		"value": certparams["state"] },
-                        	{ "name": u"Locality",         		"value": certparams["locality"] },
-                        	{ "name": u"Organization",     		"value": certparams["organization"] },
-                        	{ "name": u"OrganizationUnit",	"value": certparams["organizationalUnit"] },
-                        	{ "name": u"hostname",         		"value": certparams["commonName"] },
-                        	{ "name": u"Emailaddress",     	"value": certparams["emailAddress"] },
-                        	{ "name": u"Expires (Years)",  		"value": certparams["expires"] },
+				{ "name": u"Country", "value": certparams["country"] },
+				{ "name": u"State", "value": certparams["state"] },
+				{ "name": u"Locality", "value": certparams["locality"] },
+				{ "name": u"Organization", "value": certparams["organization"] },
+				{ "name": u"OrganizationUnit", "value": certparams["organizationalUnit"] },
+				{ "name": u"hostname", "value": certparams["commonName"] },
+				{ "name": u"Emailaddress", "value": certparams["emailAddress"] },
+				{ "name": u"Expires (Years)", "value": certparams["expires"] },
 			]
-			values = ui.getValues(title = u'Renew opsiconfd Certificate', width = 70, height = 15, entries = values)
-			
+			values = ui.getValues(title=u'Renew opsiconfd Certificate', width=70, height=15, entries=values)
+
 			if values is None:
 				raise Exception(u"Canceled")
-			
+
 			error = None
-			
-			country            	= values[0]["value"]
-                	state              		= values[1]["value"]
-                	locality           		= values[2]["value"]
-                	organization       	= values[3]["value"]
-                	organizationalUnit	= values[4]["value"]
-                	commonName      	= values[5]["value"]
-                	emailAddress       	= values[6]["value"]
-                	
-			
-			if not commonName == forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF)):
-				if not error: error = "commonName must be the FQDN from Server"
-			
-			try:
-				expires  = forceInt(values[7]["value"])
-			except Exception, e:
-					if not error: error = u'No valid years for expiredate given, must be an integer'
-				
+
+			certparams["country"] = values[0]["value"]
+			certparams["state"] = values[1]["value"]
+			certparams["locality"] = values[2]["value"]
+			certparams["organization"] = values[3]["value"]
+			certparams["organizationalUnit"] = values[4]["value"]
+			certparams["commonName"] = values[5]["value"]
+			certparams["emailAddress"] = values[6]["value"]
+
+			if error is None:
+				if not certparams["commonName"] == forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF)):
+					error = "commonName must be the FQDN from Server"
+
+			if error is None:
+				try:
+					certparams["expires"] = forceInt(values[7]["value"])
+				except Exception:
+					error = u'No valid years for expiredate given, must be an integer'
+
 			if error:
-				ui.showError(title = u'Bad value', text = error, width = 50, height = 5)
+				ui.showError(title=u'Bad value', text=error, width=50, height=5)
 				continue
-				
+
 			break
 			
 	except Exception, e:
@@ -2666,95 +2706,52 @@ def renewOpsiconfdCert():
 		logger.error(e)
 		return
 	finally:
-		if ui:
-			ui.exit()
+		ui.exit()
 		logger.setConsoleLevel(consoleLevel)
-			
-	
-	logger.notice(u"Creating new opsiconfd cert")
-	logger.notice(u"Generating new key pair")
-	if key:
-		k = key
+
+	if certificateExisted:
+		renewCertificate(
+			yearsUntilExpiration=certparams['expires'],
+			config=certparams
+		)
 	else:
-		k = crypto.PKey()
-		k.generate_key(crypto.TYPE_RSA, 1024)
-	
-	logger.notice(u"Generating new self-signed cert")
-	cert = crypto.X509()
-	cert.get_subject().C = country
-	cert.get_subject().ST = state
-	cert.get_subject().L = locality
-	cert.get_subject().O = organization
-	cert.get_subject().OU = organizationalUnit
-	cert.get_subject().CN = commonName
-	cert.get_subject().emailAddress = emailAddress
-	
-	logger.notice(u"Generating new Serialnumber")
-	#Todo generating Serial new
-	cert.set_serial_number(1000)
-	logger.notice(u"Setting new expiration date (%d years)" % expires)
-	cert.gmtime_adj_notBefore(0)
-	cert.gmtime_adj_notAfter(expires*365*24*60*60)
-	
-	logger.notice(u"Filling certificate with new data")
-	cert.set_issuer(cert.get_subject())
-	cert.set_pubkey(k)
-	cert.set_version(2)
-        
-	logger.notice(u"Signing Certificate")
-	cert.sign(k, 'sha1')
-	backupfile = ''.join((OPSICONFD_CERTFILE, ".bak"))
-	logger.notice(u"Backup existing Certifcate to %s" % backupfile)
-	shutil.copy(OPSICONFD_CERTFILE, backupfile)
-	
-	logger.notice(u"Overwriting existing Certificate")
-	certcontext = "".join((
-		crypto.dump_certificate(crypto.FILETYPE_PEM, cert),
-		crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
-	)
-     	open(OPSICONFD_CERTFILE, "wt").write(certcontext)
-     	logger.notice(u"Generating and filling new randomize string")
-     	open("/tmp/opsiconfd.rand", "wt").write(rand.bytes(512))
-     	execute("%s gendh -rand %s 512 >> %s" % (
-     		which("openssl"), "/tmp/opsiconfd.rand", OPSICONFD_CERTFILE))
-     	logger.notice(u"Setting rights")
-     	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
+		createCertificate(config=certparams)
+
+
+	logger.notice(u"Setting rights")
+	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
-     	os.chown(u'/etc/opsi/passwd', opsiconfdUid, adminGroupGid)
-     	os.chmod(u'/etc/opsi/passwd', 0660)
-     	logger.notice(u"cleanup")
-     	os.remove("/tmp/opsiconfd.rand")
-     	logger.notice(u"Restarting opsi Webservice")
-     	
-     	logger.notice(u"Restarting services")
-     	execute("/etc/init.d/opsiconfd restart")
-     	execute("/etc/init.d/opsipxeconfd restart")
- 
-	
-	
-	
+	os.chown(u'/etc/opsi/passwd', opsiconfdUid, adminGroupGid)
+	os.chmod(u'/etc/opsi/passwd', 0660)
+
+	logger.notice(u"Restarting opsi Webservice")
+	logger.notice(u"Restarting services")
+	execute("/etc/init.d/opsiconfd restart")
+	execute("/etc/init.d/opsipxeconfd restart")
+
+
 def initializeBackends():
 	if not os.path.exists(u'/etc/opsi/passwd'):
 		f = codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8')
 		f.close()
-		opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
+		opsiconfdUid = pwd.getpwnam(OPSICONFD_USER)[2]
 		adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
 		os.chown(u'/etc/opsi/passwd', opsiconfdUid, adminGroupGid)
 		os.chmod(u'/etc/opsi/passwd', 0660)
-		
+
 	from OPSI.Backend.BackendManager import BackendManager
 	backend = BackendManager(
-		dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf',
-		backendConfigDir   = u'/etc/opsi/backends',
-		extensionConfigDir = u'/etc/opsi/backendManager/extend.d',
-		depotbackend       = False
+		dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
+		backendConfigDir=u'/etc/opsi/backends',
+		extensionConfigDir=u'/etc/opsi/backendManager/extend.d',
+		depotbackend=False
 	)
 	backend.backend_createBase()
-	
+
 	logger.notice(u"Try to find a Configserver.")
-	configServer = backend.host_getObjects(type = 'OpsiConfigserver')
-	if not configServer and not backend.host_getIdents(type = 'OpsiConfigserver', id = getSysConfig()['fqdn']):
-		depot = backend.host_getObjects(type = 'OpsiDepotserver', id = getSysConfig()['fqdn'])
+	configServer = backend.host_getObjects(type='OpsiConfigserver')
+	if not configServer and not backend.host_getIdents(type='OpsiConfigserver', id=getSysConfig()['fqdn']):
+		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating config server '%s'" % getSysConfig()['fqdn'])
 			#depotLocalUrl  = u'file:///opt/pcbin/install'
@@ -2762,32 +2759,32 @@ def initializeBackends():
 			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
-			
+
 			backend.host_createOpsiConfigserver(
-				id                  = getSysConfig()['fqdn'],
-				opsiHostKey         = None,
-				depotLocalUrl       = depotLocalUrl,
-				depotRemoteUrl      = depotRemoteUrl,
-				depotWebdavUrl      = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
-				repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
-				repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
-				description         = None,
-				notes               = None,
-				hardwareAddress     = getSysConfig()['hardwareAddress'],
-				ipAddress           = getSysConfig()['ipAddress'],
-				inventoryNumber     = None,
-				networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
-				maxBandwidth        = 0,
-				isMasterDepot       = True,
-				masterDepotId       = None,
+				id=getSysConfig()['fqdn'],
+				opsiHostKey=None,
+				depotLocalUrl=depotLocalUrl,
+				depotRemoteUrl=depotRemoteUrl,
+				depotWebdavUrl=u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
+				repositoryLocalUrl=u'file:///var/lib/opsi/repository',
+				repositoryRemoteUrl=u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
+				description=None,
+				notes=None,
+				hardwareAddress=getSysConfig()['hardwareAddress'],
+				ipAddress=getSysConfig()['ipAddress'],
+				inventoryNumber=None,
+				networkAddress=u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
+				maxBandwidth=0,
+				isMasterDepot=True,
+				masterDepotId=None,
 			)
-			configServer = backend.host_getObjects(type = 'OpsiConfigserver', id = getSysConfig()['fqdn'])
+			configServer = backend.host_getObjects(type='OpsiConfigserver', id=getSysConfig()['fqdn'])
 		else:
 			logger.notice(u"Converting depot server '%s' to config server" % getSysConfig()['fqdn'])
 			configServer = OpsiConfigserver.fromHash(depot[0].toHash())
 			backend.host_createObjects(configServer)
 	else:
-		depot = backend.host_getObjects(type = 'OpsiDepotserver', id = getSysConfig()['fqdn'])	
+		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating depot server '%s'" % getSysConfig()['fqdn'])
 			#depotLocalUrl  = u'file:///opt/pcbin/install'
@@ -2795,28 +2792,28 @@ def initializeBackends():
 			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
-			
+
 			depotServer = backend.host_createOpsiDepotserver(
-				id                  = getSysConfig()['fqdn'],
-				opsiHostKey         = None,
-				depotLocalUrl       = depotLocalUrl,
-				depotRemoteUrl      = depotRemoteUrl,
-				depotWebdavUrl      = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
-				repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
-				repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
-				description         = None,
-				notes               = None,
-				hardwareAddress     = getSysConfig()['hardwareAddress'],
-				ipAddress           = getSysConfig()['ipAddress'],
-				inventoryNumber     = None,
-				networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
-				maxBandwidth        = 0,
-				isMasterDepot       = True,
-				masterDepotId       = None,
+				id=getSysConfig()['fqdn'],
+				opsiHostKey=None,
+				depotLocalUrl=depotLocalUrl,
+				depotRemoteUrl=depotRemoteUrl,
+				depotWebdavUrl=u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
+				repositoryLocalUrl=u'file:///var/lib/opsi/repository',
+				repositoryRemoteUrl=u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
+				description=None,
+				notes=None,
+				hardwareAddress=getSysConfig()['hardwareAddress'],
+				ipAddress=getSysConfig()['ipAddress'],
+				inventoryNumber=None,
+				networkAddress=u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
+				maxBandwidth=0,
+				isMasterDepot=True,
+				masterDepotId=None,
 			)
 	if configServer:
 		if configServer[0].id == getSysConfig()['fqdn']:
-			configServer = backend.host_getObjects(type = 'OpsiConfigserver')
+			configServer = backend.host_getObjects(type='OpsiConfigserver')
 			if not configServer:
 				raise Exception(u"Config server '%s' not found" % getSysConfig()['fqdn'])
 			configServer = configServer[0]
@@ -2824,21 +2821,23 @@ def initializeBackends():
 				configServer.setIpAddress(getSysConfig()['ipAddress'])
 			if getSysConfig()['hardwareAddress']:
 				configServer.setHardwareAddress(getSysConfig()['hardwareAddress'])
-		
+
 			#make sure the config server is present in all backends or we get reference error later on
 			backend.host_insertObject(configServer)
 	backend.backend_exit()
 	initializeConfigs(configServer = configServer)
-	
-	link = '/var/lib/opsi/depot'
-	source = '/opt/pcbin/install'
-	if not os.path.exists(link) and os.path.exists(source):
+
+	depotDir = '/var/lib/opsi/depot'
+	if not os.path.exists(depotDir):
 		try:
-			os.symlink(source, link)
+			os.mkdir(depotDir)
+			if os.path.exists("/opt/pcbin/install"):
+				logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
 		except Exception, e:
-			logger.warning(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
-	
-def initializeConfigs(configServer = None):
+			logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
+
+
+def initializeConfigs(configServer=None):
 	from OPSI.Backend.BackendManager import BackendManager
 	backend = BackendManager(
 		dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
@@ -2994,6 +2993,9 @@ def editConfigDefaults():
 			entries = []
 			maxConfigIdLen = 0
 			for config in configs:
+				if u'configed.saved_search.' in config.id:
+					continue
+
 				if (len(config.id) > maxConfigIdLen):
 					maxConfigIdLen = len(config.id)
 			format = u"%-10s %-" + str(maxConfigIdLen) + "s = %s"
@@ -3001,10 +3003,22 @@ def editConfigDefaults():
 				type = '[unicode]'
 				if (config.getType() == 'BoolConfig'):
 					type = '[bool]'
-				entries.append({ "id": config.id, "name": format % ( type, config.id, u', '.join(forceUnicodeList(config.defaultValues)) ) })
-			
-			selection = ui.getSelection(entries, radio = True, width=100, height=10, title=u'Please select config value to change', okLabel='OK', cancelLabel='Cancel')
-			
+
+				if u'configed.saved_search.' in config.id:
+					continue
+
+				values = u', '.join(forceUnicodeList(config.defaultValues))
+				if len(values) > 60:
+					values = values[:60] + '...'
+				entries.append(
+					{
+						"id": config.id,
+						"name": format % (type, config.id, values)
+					}
+				)
+
+			selection = ui.getSelection(entries, radio=True, width=100, heigt=10, title=u'Please select config value to change', okLabel='OK', cancelLabel='Cancel')
+
 			if not selection:
 				return
 
@@ -3352,7 +3366,7 @@ def usage():
 	print u"   --auto-configure-samba        patch smb.conf"
 	print u"   --auto-configure-dhcpd        patch dhcpd.conf"
 	print u"   --renew-opsiconfd-cert        renew opsiconfd-cert (not supported on python < 2.5)"
-	print u"   --patch-sudoers-file	          patching sudoers file for tasks in opsiadmin context."
+	print u"   --patch-sudoers-file	         patching sudoers file for tasks in opsiadmin context."
 	print u""
 
 
