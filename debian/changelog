@@ -1,3 +1,9 @@
+opsi4ucs (4.0.4.1-2) testing; urgency=low
+
+  * opsi-set-rights added.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 05 Nov 2013 15:10:02 +0100
+
 opsi4ucs (4.0.4.1-1) testing; urgency=low
 
   * join Script: Fixing executable-Bit problem for opsi_depot Share
