@@ -3398,7 +3398,7 @@ def main():
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
 			['help', 'log-file=', 'ip-address=', 'backend-config=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
 			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-univention', 'update-file', 'edit-config-defaults', 'cleanup-backend',
-			 'update-from=', 'renew-opsiconfd-cert', 'patch-sudoers-file'])
+			 'update-from=', 'binddata=', 'renew-opsiconfd-cert', 'patch-sudoers-file'])
 
 	except Exception, e:
 		usage()

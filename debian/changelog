@@ -1,3 +1,9 @@
+opsi4ucs (4.0.4.2-1) testing; urgency=low
+
+  * opsi-setup: fix for automatic registering depot by the joinscript.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 06 Nov 2013 10:26:02 +0100
+
 opsi4ucs (4.0.4.1-2) testing; urgency=low
 
   * opsi-set-rights added.
