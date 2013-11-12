@@ -3145,10 +3145,10 @@ def cleanupBackend():
 				else:
 					if res['value'] in ('0','1') and res['product_property_id'] not in deleteIds:
 						deleteIds.append(res['product_property_id'])
-			if res['product_property_id']:
-				for ID in deleteIds:
-					logger.notice(u"Deleting PropertyValue id: %s" % ID)
-					mysql.execute("DELETE FROM `PRODUCT_PROPERTY_VALUE` where `product_property_id` = '%s'" % ID )
+			
+			for ID in deleteIds:
+				logger.notice(u"Deleting PropertyValue id: %s" % ID)
+				mysql.execute("DELETE FROM `PRODUCT_PROPERTY_VALUE` where `product_property_id` = '%s'" % ID )
 	except Exception as e:
 		logger.warning(e)
 
