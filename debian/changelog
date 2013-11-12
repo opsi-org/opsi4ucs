@@ -1,3 +1,10 @@
+opsi4ucs (4.0.4.3-1) testing; urgency=low
+
+  *  fixing opsi-setup bug
+  * 99opsi4ucs.inst: only setting opsifileadmins group when ucs version > 3 and samba version 4 is found
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 12 Nov 2013 10:11:42 +0100
+
 opsi4ucs (4.0.4.2-1) testing; urgency=low
 
   * opsi-setup: fix for automatic registering depot by the joinscript.

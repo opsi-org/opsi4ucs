@@ -6,7 +6,7 @@
 # =          All rights reserved.             			=
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=8
+VERSION=9
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -68,8 +68,12 @@ ret=$?
 set -e
 if [ $ret = 0 ]; then
 	UCS_3="1"
-	fileadmingroup="opsifileadmins"
-	sed -i "s/pcpatch/opsifileadmins/g" /etc/opsi/opsi.conf
+	if [ $SAMBA4 = 1 ]; then
+		fileadmingroup="opsifileadmins"
+		sed -i "s/pcpatch/opsifileadmins/g" /etc/opsi/opsi.conf
+	else
+		fileadmingroup="pcpatch"
+	fi
 	LDAP_PORT=$(ucr get ldap/master/port)
 else
 	UCS_3="0"
