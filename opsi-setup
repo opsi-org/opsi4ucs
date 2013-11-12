@@ -81,6 +81,7 @@ def getDistribution():
 		pass
 	return distribution
 
+
 def getSysConfig():
 	global sysConfig
 	if sysConfig:
@@ -216,7 +217,7 @@ def configureSamba():
 		newlines.append(u"   writeable = no\n")
 		newlines.append(u"   invalid users = root\n")
 		newlines.append(u"\n")
-		
+
 		depotDir = '/var/lib/opsi/depot'
 		if not os.path.exists(depotDir):
 			try:
@@ -535,7 +536,7 @@ def setRights(path=u'/'):
 	opsiconfdUid = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
 	fileAdminGroupGid = grp.getgrnam(FILE_ADMIN_GROUP)[2]
-	
+
 	distribution = getDistribution()
 
 	depotDir = ''
@@ -700,7 +701,7 @@ def update(fromVersion=None):
 		except Exception, e:
 			logger.warning(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
 	"""
-	
+
 	# 4.0.3 => 4.0.4
 	depotDir = '/var/lib/opsi/depot'
 	if not os.path.exists(depotDir):
@@ -1579,9 +1580,9 @@ def updateMySQLBackend():
 			for tab in ('SOFTWARE_LICENSE_TO_LICENSE_POOL', 'LICENSE_ON_CLIENT'):
 				for i in data[tab]:
 					mysql.insert(tab, i)
-	
+
 	#Increase productId Fields on existing database:
-	
+
 	logger.notice(u"Updating productId Columns")
 	for line in mysql.getSet(u"SHOW TABLES;"):
 		tableName = line.values()[0]
@@ -1592,7 +1593,7 @@ def updateMySQLBackend():
 			if "productid" in fieldName.lower() and fieldType != "varchar(255)":
 				logger.debug("ALTER TABLE for Table: '%s' and Column: '%s" % (tableName, fieldName))
 				mysql.execute(u"alter table %s MODIFY COLUMN `%s` VARCHAR(255);" % (tableName, fieldName))
-	
+
 
 	mysqlBackend = MySQLBackend(**config)
 	mysqlBackend.backend_createBase()
@@ -2297,7 +2298,7 @@ def configureMySQLBackend():
 def registerDepot(username = None, password = None, configserver = None):
 	backendConfigFile = u'/etc/opsi/backends/jsonrpc.conf'
 	dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf'
-	
+
 	getSysConfig()
 	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
 	logger.info(u"Loading backend config '%s'" % backendConfigFile)
@@ -2305,17 +2306,17 @@ def registerDepot(username = None, password = None, configserver = None):
 	config = l['config']
 	config.update(backendConfig)
 	logger.info(u"Current jsonrpc backend config: %s" % config)
-	
-	
+
+
 	jsonrpcBackend = None
 	depot = None
-	
+
 	if username and password and configserver:
 		logger.notice(u"Credentials are given, trying to registering depot noninteractive.")
 		config['address'] = configserver
 		adminUser = username
 		adminPass = password
-		
+
 		try:
 			jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
 			if not jsonrpcBackend.accessControl_userIsAdmin():
@@ -2323,7 +2324,7 @@ def registerDepot(username = None, password = None, configserver = None):
 		except Exception, e:
 			logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
 		logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
-		
+
 		depots = jsonrpcBackend.host_getObjects(id = getSysConfig()['fqdn'])
 		if depots:
 			# Already exists
@@ -2341,7 +2342,7 @@ def registerDepot(username = None, password = None, configserver = None):
 			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
-			
+
 			depot = OpsiDepotserver(
 					id                  = getSysConfig()['fqdn'],
 					opsiHostKey         = None,
@@ -2360,8 +2361,8 @@ def registerDepot(username = None, password = None, configserver = None):
 					isMasterDepot       = True,
 					masterDepotId       = None,
 			)
-		
-		
+
+
 	else:
 		consoleLevel = logger.getConsoleLevel()
 		logger.setConsoleLevel(LOG_NONE)
@@ -2379,16 +2380,16 @@ def registerDepot(username = None, password = None, configserver = None):
 				values = ui.getValues(title = u'Config server connection', width = 70, height = 10, entries = values)
 				if values is None:
 					raise Exception(u"Canceled")
-				
+
 				config['address']  = values[0]["value"]
 				adminUser          = values[1]["value"]
 				adminPass          = values[2]["value"]
-				
+
 				messageBox = ui.createMessageBox(width = 70, height = 20, title = u'Register depot', text = u'')
 				# Connect to config server
 				logger.notice(u"Connecting to config server '%s' as user '%s'" % (config['address'], adminUser))
 				messageBox.addText(u"Connecting to config server '%s' as user '%s'\n" % (config['address'], adminUser))
-				
+
 				try:
 					jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
 					if not jsonrpcBackend.accessControl_userIsAdmin():
@@ -2402,7 +2403,7 @@ def registerDepot(username = None, password = None, configserver = None):
 				logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
 				messageBox.addText(u"Successfully connected to config server '%s' as user '%s'\n" % (config['address'], adminUser))
 				break
-			
+
 			depots = jsonrpcBackend.host_getObjects(id = getSysConfig()['fqdn'])
 			if depots:
 				# Already exists
@@ -2419,7 +2420,7 @@ def registerDepot(username = None, password = None, configserver = None):
 				#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 				depotLocalUrl = u'file:///var/lib/opsi/depot'
 				depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
-				
+
 				depot = OpsiDepotserver(
 						id                  = getSysConfig()['fqdn'],
 						opsiHostKey         = None,
@@ -2443,7 +2444,7 @@ def registerDepot(username = None, password = None, configserver = None):
 					depot.maxBandwidth = 0
 				if (depot.maxBandwidth > 0):
 					depot.maxBandwidth = int(depot.maxBandwidth/1000)
-				
+
 				values = [
 					{ "name": u"Description",                 "value": depot.description          },
 					{ "name": u"Inventory number",            "value": depot.inventoryNumber      },
@@ -2459,58 +2460,58 @@ def registerDepot(username = None, password = None, configserver = None):
 					{ "name": u"Remote repository url",       "value": depot.repositoryRemoteUrl  },
 					{ "name": u"Is master depot",             "value": depot.isMasterDepot        },
 					{ "name": u"Master depot id",             "value": depot.masterDepotId or u'' },
-					
+
 				]
 				values = ui.getValues(title = u'Depot server settings', width = 70, height = 16, entries = values)
 				if values is None:
 					raise Exception(u"Canceled")
-				
+
 				error = None
 				try:
 					depot.setDescription( values[0].get('value') )
 				except Exception, e:
 					if not error: error = u'Invalid description'
-				
+
 				try:
 					depot.setInventoryNumber( values[1].get('value') )
 				except Exception, e:
 					if not error: error = u'Inventory number invalid'
-				
+
 				try:
 					depot.setNotes( values[2].get('value') )
 				except Exception, e:
 					if not error: error = u'Invalid notes'
-				
+
 				try:
 					depot.setIpAddress( values[3].get('value') )
 				except Exception, e:
 					if not error: error = u'Invalid ip address'
-				
+
 				try:
 					depot.setHardwareAddress( values[4].get('value') )
 				except Exception, e:
 					if not error: error = u'Invalid hardware address'
-				
+
 				try:
 					depot.setNetworkAddress( values[5].get('value') )
 				except Exception, e:
 					if not error: error = u'Invalid network address'
-				
+
 				try:
 					depot.setMaxBandwidth( forceInt(values[6].get('value'))*1000 )
 				except Exception, e:
 					if not error: error = u'Invalid maximum bandwidth'
-				
+
 				try:
 					depot.setDepotLocalUrl( values[7].get('value') )
 				except Exception, e:
 					if not error: error = u'Depot local url invalid'
-				
+
 				try:
 					depot.setDepotRemoteUrl( values[8].get('value') )
 				except Exception, e:
 					if not error: error = u'Depot remote url invalid'
-				
+
 				try:
 					if values[9].get('value'):
 						depot.setDepotWebdavUrl( values[9].get('value') )
@@ -2518,22 +2519,22 @@ def registerDepot(username = None, password = None, configserver = None):
 						depot.depotWebdavUrl = None
 				except Exception, e:
 					if not error: error = u'Depot webdav url invalid'
-				
+
 				try:
 					depot.setRepositoryLocalUrl( values[10].get('value') )
 				except Exception, e:
 					if not error: error = u'Repository local url invalid'
-				
+
 				try:
 					depot.setRepositoryRemoteUrl( values[11].get('value') )
 				except Exception, e:
 					if not error: error = u'Repository remote url invalid'
-				
+
 				try:
 					depot.setIsMasterDepot( values[12].get('value') )
 				except Exception, e:
 					if not error: error = u'Invalid value for is master depot'
-				
+
 				try:
 					if values[13].get('value'):
 						depot.setMasterDepotId( values[13].get('value') )
@@ -2541,19 +2542,19 @@ def registerDepot(username = None, password = None, configserver = None):
 						depot.masterDepotId = None
 				except Exception, e:
 					if not error: error = u'Master depot id invalid'
-				
+
 				if error:
 					ui.showError(title = u'Bad value', text = error, width = 50, height = 5)
 					continue
-				
+
 				break
 		finally:
 			ui.exit()
 			logger.setConsoleLevel(consoleLevel)
-	
+
 	logger.notice(u"Creating depot '%s'" % depot.id)
 	jsonrpcBackend.host_createObjects([ depot ])
-	
+
 	logger.notice(u"Getting depot '%s'" % depot.id)
 	depots = jsonrpcBackend.host_getObjects(id = depot.id)
 	if not depots:
@@ -2562,14 +2563,14 @@ def registerDepot(username = None, password = None, configserver = None):
 	config['username'] = depot.id
 	config['password'] = depot.opsiHostKey
 	jsonrpcBackend.backend_exit()
-	
+
 	logger.notice(u"Testing connection to config server as user '%s'" % config['username'])
 	try:
 		jsonrpcBackend = JSONRPCBackend(address = config['address'], username = config['username'], password = config['password'])
 	except Exception, e:
 		raise Exception(u"Failed to connect to config server as user '%s': %s" % (config['username'], e))
 	logger.notice(u"Successfully connected to config server as user '%s'" % config['username'])
-	
+
 	logger.notice(u"Updating backend config '%s'" % backendConfigFile)
 	lines = []
 	f = codecs.open(backendConfigFile, 'r', 'utf-8')
@@ -2607,7 +2608,7 @@ def registerDepot(username = None, password = None, configserver = None):
 
 
 def renewOpsiconfdCert():
-	
+
 	OPSICONFD_CERTFILE = u"/etc/opsi/opsiconfd.pem"
 	consoleLevel = logger.getConsoleLevel()
 	logger.setConsoleLevel(LOG_NONE)
@@ -2654,7 +2655,7 @@ def renewOpsiconfdCert():
        			"emailAddress"       	: u"",
        			"expires"                	: u"2",
        		}
-       		
+
 		country            		= ""
 		state             			= ""
 		locality          			= ""
@@ -2663,7 +2664,7 @@ def renewOpsiconfdCert():
 		commonName      		= None
 		emailAddress       		= ""
 		key					= None
-       		
+
        		if os.path.exists(OPSICONFD_CERTFILE):
        			data = open(OPSICONFD_CERTFILE).read()
        			cert = crypto.load_certificate(crypto.FILETYPE_PEM, data)
@@ -2676,8 +2677,8 @@ def renewOpsiconfdCert():
        			certparams["organizationalUnit"] = cert.get_subject().OU
        			certparams["commonName"]         = cert.get_subject().CN
        			certparams["emailAddress"]       = cert.get_subject().emailAddress
-		
-		
+
+
 		messageBox = None
 		while True:
 			values = [
@@ -2720,7 +2721,7 @@ def renewOpsiconfdCert():
 				continue
 
 			break
-			
+
 	except Exception, e:
 		if ui:
 			ui.exit()
@@ -3147,7 +3148,7 @@ def cleanupBackend():
 				else:
 					if res['value'] in ('0','1') and res['product_property_id'] not in deleteIds:
 						deleteIds.append(res['product_property_id'])
-			
+
 			for ID in deleteIds:
 				logger.notice(u"Deleting PropertyValue id: %s" % ID)
 				mysql.execute("DELETE FROM `PRODUCT_PROPERTY_VALUE` where `product_property_id` = '%s'" % ID )
@@ -3417,8 +3418,8 @@ def main():
 	username = None
 	password = None
 	configserver = None
-	
-	
+
+
 	for (opt, arg) in opts:
 		if opt in ("-h", "--help"):
 			usage()
@@ -3479,7 +3480,7 @@ def main():
 					break
 				else:
 					i += 1
-	
+
 	path = u'/'
 	if (len(args) > 0):
 		if (task == 'set-rights') and (len(args) == 1):
