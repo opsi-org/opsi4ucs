@@ -59,15 +59,6 @@ if os.path.exists(u'/etc/init.d/smb'):
 
 sysConfig = {}
 
-def getDistributor():
-	distributor = ''
-	try:
-		f = os.popen('lsb_release -i 2>/dev/null')
-		distributor = f.read().split(':')[1].strip()
-		f.close()
-	except:
-		pass
-	return distributor
 
 def getDistribution():
 	distribution = ''
