@@ -5,8 +5,26 @@
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
 
+import codecs
+import getopt
+import grp
+import ldap
+import MySQLdb
+import os
+import pwd
+import re
+import shutil
+import sys
+import socket
+import time
+from OpenSSL import crypto
 
-from OPSI.Logger import *
+if (sys.version_info >= (2,6)):
+	import json
+else:
+	import simplejson as json
+
+from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import *
 from OPSI.Object import *
 from OPSI.System import *
@@ -20,13 +38,6 @@ from OPSI.Backend.File import *
 from OPSI.Backend.JSONRPC import *
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 
-import os, sys, socket, re, shutil, getopt, pwd, grp, stat, codecs, time, MySQLdb, ldap
-from OpenSSL import crypto, SSL, rand
-
-if (sys.version_info >= (2,6)):
-	import json
-else:
-	import simplejson as json
 
 logger = Logger()
 
