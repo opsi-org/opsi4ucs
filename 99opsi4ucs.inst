@@ -6,7 +6,7 @@
 # =          All rights reserved.             			=
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=9
+VERSION=10
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -489,18 +489,19 @@ fi
 if [ $UCS_3 = "1" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 	$VERBOSE && echo "Checking security options for opsi"
-	reloadsecurity="false"
-	if [ -z "$(grep tcp /etc/security/packetfilter.d/50_local.sh | grep 4447 | grep -i accept)" ]; then
-		echo "/sbin/iptables -A INPUT -p "tcp"  --dport 4447 -j ACCEPT" >> /etc/security/packetfilter.d/50_local.sh
-		reloadsecurity="true"
-	fi
-	if [ -z "$(grep udp /etc/security/packetfilter.d/50_local.sh | grep 69 | grep -i accept)" ]; then
-		echo "/sbin/iptables -A INPUT -p "udp"  --dport 69 -j ACCEPT" >> /etc/security/packetfilter.d/50_local.sh
-		reloadsecurity="true"
-	fi
-	if [ $reloadsecurity != "false" ]; then
-		/etc/init.d/univention-firewall restart
-	fi
+	
+	ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all=ACCEPT
+	ucr set security/packetfilter/package/opsi4ucs/udp/69/all=ACCEPT
+	ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all/en="Port for opsi-Webservice"
+	ucr set security/packetfilter/package/opsi4ucs/udp/69/all/en="Port for TFTPD" 
+	
+	$VERBOSE && echo "Cleanup old opsi local-Filterrules"
+	
+	TEMPFILE=$(tempfile)
+	
+	grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
+	cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
+	/etc/init.d/univention-firewall restart
 else
 	ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
 fi
