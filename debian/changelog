@@ -1,3 +1,9 @@
+opsi4ucs (4.0.4.4-1) testing; urgency=low
+
+  * Changed firewall rules on UCS3 to ucr variables (fix for UCS 3.2 support)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 14 Nov 2013 16:56:42 +0100
+
 opsi4ucs (4.0.4.3-1) testing; urgency=low
 
   *  fixing opsi-setup bug
