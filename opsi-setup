@@ -1,9 +1,9 @@
 #!/usr/bin/python
-# = = = = = = = = = = = = = = = = = = = = = = =
-# =       Copyright (C) 2011 uib GmbH         =
-# =           http://www.uib.de               =
-# =          All rights reserved.             =
-# = = = = = = = = = = = = = = = = = = = = = = =
+#
+# Copyright (C) 2011-2013 uib GmbH
+# http://www.uib.de
+# All rights reserved.
+#
 
 import codecs
 import getopt
@@ -1582,7 +1582,6 @@ def updateMySQLBackend():
 					mysql.insert(tab, i)
 
 	#Increase productId Fields on existing database:
-
 	logger.notice(u"Updating productId Columns")
 	for line in mysql.getSet(u"SHOW TABLES;"):
 		tableName = line.values()[0]
@@ -1591,9 +1590,19 @@ def updateMySQLBackend():
 			fieldName = column['Field']
 			fieldType = column['Type']
 			if "productid" in fieldName.lower() and fieldType != "varchar(255)":
-				logger.debug("ALTER TABLE for Table: '%s' and Column: '%s" % (tableName, fieldName))
+				logger.debug("ALTER TABLE for Table: '%s' and Column: '%s'" % (tableName, fieldName))
 				mysql.execute(u"alter table %s MODIFY COLUMN `%s` VARCHAR(255);" % (tableName, fieldName))
 
+	# Changing description fields to type TEXT
+	for tableName in (u"PRODUCT_PROPERTY", u"BOOT_CONFIGURATION"):
+		logger.notice(u"Updating field 'description' on table {name}".format(name=tableName))
+		fieldName = u"description"
+		mysql.execute(
+			u"alter table {name} MODIFY COLUMN `{column}` TEXT;".format(
+				name=tableName,
+				column=fieldName
+			)
+		)
 
 	mysqlBackend = MySQLBackend(**config)
 	mysqlBackend.backend_createBase()
