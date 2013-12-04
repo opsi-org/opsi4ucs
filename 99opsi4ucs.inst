@@ -346,6 +346,7 @@ if [ $ret != 0 ]; then
 		--set sambaPublic=0 \
 		--set sambaOplocks=0 \
 		--set sambaLevel2Oplocks=0 \
+		--set sambaCustomSettings='"follow symlinks" yes' \
 		--ignore_exists
 fi
 if [ ! -e "/var/lib/opsi/depot" -a ! -L "/var/lib/opsi/depot" -a -e "/opt/pcbin/install" ]; then
@@ -408,7 +409,7 @@ fi
 
 if [ $UCS_3 = "1" ]; then
 	if [ -e /etc/init.d/samba4 ]; then
-		/etc/init.d/samba4 reload
+		/etc/init.d/samba4 force-reload
 	fi
 	if [ -e /etc/init.d/samba ]; then
 		/etc/init.d/samba reload
@@ -553,7 +554,7 @@ if [ $UCS_3 = "1" ]; then
 		/etc/init.d/dhcp3-server restart || true
 	fi
 	if [ $SAMBA4 = "1" ]; then
-		/etc/init.d/samba4 reload || true
+		/etc/init.d/samba4 force-reload || true
 	fi
 else
 	if [ -e "/etc/init.d/dhcp3-server" ]; then
