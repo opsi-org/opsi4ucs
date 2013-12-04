@@ -8,6 +8,7 @@
 import codecs
 import getopt
 import grp
+import json
 import ldap
 import MySQLdb
 import os
@@ -18,11 +19,6 @@ import sys
 import socket
 import time
 from OpenSSL import crypto
-
-if (sys.version_info >= (2,6)):
-	import json
-else:
-	import simplejson as json
 
 from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import *
