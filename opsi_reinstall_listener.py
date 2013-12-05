@@ -4,7 +4,7 @@
    = = = = = = = = = = = = = = = = = = = = = = =
    =       OPSI reinstallation listener        =
    = = = = = = = = = = = = = = = = = = = = = = =
-   
+
    @copyright:	uib - http://www.uib.de - <info@uib.de>
    @author: Jan Schneider <j.schneider@uib.de>
    @license: GNU GPL, see COPYING for details.
@@ -30,28 +30,28 @@ logger.setUniventionClass(univention.debug.LISTENER)
 
 
 def handler(dn, new, old):
-	
+
 	if not new:
 		return
-	
+
 	reinst = new.get('univentionWindowsReinstall')
 	if not reinst:
 		return
-	
+
 	listener.setuid(0)
-	
+
 	bm = None
 	try:
 		bm = BackendManager( authRequired = False )
-	except Exception, e:
+	except Exception as e:
 		logger.error('Failed to create BackendManager instance: %s' % e)
 		return
-	
+
 	hostId = ''
 	try:
 		hostId = bm.getHostId(dn)
 		logger.info('DN: %s, hostId: %s' % (dn, hostId))
-	except Exception, e:
+	except Exception as e:
 		logger.error('Failed to get hostId: %s, trying to create host' % e)
 		hostName = ''
 		domain = ''
@@ -63,10 +63,10 @@ def handler(dn, new, old):
 			elif(att.lower() == 'dn'):
 				if domain: domain += '.'
 				domain += val
-			
+
 		hostId = bm.createClient( hostName, domain )
 		logger.notice("Host '%s' created (dn=%s)" % (hostId, dn))
-		
+
 	netbootProducts = bm.getInstallableNetBootProductIds_list(hostId)
 	productIds = []
 	try:
@@ -76,20 +76,20 @@ def handler(dn, new, old):
 			if not actionRequest.get('actionRequest').startswith('setup'):
 				continue
 			productIds.append(actionRequest.get('productId'))
-	except Exception, e:
+	except Exception as e:
 		logger.warning("Failed to get product action requests for client '%s': %s'" % (hostId, e))
 	if not productIds:
 		logger.warning("Action request 'setup' not set for any netboot product, client '%s'" % hostId)
-	
+
 	if ( reinst[0] == '0'):
 		for productId in productIds:
 			logger.notice("Unsetting action for client '%s', product '%s'" % (hostId, productId))
-		
+
 			try:
 				bm.unsetProductActionRequest(productId, hostId)
-			except Exception, e:
+			except Exception as e:
 				logger.warning("Failed to unset product action request for client '%s', product '%s': %s'" % (hostId, productId, e))
-	
+
 	elif ( reinst[0] == '1'):
 		#try:
 		#	bm.createClient( hostId.split('.')[0], '.'.join( hostId.split('.')[1:] ) )
@@ -97,7 +97,7 @@ def handler(dn, new, old):
 		#	e = str(e)
 		#	if (e.find("already exists") == -1):
 		#		logger.error("Failed to create client '%s': %s'" % (hostId, e))
-		
+
 		productId = ''
 		if productIds:
 			productId = productIds[0]
@@ -110,7 +110,7 @@ def handler(dn, new, old):
 				if installationStatus.get('installationStatus') not in ['installed']:
 					continue
 				productIds.append(installationStatus.get('productId'))
-			
+
 			if (len(productIds) > 0):
 				if (len(productIds) > 1):
 					logger.warning("More than one netboot product is installed: %s, client '%s', using '%s'" \
@@ -118,27 +118,26 @@ def handler(dn, new, old):
 				productId = productIds[0]
 			else:
 				logger.notice("Installation status 'installed' not set for any netboot product, client '%s'" % hostId)
-			
+
 		if not productId:
 			# Get default netboot product
 			try:
 				productId = bm.getDefaultNetBootProductId(hostId)
-			except Exception, e:
+			except Exception as e:
 				logger.warning(e)
-			
+
 		if not productId:
 			logger.error("Failed to set PXE boot configuration for host '%s': failed to get default netboot product" % hostId)
 			productId = bm.unsetPXEBootConfiguration(hostId)
 			bm.exit()
 			return
-		
+
 		logger.notice("Setting product action request 'setup' for client '%s', product '%s'" % (hostId, productId) )
-		
+
 		try:
 			bm.setProductActionRequest(productId, hostId, 'setup')
-		except Exception, e:
+		except Exception as e:
 			logger.error("Failed to set action request 'setup' for client '%s', product '%s': %s'" % (hostId, productId, e))
 			productId = bm.unsetPXEBootConfiguration(hostId)
-	
+
 	bm.exit()
-	

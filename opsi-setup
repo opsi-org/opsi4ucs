@@ -92,7 +92,7 @@ def getSysConfig():
 		f = os.popen('lsb_release -d 2>/dev/null')
 		sysConfig['distribution'] = f.read().split(':')[1].strip()
 		f.close()
-	except Exception, e:
+	except Exception as e:
 		logger.warning(u"Failed to get distributor/distribution: %s" % e)
 
 	logger.notice(u"Getting current system config")
@@ -220,7 +220,7 @@ def configureSamba():
 				os.mkdir(depotDir)
 				if os.path.exists("/opt/pcbin/install"):
 					logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
-			except Exception, e:
+			except Exception as e:
 				logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
 
 	if not depotShareRWFound:
@@ -656,7 +656,7 @@ def update(fromVersion=None):
 			shutil.move(os.path.join(u'/var/lib/opsi/products', f), os.path.join(u'/var/lib/opsi/repository', f))
 		try:
 			os.rmdir(u'/var/lib/opsi/products')
-		except Exception, e:
+		except Exception as e:
 			logger.warning(e)
 
 	isConfigServer = False
@@ -670,7 +670,7 @@ def update(fromVersion=None):
 			if not 'jsonrpc' in backends:
 				isConfigServer = True
 			break
-	except Exception, e:
+	except Exception as e:
 		logger.warning(e)
 
 	if isConfigServer:
@@ -705,7 +705,7 @@ def update(fromVersion=None):
 			os.mkdir(depotDir)
 			if os.path.exists("/opt/pcbin/install"):
 				logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
-		except Exception, e:
+		except Exception as e:
 			logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
 
 
@@ -743,7 +743,7 @@ def updateLDAPBackend(backendConfigFile=u'/etc/opsi/backends/ldap.conf'):
 		ldapObj.setAttribute('opsiProductType', ['LocalbootProduct'])
 		ldapObj.writeToDirectory(ldapSession)
 		ldapObj.deleteFromDirectory(ldapSession)
-	except Exception, e:
+	except Exception as e:
 		raise Exception(u'Test of opsi-ldap 4.0 schema failed: %s, Please verify opsi.schema and restart slapd.' % e)
 
 
@@ -774,7 +774,7 @@ def updateLDAPBackend(backendConfigFile=u'/etc/opsi/backends/ldap.conf'):
 			obj.setAttribute('opsiRepositoryRemoteUrl', [url])
 			obj.setAttribute('opsiIsMasterDepot', ['TRUE'])
 			obj.writeToDirectory(ldapSession)
-		except Exception, e:
+		except Exception as e:
 			obj.deleteFromDirectory(ldapSession)
 			logger.error(e)
 
@@ -794,7 +794,7 @@ def updateLDAPBackend(backendConfigFile=u'/etc/opsi/backends/ldap.conf'):
 			obj.setAttribute('opsiRepositoryRemoteUrl', [url])
 			obj.setAttribute('opsiIsMasterDepot', ['TRUE'])
 			obj.writeToDirectory(ldapSession)
-		except Exception, e:
+		except Exception as e:
 			obj.deleteFromDirectory(ldapSession)
 			logger.error(e)
 
@@ -809,7 +809,7 @@ def updateLDAPBackend(backendConfigFile=u'/etc/opsi/backends/ldap.conf'):
 			obj.addObjectClass('OpsiHost')
 			obj.addObjectClass('OpsiClient')
 			obj.writeToDirectory(ldapSession)
-		except Exception, e:
+		except Exception as e:
 			obj.deleteFromDirectory(ldapSession)
 			logger.error(e)
 
@@ -1064,7 +1064,7 @@ def updateLDAPBackend(backendConfigFile=u'/etc/opsi/backends/ldap.conf'):
 		try:
 			logger.notice(u"Deleting %s" % deleteDn)
 			LDAPObject(deleteDn).deleteFromDirectory(ldapSession, recursive=True)
-		except Exception, e:
+		except Exception as e:
 			logger.error(e)
 
 	logger.notice(u"Converting opsiProductState")
@@ -1667,7 +1667,7 @@ def updateFileBackend():
 			try:
 				(hostId, key) = line.strip().split(':')
 				hostId = forceHostId(hostId.replace('_', '-'))
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Bad line in %s: '%s': %s" % (config["hostKeyFile"], line, e))
 				continue
 			lines.append(u"%s:%s\n" % (hostId, key))
@@ -1692,7 +1692,7 @@ def updateFileBackend():
 					if (ini.get(proId, depId) == u'locked'):
 						key = u'%s' % (proId.lower() + '#' + depId.lower())
 						lockedList[key] = True
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Could not get all information on product.locks: %s" % (e))
 	else:
 		logger.warning(u"Product locks fils does not exist: '%s'" % (os.path.join(backupDepotConfigDir, u'product.locks')))
@@ -1710,7 +1710,7 @@ def updateFileBackend():
 				continue
 			try:
 				depotId = forceHostId(depotId)
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Invalid depot: '%s': %s" % (oldPath, e))
 				continue
 
@@ -1764,7 +1764,7 @@ def updateFileBackend():
 				if ini.has_option('depotserver', 'inventorynumber'):
 					oldDepotDict['inventoryNumber'] = ini.get('depotserver', 'inventorynumber')
 
-			except Exception, e:
+			except Exception as e:
 				logger.warning(u"Could not get all information on depot: %s" % (e))
 
 			backend.host_createObjects([OpsiDepotserver.fromHash(oldDepotDict)])
@@ -1896,7 +1896,7 @@ def updateFileBackend():
 							multiValue = True
 						elif (option.lower() == u'windomain'):
 							configId = u'clientconfig.windows.domain'
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Error in option '%s' in section '%s': '%s'" % (option, section, e))
 					continue
 
@@ -1921,7 +1921,7 @@ def updateFileBackend():
 				continue
 			try:
 				clientId = forceHostId(filename[:-4].replace('_', '-'))
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Invalid client id '%s': %s" % (filename[:-4], e))
 				continue
 
@@ -2020,7 +2020,7 @@ def updateFileBackend():
 										poc['modificationTime'] = ini.get(productId + u'-state', 'laststatechange')
 
 								updatedProductOnClients.append(ProductOnClient.fromHash(poc))
-							except Exception, e:
+							except Exception as e:
 								logger.error(u"Exception while creating ProductOnClient from '%s': %s" % (oldClient, e))
 
 #					elif (section.lower().endswith(u'-state')):
@@ -2043,7 +2043,7 @@ def updateFileBackend():
 											value = value + '/rpc'
 									elif (option.lower() == u'windomain'):
 										configId = u'clientconfig.windows.domain'
-							except Exception, e:
+							except Exception as e:
 								logger.error(u"%s" % (e))
 								continue
 
@@ -2058,14 +2058,14 @@ def updateFileBackend():
 				#TODO: check, if configState.configId exists
 				try:
 					backend.configState_createObjects([cs])
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Could not create configState '%s': %s" % (cs.getIdent(), e))
 
 			logger.info(u"Updating ProductOnClients in '%s'" % (clientId))
 			for poc in updatedProductOnClients:
 				try:
 					backend.productOnClient_createObjects([poc])
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Could not create ProductOnClient '%s': %s" % (poc.getIdent(), e))
 
 
@@ -2073,7 +2073,7 @@ def updateFileBackend():
 			for pps in updatedProductPropertyStates:
 				try:
 					backend.productPropertyState_createObjects([pps])
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Could not create ProductPropertyState '%s': %s" % (pps.getIdent(), e))
 	else:
 		logger.error(u"No client folder, skipping clients.")
@@ -2205,7 +2205,7 @@ def configureMySQLBackend():
 
 			try:
 				db = MySQLdb.connect(host=config['address'], user=dbAdminUser, passwd=dbAdminPass)
-			except Exception, e:
+			except Exception as e:
 				messageBox.hide()
 				logger.error(u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], dbAdminUser, e))
 				ui.showError(text=u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], dbAdminUser, e),
@@ -2326,7 +2326,7 @@ def registerDepot(username = None, password = None, configserver = None):
 			jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
 			if not jsonrpcBackend.accessControl_userIsAdmin():
 				raise Exception(u"User '%s' is not an admin user" % adminUser)
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
 		logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
 
@@ -2399,7 +2399,7 @@ def registerDepot(username = None, password = None, configserver = None):
 					jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
 					if not jsonrpcBackend.accessControl_userIsAdmin():
 						raise Exception(u"User '%s' is not an admin user" % adminUser)
-				except Exception, e:
+				except Exception as e:
 					messageBox.hide()
 					logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
 					ui.showError(text = u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e),
@@ -2474,47 +2474,47 @@ def registerDepot(username = None, password = None, configserver = None):
 				error = None
 				try:
 					depot.setDescription( values[0].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid description'
 
 				try:
 					depot.setInventoryNumber( values[1].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Inventory number invalid'
 
 				try:
 					depot.setNotes( values[2].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid notes'
 
 				try:
 					depot.setIpAddress( values[3].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid ip address'
 
 				try:
 					depot.setHardwareAddress( values[4].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid hardware address'
 
 				try:
 					depot.setNetworkAddress( values[5].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid network address'
 
 				try:
 					depot.setMaxBandwidth( forceInt(values[6].get('value'))*1000 )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid maximum bandwidth'
 
 				try:
 					depot.setDepotLocalUrl( values[7].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Depot local url invalid'
 
 				try:
 					depot.setDepotRemoteUrl( values[8].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Depot remote url invalid'
 
 				try:
@@ -2522,22 +2522,22 @@ def registerDepot(username = None, password = None, configserver = None):
 						depot.setDepotWebdavUrl( values[9].get('value') )
 					else:
 						depot.depotWebdavUrl = None
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Depot webdav url invalid'
 
 				try:
 					depot.setRepositoryLocalUrl( values[10].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Repository local url invalid'
 
 				try:
 					depot.setRepositoryRemoteUrl( values[11].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Repository remote url invalid'
 
 				try:
 					depot.setIsMasterDepot( values[12].get('value') )
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Invalid value for is master depot'
 
 				try:
@@ -2545,7 +2545,7 @@ def registerDepot(username = None, password = None, configserver = None):
 						depot.setMasterDepotId( values[13].get('value') )
 					else:
 						depot.masterDepotId = None
-				except Exception, e:
+				except Exception as e:
 					if not error: error = u'Master depot id invalid'
 
 				if error:
@@ -2572,7 +2572,7 @@ def registerDepot(username = None, password = None, configserver = None):
 	logger.notice(u"Testing connection to config server as user '%s'" % config['username'])
 	try:
 		jsonrpcBackend = JSONRPCBackend(address = config['address'], username = config['username'], password = config['password'])
-	except Exception, e:
+	except Exception as e:
 		raise Exception(u"Failed to connect to config server as user '%s': %s" % (config['username'], e))
 	logger.notice(u"Successfully connected to config server as user '%s'" % config['username'])
 
@@ -2727,7 +2727,7 @@ def renewOpsiconfdCert():
 
 			break
 
-	except Exception, e:
+	except Exception as e:
 		if ui:
 			ui.exit()
 		logger.setConsoleLevel(consoleLevel)
@@ -2861,7 +2861,7 @@ def initializeBackends():
 			os.mkdir(depotDir)
 			if os.path.exists("/opt/pcbin/install"):
 				logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
-		except Exception, e:
+		except Exception as e:
 			logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
 
 
@@ -3408,7 +3408,7 @@ def main():
 			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-univention', 'update-file', 'edit-config-defaults', 'cleanup-backend',
 			 'update-from=', 'binddata=', 'renew-opsiconfd-cert', 'patch-sudoers-file'])
 
-	except Exception, e:
+	except Exception as e:
 		usage()
 		raise
 
