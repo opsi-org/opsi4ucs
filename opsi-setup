@@ -27,7 +27,7 @@ from OPSI.System import *
 from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import *
 from OPSI.Util import *
-from OPSI.UI import UIFactory 
+from OPSI.UI import UIFactory
 from OPSI.Backend.MySQL import *
 from OPSI.Backend.LDAP import *
 from OPSI.Backend.File import *
@@ -219,7 +219,7 @@ def configureSamba():
 			try:
 				os.mkdir(depotDir)
 				if os.path.exists("/opt/pcbin/install"):
-					logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
+					logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please use /var/lib/opsi/depot instead.")
 			except Exception as e:
 				logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
 
@@ -3393,7 +3393,7 @@ def usage():
 	print u"   --cleanup-backend             cleanup backend"
 	print u"   --auto-configure-samba        patch smb.conf"
 	print u"   --auto-configure-dhcpd        patch dhcpd.conf"
-	print u"   --renew-opsiconfd-cert        renew opsiconfd-cert (not supported on python < 2.5)"
+	print u"   --renew-opsiconfd-cert        renew opsiconfd-cert"
 	print u"   --patch-sudoers-file	         patching sudoers file for tasks in opsiadmin context."
 	print u""
 
