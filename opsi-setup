@@ -27,7 +27,7 @@ from OPSI.System import *
 from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import *
 from OPSI.Util import *
-from OPSI.UI import *
+from OPSI.UI import UIFactory 
 from OPSI.Backend.MySQL import *
 from OPSI.Backend.LDAP import *
 from OPSI.Backend.File import *
