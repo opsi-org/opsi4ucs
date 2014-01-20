@@ -425,38 +425,37 @@ def patchSudoersFileForOpsi():
 		"opsiconfd ALL=NOPASSWD: %s" % "/usr/bin/opsi-set-rights",
 		"%%%s ALL=NOPASSWD: %s" % (FILE_ADMIN_GROUP, "/usr/bin/opsi-set-rights"),
 	]
-	modify = False
-
 	lines = []
-	for entry in entries:
-		found = False
+	found = False
 
-		f = codecs.open(SUDOERS, 'r', 'utf-8')
-		for line in f.readlines():
-			if (line.find(entry) != -1):
-				found = True
+	with codecs.open(SUDOERS, 'r', 'utf-8') as sudoersFile:
+		for line in sudoersFile:
+			for entry in entries:
+				if entry in line:
+					found = True
+
 			lines.append(line)
-		f.close()
 
-		if not found:
-			lines.append(entry)
-			modify = True
-
-	if modify:
+	if not found:
 		logger.notice(u"   Creating backup of %s" % SUDOERS)
 		shutil.copy(SUDOERS, SUDOERS + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
 
 		logger.notice(u"   Adding sudoers entries for opsi")
+		for entry in entries:
+			lines.append("{0}\n".format(entry))
+
 		distributor = getSysConfig()['distributor']
-		if (distributor.lower().find('redhat') != -1) or (distributor.lower().find('centos') != -1) or (distributor.lower().find('scientificsl') != -1) or (distributor.lower().find('sme') != -1):
+		distributor = distributor.lower()
+		if ('scientificsl' in distributor or 'redhat' in distributor
+			or 'centos' in distributor or 'sme' in distributor):
+
 			lines.append(u"Defaults:opsiconfd !requiretty\n")
 
 		lines.append('\n')
 
 		logger.notice(u"   Writing new %s" % SUDOERS)
-		f = codecs.open(SUDOERS, 'w', 'utf-8')
-		f.writelines(lines)
-		f.close()
+		with codecs.open(SUDOERS, 'w', 'utf-8') as sudoersFile:
+			sudoersFile.writelines(lines)
 
 
 def configureClientUser():

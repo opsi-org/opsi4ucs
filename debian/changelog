@@ -1,3 +1,9 @@
+opsi4ucs (4.0.4.4-2) UNRELEASED; urgency=low
+
+  * Do not duplicate the lines of the sudoers file.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 20 Jan 2014 15:14:15 +0100
+
 opsi4ucs (4.0.4.4-1) testing; urgency=low
 
   * Changed firewall rules on UCS3 to ucr variables (fix for UCS 3.2 support)
@@ -272,7 +278,7 @@ opsi4ucs (3.3.1-6) stable; urgency=low
 
   * Disabled opsi4ucs univention-directory-listener
   * postinst differentiates between configserver and depotserver installations
-  
+
  -- Jan Schneider <j.schneider@uib.de>  Tue, 21 Jul 2009 14:21:03 +0200
 
 opsi4ucs (3.3.1-5) stable; urgency=low
