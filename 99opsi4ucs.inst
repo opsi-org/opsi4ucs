@@ -89,7 +89,13 @@ fi
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
 set +e
 if [ $UCS_3 = "1" ]; then
-	univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
+	if [ "SERVER_ROLE" = "member" ]; then
+		set -e
+		univention-ldapsearch -D "$ROOT_DN" -w "(cat /etc/machine.secret)" -s base > /dev/null
+		set +e
+	else
+		univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
+	fi
 else
 	ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
 fi
@@ -560,9 +566,7 @@ if [ $UCS_3 = "1" ]; then
 	elif [ -e "/etc/init.d/dhcp3-server" ]; then
 		/etc/init.d/dhcp3-server restart || true
 	fi
-	if [ $SAMBA4 = "1" ]; then
-		/etc/init.d/samba4 force-reload || true
-	fi
+	$SAMBA_INIT_SCRIPT reload || true
 else
 	if [ -e "/etc/init.d/dhcp3-server" ]; then
 		/etc/init.d/dhcp3-server restart || true
