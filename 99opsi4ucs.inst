@@ -6,7 +6,7 @@
 # =          All rights reserved.             			=
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=10
+VERSION=11
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -53,7 +53,11 @@ else
 	DHCPSERVER=0	
 fi
 
-if [ -e "/etc/init.d/samba4" ]; then
+SAMBA_INIT_SCRIPT="/etc/init.d/samba"
+if [ "$(ucr get samba/domain/security)" == "ads" ]; then
+	if [ "UCS_VERSION" = "3.1" ]; then
+		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
+	fi
 	SAMBA4=1
 else
 	SAMBA4=0
@@ -146,6 +150,9 @@ set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
 	$VERBOSE && echo "No Server marked as OpsiConfigserver, trying to set $FQDN as OpsiConfigserver for $ROOT_DN"
 	udm computers/$SERVER_ROLE modify "$@" --dn $(ucr get ldap/hostdn) --append service=OpsiConfigserver
+	$VERBOSE && echo "Creating Service Entry for UMC."
+	udm settings/service create "$@" --ignore_exists --position "cn=services,cn=univention,$ROOT_DN" --set name=OpsiConfigserver
+
 elif [ "$config_server" != ".$DOMAIN" -a "$config_server" != "$FQDN" ]; then
 	OPSI_ROLE="depotserver"
 fi
