@@ -89,10 +89,8 @@ fi
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
 set +e
 if [ $UCS_3 = "1" ]; then
-	if [ "SERVER_ROLE" = "member" ]; then
-		set -e
-		univention-ldapsearch -D "$ROOT_DN" -w "(cat /etc/machine.secret)" -s base > /dev/null
-		set +e
+	if [ "SERVER_ROLE" = "memberserver" ]; then
+		univention-ldapsearch -D "$LDAP_USER" -w "$LDAP_SECRET" -s base > /dev/null
 	else
 		univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
 	fi
