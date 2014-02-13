@@ -2956,7 +2956,7 @@ def initializeConfigs(configServer=None):
 				id=u'clientconfig.depot.user',
 				description=u'User for depot share',
 				possibleValues=[],
-				defaultValues=["%s\\pcpatch" % depotuser],
+				defaultValues=["%s" % depotuser],
 				editable=True,
 				multiValue=False
 			)

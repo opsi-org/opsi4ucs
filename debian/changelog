@@ -1,3 +1,9 @@
+opsi4ucs (4.0.4.6-1) stable; urgency=low
+
+  * small fix for --init-current-config in opsi-setup
+  
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 12 Feb 2014 12:14:15 +0100
+
 opsi4ucs (4.0.4.5-1) stable; urgency=low
 
   * Do not duplicate the lines of the sudoers file.
