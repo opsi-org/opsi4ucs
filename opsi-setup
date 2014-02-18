@@ -2640,11 +2640,6 @@ def registerDepot(username = None, password = None, configserver = None):
 
 
 def renewOpsiconfdCert():
-
-	OPSICONFD_CERTFILE = u"/etc/opsi/opsiconfd.pem"
-	consoleLevel = logger.getConsoleLevel()
-	logger.setConsoleLevel(LOG_NONE)
-	ui = UIFactory(type = 'snack')
 	try:
 		which("ucr")
 		logger.notice(u"Don't use recreate method on UCS-Systems")
@@ -2676,42 +2671,6 @@ def renewOpsiconfdCert():
 	ui = UIFactory(type='snack')
 
 	try:
-		#loaddefaults
-		certparams = {
-			"country"            	: u"DE",
-       			"state"              	: u"RP",
-       			"locality"           	: u"Mainz",
-       			"organization"         	: u"uib gmbh",
-       			"organizationalUnit" 	: u"",
-       			"commonName"      	: forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF)),
-       			"emailAddress"       	: u"",
-       			"expires"                	: u"2",
-       		}
-
-		country            		= ""
-		state             			= ""
-		locality          			= ""
-		organization       		= ""
-		organizationalUnit		= ""
-		commonName      		= None
-		emailAddress       		= ""
-		key					= None
-
-       		if os.path.exists(OPSICONFD_CERTFILE):
-       			data = open(OPSICONFD_CERTFILE).read()
-       			cert = crypto.load_certificate(crypto.FILETYPE_PEM, data)
-       			key  = crypto.load_privatekey(crypto.FILETYPE_PEM, data)
-
-       			certparams["country"]            = cert.get_subject().C
-       			certparams["state"]              = cert.get_subject().ST
-       			certparams["locality"]           = cert.get_subject().L
-       			certparams["organization"]       = cert.get_subject().O
-       			certparams["organizationalUnit"] = cert.get_subject().OU
-       			certparams["commonName"]         = cert.get_subject().CN
-       			certparams["emailAddress"]       = cert.get_subject().emailAddress
-
-
-		messageBox = None
 		while True:
 			values = [
 				{ "name": u"Country", "value": certparams["country"] },
@@ -2753,13 +2712,6 @@ def renewOpsiconfdCert():
 				continue
 
 			break
-
-	except Exception as e:
-		if ui:
-			ui.exit()
-		logger.setConsoleLevel(consoleLevel)
-		logger.error(e)
-		return
 	finally:
 		ui.exit()
 		logger.setConsoleLevel(consoleLevel)
