@@ -45,7 +45,6 @@ import shutil
 import sys
 import socket
 import time
-from OpenSSL import crypto
 
 from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import *
@@ -68,15 +67,15 @@ logger = Logger()
 logger.setConsoleLevel(LOG_NOTICE)
 logger.setConsoleColor(True)
 
-LOG_FILE         = u'/tmp/opsi-setup.log'
-SMB_CONF         = u'/etc/samba/smb.conf'
-SMB_INIT         = u'/etc/init.d/samba'
-DHCPD_CONF       = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
-DHCPD_INIT       = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
-SUDOERS          = u'/etc/sudoers'
-OPSICONFD_USER   = u'opsiconfd'
-ADMIN_GROUP      = u'opsiadmin'
-CLIENT_USER      = u'pcpatch'
+LOG_FILE = u'/tmp/opsi-setup.log'
+SMB_CONF = u'/etc/samba/smb.conf'
+SMB_INIT = u'/etc/init.d/samba'
+DHCPD_CONF = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
+DHCPD_INIT = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
+SUDOERS = u'/etc/sudoers'
+OPSICONFD_USER = u'opsiconfd'
+ADMIN_GROUP = u'opsiadmin'
+CLIENT_USER = u'pcpatch'
 FILE_ADMIN_GROUP = u'pcpatch'
 
 OPSI_CONF = u'/etc/opsi/opsi.conf'
@@ -2901,8 +2900,8 @@ def initializeConfigs(configServer=None):
 		depotuser = u'pcpatch'
 		depotdomain = getSysConfig()['winDomain']
 		if depotdomain:
-			depotuser = u'%s\\pcpatch' % depotdomain 
-			
+			depotuser = u'%s\\pcpatch' % depotdomain
+
 		configs.append(
 			UnicodeConfig(
 				id=u'clientconfig.depot.user',
