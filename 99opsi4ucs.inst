@@ -6,7 +6,7 @@
 # =          All rights reserved.             			=
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=11
+VERSION=12
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -54,7 +54,9 @@ else
 fi
 
 SAMBA_INIT_SCRIPT="/etc/init.d/samba"
-if [ "$(ucr get samba/domain/security)" == "ads" ]; then
+# this will not work on Master and Backup, switching to old detection
+#if [ "$(ucr get samba/domain/security)" == "ads" ]; then
+if [ -e "/etc/init.d/samba4" ]; then
 	if [ "UCS_VERSION" = "3.1" ]; then
 		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
 	fi
