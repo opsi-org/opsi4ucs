@@ -46,6 +46,7 @@ import sys
 import socket
 import time
 
+import OPSI.Util.Task.ConfigureBackend as backendUtils
 from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import *
 from OPSI.Object import *
@@ -60,6 +61,8 @@ from OPSI.Backend.File import *
 from OPSI.Backend.JSONRPC import *
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
+from OPSI.Util.Task.ConfigureBackend.MySQL import (DatabaseConnectionFailedException,
+	configureMySQLBackend as configureMySQLBackendWithoutGUI)
 
 
 logger = Logger()
@@ -2188,30 +2191,34 @@ def updateFileBackend():
 
 
 def configureMySQLBackend():
-	backendConfigFile = u'/etc/opsi/backends/mysql.conf'
+	def notifyFunction(message):
+		logger.notice(message)
+		messageBox.addText(u"{0}\n".format(message))
 
-	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
-	logger.info(u"Loading backend config '%s'" % backendConfigFile)
-	execfile(backendConfigFile, l)
-	config = l['config']
-	config.update(backendConfig)
-	logger.info(u"Current mysql backend config: %s" % config)
+	def errorFunction(message):
+		logger.error(message)
+		ui.showError(
+			text=message, width=70, height=6,
+			title=u'Problem configuring MySQL backend'
+		)
+
+	dbAdminUser = u'root'
+	dbAdminPass = u''
+	messageBox = None
+	config = backendUtils.getBackendConfiguration(u'/etc/opsi/backends/mysql.conf')
 
 	consoleLevel = logger.getConsoleLevel()
 	logger.setConsoleLevel(LOG_NONE)
-	ui = UIFactory(type = 'snack')
+	ui = UIFactory(type='snack')
 	try:
-		dbAdminUser = u'root'
-		dbAdminPass = u''
-		messageBox = None
 		while True:
 			values = [
-				{ "name": u"Database host", "value": config['address'] },
-				{ "name": u"Database admin user", "value": dbAdminUser },
-				{ "name": u"Database admin password", "value": dbAdminPass, "password": True },
-				{ "name": u"Opsi database name", "value": config['database'] },
-				{ "name": u"Opsi database user", "value": config['username'] },
-				{ "name": u"Opsi database password", "value": config['password'], "password": True }
+				{"name": u"Database host", "value": config['address']},
+				{"name": u"Database admin user", "value": dbAdminUser},
+				{"name": u"Database admin password", "value": dbAdminPass, "password": True},
+				{"name": u"Opsi database name", "value": config['database']},
+				{"name": u"Opsi database user", "value": config['username']},
+				{"name": u"Opsi database password", "value": config['password'], "password": True}
 			]
 			values = ui.getValues(title=u'MysQL config', width=70, height=15, entries=values)
 			if values is None:
@@ -2224,104 +2231,31 @@ def configureMySQLBackend():
 			config['username'] = values[4]["value"]
 			config['password'] = values[5]["value"]
 
-			messageBox = ui.createMessageBox(width=70, height=20, title=u'MysQL config', text=u'')
-			# Connect to database host
-			logger.notice(u"Connecting to host '%s' as user '%s'" % (config['address'], dbAdminUser))
-			messageBox.addText(u"Connecting to host '%s' as user '%s'\n" % (config['address'], dbAdminUser))
+			messageBox = ui.createMessageBox(
+				width=70, height=20, title=u'MysQL config', text=u''
+			)
 
 			try:
-				db = MySQLdb.connect(host=config['address'], user=dbAdminUser, passwd=dbAdminPass)
-			except Exception as e:
-				messageBox.hide()
-				logger.error(u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], dbAdminUser, e))
-				ui.showError(text=u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], dbAdminUser, e),
-						title=u'Failed to connect', width=70, height=6, seconds=0)
-				continue
-			logger.notice(u"Successfully connected to host '%s' as user '%s'" % (config['address'], dbAdminUser))
-			messageBox.addText(u"Successfully connected to host '%s' as user '%s'\n" % (config['address'], dbAdminUser))
-
-			# Create opsi database and user
-			logger.notice(u"Creating database '%s'" % config['database'])
-			messageBox.addText(u"Creating database '%s'\n" % config['database'])
-			try:
-				db.query(u'CREATE DATABASE %s DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_bin;' % config['database'])
-			except MySQLdb.ProgrammingError as e:
-				if (e[0] != 1007):
-					# 1007: database exists
-					raise
-			logger.notice(u"Database '%s' created" % config['database'])
-			messageBox.addText(u"Database '%s' created\n" % config['database'])
-
-			def createUser(host):
-				logger.notice(u"Creating user '%s' and granting all rights on '%s'" % (config['username'], config['database']))
-				messageBox.addText(u"Creating user '%s' and granting all rights on '%s'\n" % (config['username'], config['database']))
-				db.query(u'USE %s;' % config['database'])
-				db.query(u'GRANT ALL ON %s .* TO %s@%s IDENTIFIED BY \'%s\'' \
-					% (config['database'], config['username'], host, config['password']))
-				db.query(u'FLUSH PRIVILEGES;')
-				logger.notice(u"User '%s' created and privileges set" % config['username'])
-				messageBox.addText(u"User '%s' created and privileges set\n" % config['username'])
-
-			sysconf = getSysConfig()
-			if config['address'] in ("localhost", "127.0.0.1", sysconf['hostname'], sysconf['fqdn']):
-				createUser("localhost")
-				if config['address'] not in ("localhost", "127.0.0.1"):
-					createUser(config['address'])
-			else:
-				createUser(sysConfig['ipAddress'])
-				createUser(sysConfig['fqdn'])
-				createUser(sysConfig['hostname'])
-
-			# Disconnect from database
-			db.close()
-
-			# Test connection / credentials
-			logger.notice(u"Testing connection to database '%s' as user '%s'" % (config['database'], config['username']))
-			messageBox.addText(u"Testing connection to database '%s' as user '%s'\n" % (config['database'], config['username']))
-
-			try:
-				db = MySQLdb.connect(host = config['address'], user = config['username'], passwd = config['password'], db = config['database'])
-				db.close()
-			except Exception as e:
-				messageBox.hide()
-				logger.error(u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], config['username'], e))
-				ui.showError(text=u"Failed to connect to host '%s' as user '%s': %s" % (config['address'], config['username'], e),
-						title=u'Connection failed', width=70, height=6, seconds=0)
-				continue
-
-			logger.notice(u"Successfully connected to host '%s' as user '%s'" % (config['address'], config['username']))
-			messageBox.addText(u"Successfully connected to host '%s' as user '%s'\n" % (config['address'], config['username']))
-			break
-
-		logger.notice(u"Updating backend config '%s'" % backendConfigFile)
-		messageBox.addText(u"Updating backend config '%s'\n" % backendConfigFile)
-
-		lines = []
-		f = codecs.open(backendConfigFile, 'r', 'utf-8')
-		for line in f.readlines():
-			if re.search('^\s*config\s*\=', line):
+				configureMySQLBackendWithoutGUI(
+					dbAdminUser, dbAdminPass,
+					config, getSysConfig(),
+					additionalBackendConfig=backendConfig,
+					notificationFunction=notifyFunction,
+					errorFunction=errorFunction
+				)
 				break
-			lines.append(line)
-		f.close()
-		f = codecs.open(backendConfigFile, 'w', 'utf-8')
-		f.writelines(lines)
-		f.write("config = %s\n" % objectToBeautifiedText(config))
-		f.close()
-
-		logger.notice(u"Backend config '%s' updated" % backendConfigFile)
-		messageBox.addText(u"Backend config '%s' updated\n" % backendConfigFile)
-
-		logger.notice(u"Initializing mysql backend")
-		messageBox.addText(u"Initializing mysql backend\n")
-
-		backend = MySQLBackend(**config)
-		backend.backend_createBase()
+			except DatabaseConnectionFailedException:
+				messageBox.hide()
 
 		time.sleep(2)
-		messageBox.hide()
-
-		ui.showMessage(title=u'Success', text=u"MySQL Backend configuration done", width=70, height=4, seconds=0)
+		ui.showMessage(
+			width=70, height=4,
+			title=u'Success', text=u"MySQL Backend configuration done"
+		)
 	finally:
+		if messageBox is not None:
+			messageBox.hide()
+
 		ui.exit()
 		logger.setConsoleLevel(consoleLevel)
 

@@ -1,7 +1,13 @@
+opsi4ucs (4.0.4.7-1) UNRELEASED; urgency=low
+
+  * Using OPSI.Util.Task.ConfigureBackend.MySQL
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 24 Feb 2014 14:13:20 +0100
+
 opsi4ucs (4.0.4.6-1) stable; urgency=low
 
   * small fix for --init-current-config in opsi-setup
-  
+
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 12 Feb 2014 12:14:15 +0100
 
 opsi4ucs (4.0.4.5-1) stable; urgency=low
