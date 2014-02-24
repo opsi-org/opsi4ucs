@@ -59,6 +59,9 @@ from OPSI.Backend.LDAP import *
 from OPSI.Backend.File import *
 from OPSI.Backend.JSONRPC import *
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
+from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
+	NoCertificateError, UnreadableCertificateError, createCertificate,
+	loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
