@@ -3136,8 +3136,7 @@ def main():
 			['help', 'log-file=', 'ip-address=', 'backend-config=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
 			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-univention', 'update-file', 'edit-config-defaults', 'cleanup-backend',
 			 'update-from=', 'binddata=', 'renew-opsiconfd-cert', 'patch-sudoers-file'])
-
-	except Exception as e:
+	except Exception:
 		usage()
 		raise
 
