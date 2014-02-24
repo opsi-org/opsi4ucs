@@ -37,7 +37,6 @@ import getopt
 import grp
 import json
 import ldap
-import MySQLdb
 import os
 import pwd
 import re
@@ -61,8 +60,10 @@ from OPSI.Backend.File import *
 from OPSI.Backend.JSONRPC import *
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
-from OPSI.Util.Task.ConfigureBackend.MySQL import (DatabaseConnectionFailedException,
-	configureMySQLBackend as configureMySQLBackendWithoutGUI)
+from OPSI.Util.Task.ConfigureBackend.MySQL import (
+	DatabaseConnectionFailedException,
+	configureMySQLBackend as configureMySQLBackendWithoutGUI
+)
 
 
 logger = Logger()
