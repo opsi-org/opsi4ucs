@@ -6,7 +6,7 @@
 # =          All rights reserved.             			=
 # = = = = = = = = = = = = = = = = = = = = = = =
 
-VERSION=11
+VERSION=12
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -481,9 +481,11 @@ update-inetd --add "${TFTPLINE}"
 
 $VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
 ln -sf /tftpboot/linux/install $TFTPROOT/
+ln -sf /tftpboot/linux/install-x64 $TFTPROOT/
 ln -sf /tftpboot/linux/menu.c32 $TFTPROOT/
 ln -sf /tftpboot/linux/chain.c32 $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
+ln -sf /tftpboot/linux/miniroot-x64.bz2 $TFTPROOT/
 if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
 	find "$TFTPROOT/pxelinux.cfg" -mindepth 1 -maxdepth 1 -exec mv "{}" "/tftpboot/linux/pxelinux.cfg/" \;
 	rmdir $TFTPROOT/pxelinux.cfg
