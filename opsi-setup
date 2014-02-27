@@ -2570,9 +2570,14 @@ def registerDepot(username = None, password = None, configserver = None):
 	logger.notice(u"Dispatch config '%s' updated" % dispatchConfigFile)
 
 	setRights()
+	restartServices()
 
-	logger.notice(u"Restarting services")
+
+def restartServices():
+	""" Restart *opsiconfd* and *opsipxeconfd* """
+	logger.notice(u"Restarting opsi webservice")
 	execute("/etc/init.d/opsiconfd restart")
+	logger.notice(u"Restarting PXE service")
 	execute("/etc/init.d/opsipxeconfd restart")
 
 
@@ -2662,26 +2667,21 @@ def renewOpsiconfdCert():
 		createCertificate(config=certparams)
 
 
+
+def setPasswdRights():
+	""" Setting correct permissions on ``/etc/opsi/passwd`` """
 	logger.notice(u"Setting rights")
 	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
 	os.chown(u'/etc/opsi/passwd', opsiconfdUid, adminGroupGid)
 	os.chmod(u'/etc/opsi/passwd', 0660)
 
-	logger.notice(u"Restarting opsi Webservice")
-	logger.notice(u"Restarting services")
-	execute("/etc/init.d/opsiconfd restart")
-	execute("/etc/init.d/opsipxeconfd restart")
-
 
 def initializeBackends():
 	if not os.path.exists(u'/etc/opsi/passwd'):
 		f = codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8')
 		f.close()
-		opsiconfdUid = pwd.getpwnam(OPSICONFD_USER)[2]
-		adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
-		os.chown(u'/etc/opsi/passwd', opsiconfdUid, adminGroupGid)
-		os.chmod(u'/etc/opsi/passwd', 0660)
+		setPasswdRights()
 
 	from OPSI.Backend.BackendManager import BackendManager
 	backend = BackendManager(
