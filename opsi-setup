@@ -2232,13 +2232,9 @@ def registerDepot(username = None, password = None, configserver = None):
 	dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf'
 
 	getSysConfig()
-	l = {'socket': socket, 'os': os, 'sys': sys, 'module': '', 'config': {}}
-	logger.info(u"Loading backend config '%s'" % backendConfigFile)
-	execfile(backendConfigFile, l)
-	config = l['config']
+	config = backendUtils.getBackendConfiguration(backendConfigFile)
 	config.update(backendConfig)
 	logger.info(u"Current jsonrpc backend config: %s" % config)
-
 
 	jsonrpcBackend = None
 	depot = None
@@ -2503,19 +2499,7 @@ def registerDepot(username = None, password = None, configserver = None):
 		raise Exception(u"Failed to connect to config server as user '%s': %s" % (config['username'], e))
 	logger.notice(u"Successfully connected to config server as user '%s'" % config['username'])
 
-	logger.notice(u"Updating backend config '%s'" % backendConfigFile)
-	lines = []
-	f = codecs.open(backendConfigFile, 'r', 'utf-8')
-	for line in f.readlines():
-		if re.search('^\s*config\s*\=', line):
-			break
-		lines.append(line)
-	f.close()
-	f = codecs.open(backendConfigFile, 'w', 'utf-8')
-	f.writelines(lines)
-	f.write("config = %s\n" % forceUnicode(config).replace(',', ',\n').replace('{', '{\n').replace('}', '\n}'))
-	f.close()
-	logger.notice(u"Backend config '%s' updated" % backendConfigFile)
+	backendUtils.updateConfigFile(backendConfigFile, config)
 
 	logger.notice(u"Updating dispatch config '%s'" % dispatchConfigFile)
 	lines = []
