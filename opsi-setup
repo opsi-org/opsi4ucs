@@ -2615,14 +2615,14 @@ def renewOpsiconfdCert():
 	try:
 		while True:
 			values = [
-				{ "name": u"Country", "value": certparams["country"] },
-				{ "name": u"State", "value": certparams["state"] },
-				{ "name": u"Locality", "value": certparams["locality"] },
-				{ "name": u"Organization", "value": certparams["organization"] },
-				{ "name": u"OrganizationUnit", "value": certparams["organizationalUnit"] },
-				{ "name": u"hostname", "value": certparams["commonName"] },
-				{ "name": u"Emailaddress", "value": certparams["emailAddress"] },
-				{ "name": u"Expires (Years)", "value": certparams["expires"] },
+				{"name": u"Country", "value": certparams["country"]},
+				{"name": u"State", "value": certparams["state"]},
+				{"name": u"Locality", "value": certparams["locality"]},
+				{"name": u"Organization", "value": certparams["organization"]},
+				{"name": u"OrganizationUnit", "value": certparams["organizationalUnit"]},
+				{"name": u"Hostname", "value": certparams["commonName"]},
+				{"name": u"Emailaddress", "value": certparams["emailAddress"]},
+				{"name": u"Expires (Years)", "value": certparams["expires"]},
 			]
 			values = ui.getValues(title=u'Renew opsiconfd Certificate', width=70, height=15, entries=values)
 
@@ -2641,7 +2641,7 @@ def renewOpsiconfdCert():
 
 			if error is None:
 				if not certparams["commonName"] == forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF)):
-					error = "commonName must be the FQDN from Server"
+					error = "Hostname must be the FQDN from Server"
 
 			if error is None:
 				try:
