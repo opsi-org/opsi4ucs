@@ -2194,7 +2194,7 @@ def updateFileBackend():
 	#AuditSoftwares/AuditSoftwareOnClients/AuditHardwares/AuditHardwareOnHosts
 
 
-def configureMySQLBackend():
+def configureMySQLBackend(unattendedConfiguration=None):
 	def notifyFunction(message):
 		logger.notice(message)
 		messageBox.addText(u"{0}\n".format(message))
@@ -2208,8 +2208,29 @@ def configureMySQLBackend():
 
 	dbAdminUser = u'root'
 	dbAdminPass = u''
-	messageBox = None
 	config = backendUtils.getBackendConfiguration(u'/etc/opsi/backends/mysql.conf')
+	messageBox = None
+
+	if unattendedConfiguration is not None:
+		errorTemplate = u"Missing '{key}' in unattended configuration."
+		for key in ('dbAdminUser', 'dbAdminPass'):
+			if not key in unattendedConfiguration:
+				raise Exception(errorTemplate.format(key=key))
+
+		dbAdminUser = unattendedConfiguration['dbAdminUser']
+		dbAdminPass = unattendedConfiguration['dbAdminPass']
+		# User / PW must not show in config file -> delete from config.
+		for key in ('dbAdminUser', 'dbAdminPass'):
+			del unattendedConfiguration[key]
+
+		config.update(unattendedConfiguration)
+
+		logger.debug(u"Configuration for unattended mysql configuration: {0}".format(config))
+		configureMySQLBackendWithoutGUI(
+			dbAdminUser, dbAdminPass, config, getSysConfig(),
+			additionalBackendConfig=backendConfig,
+		)
+		return
 
 	consoleLevel = logger.getConsoleLevel()
 	logger.setConsoleLevel(LOG_NONE)
@@ -3207,8 +3228,8 @@ def main():
 		initializeBackends()
 		configureClientUser()
 
-	elif (task == 'configure-mysql'):
-		configureMySQLBackend()
+	elif task == 'configure-mysql':
+		configureMySQLBackend(unattended)
 
 	elif (task == 'update-mysql'):
 		updateMySQLBackend()
