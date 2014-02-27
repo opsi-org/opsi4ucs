@@ -3071,9 +3071,16 @@ def main():
 
 	try:
 		(opts, args) = getopt.getopt(sys.argv[1:], "hl:",
-			['help', 'log-file=', 'ip-address=', 'backend-config=', 'init-current-config', 'set-rights', 'auto-configure-samba', 'auto-configure-dhcpd',
-			 'register-depot', 'configure-mysql', 'update-mysql', 'update-ldap', 'update-univention', 'update-file', 'edit-config-defaults', 'cleanup-backend',
-			 'update-from=', 'binddata=', 'renew-opsiconfd-cert', 'patch-sudoers-file'])
+			[
+				'help', 'log-file=', 'ip-address=', 'backend-config=',
+				'init-current-config', 'set-rights', 'auto-configure-samba',
+				'auto-configure-dhcpd',	'register-depot', 'configure-mysql',
+				'update-mysql', 'update-ldap', 'update-univention',
+				'update-file', 'edit-config-defaults', 'cleanup-backend',
+				'update-from=', 'binddata=', 'renew-opsiconfd-cert',
+				'patch-sudoers-file', 'unattended='
+			]
+		)
 	except Exception:
 		usage()
 		raise
@@ -3089,6 +3096,7 @@ def main():
 	username = None
 	password = None
 	configserver = None
+	unattended = None
 
 
 	for (opt, arg) in opts:
@@ -3151,6 +3159,9 @@ def main():
 					break
 				else:
 					i += 1
+		elif opt == '--unattended':
+			logger.debug(u'Got unattended argument: {0}'.format(arg))
+			unattended = json.loads(arg)
 
 	path = u'/'
 	if (len(args) > 0):
