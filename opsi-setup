@@ -67,7 +67,9 @@ from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
 	configureMySQLBackend as configureMySQLBackendWithoutGUI
 )
-from OPSI.Util.Task.Sudoers import patchSudoersFileForOpsi
+from OPSI.Util.Task.Sudoers import (
+	patchSudoersFileForOpsi, patchSudoersFileToAllowRestartingDHCPD
+)
 
 
 logger = Logger()
@@ -80,7 +82,6 @@ SMB_CONF = u'/etc/samba/smb.conf'
 SMB_INIT = u'/etc/init.d/samba'
 DHCPD_CONF = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
 DHCPD_INIT = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
-SUDOERS = u'/etc/sudoers'
 OPSICONFD_USER = u'opsiconfd'
 ADMIN_GROUP = u'opsiadmin'
 CLIENT_USER = u'pcpatch'
@@ -424,28 +425,7 @@ def configureDHCPD():
 			logger.warning(e)
 
 	logger.notice(u"Configuring sudoers")
-
-	found = False
-	f = codecs.open(SUDOERS, 'r', 'utf-8')
-	lines = []
-	for line in f.readlines():
-		if (line.find('%s restart' % DHCPD_INIT) != -1):
-			found = True
-		lines.append(line)
-	f.close()
-	if not found:
-		logger.notice(u"   Creating backup of %s" % SUDOERS)
-		shutil.copy(SUDOERS, SUDOERS + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
-
-		logger.notice(u"   Adding sudoers entry for dhcpd restart")
-		distributor = getSysConfig()['distributor']
-		if (distributor.lower().find('redhat') != -1) or (distributor.lower().find('centos') != -1) or (distributor.lower().find('scientificsl') != -1) or (distributor.lower().find('sme') != -1):
-			lines.append(u"Defaults:opsiconfd !requiretty\n")
-		lines.append(u"opsiconfd ALL=NOPASSWD: %s restart\n" % DHCPD_INIT)
-		logger.notice(u"   Writing new %s" % SUDOERS)
-		f = codecs.open(SUDOERS, 'w', 'utf-8')
-		f.writelines(lines)
-		f.close()
+	patchSudoersFileToAllowRestartingDHCPD('{0} restart'.format(DHCPD_INIT))
 
 	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
