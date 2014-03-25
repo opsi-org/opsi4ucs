@@ -432,6 +432,18 @@ def configureDHCPD():
 	os.chown(DHCPD_CONF, opsiconfdUid, adminGroupGid)
 	os.chmod(DHCPD_CONF, 0664)
 
+	sysinfo = SysInfo()
+	if 'Red Hat Enterprise Linux' in sysinfo.distribution or 'CentOS' in sysinfo.distribution:
+		dhcpDir = os.path.dirname(DHCPD_CONF)
+		if dhcpDir == '/etc':
+			return
+
+		logger.notice(
+			'Detected Red Hat-family system. Providing rights on "{dir}" '
+			'to group "{group}"'.format(dir=dhcpDir, group=ADMIN_GROUP)
+		)
+		os.chown(dhcpDir, -1, adminGroupGid)
+
 
 def configureClientUser():
 	logger.notice(u"Configuring client user %s" % CLIENT_USER)
