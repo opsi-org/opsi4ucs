@@ -1,10 +1,8 @@
 #! /bin/bash -e
 
-# = = = = = = = = = = = = = = = = = = = = = = 	=
-# =        Copyright (C) 2013 uib GmbH    			=
-# =           http://www.uib.de                                      	=
-# =          All rights reserved.             			=
-# = = = = = = = = = = = = = = = = = = = = = = =
+# Copyright (C) 2013-2014 uib GmbH
+# http://www.uib.de
+# All rights reserved.
 
 VERSION=12
 VERBOSE=true
@@ -50,7 +48,7 @@ fi
 if [ -e "/etc/init.d/univention-dhcp"  ]; then
 	DHCPSERVER=1
 else
-	DHCPSERVER=0	
+	DHCPSERVER=0
 fi
 
 SAMBA_INIT_SCRIPT="/etc/init.d/samba"
@@ -129,12 +127,12 @@ if [ "$IPADDRESS" != "" ]; then
 		I[$part]=$(echo $IPADDRESS | cut -d . -f $part)
 		M[$part]=$(echo $NETMASK | cut -d . -f $part)
 	done
-	
+
 	for part in 1 2 3 4; do
 		N[$part]=$((${I[$part]} & ${M[$part]}))
 		B[$part]=$((${N[$part]} | $((${M[$part]} ^255))))
 	done
-	
+
 	SUBNET="${N[1]}.${N[2]}.${N[3]}.${N[4]}"
 	BROADCAST="${B[1]}.${B[2]}.${B[3]}.${B[4]}"
 fi
@@ -149,7 +147,7 @@ if [ $UCS_3 = "1" ];then
 else
 	config_server="$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 fi
-$VERBOSE && echo "Found configserver: $config_server" 
+$VERBOSE && echo "Found configserver: $config_server"
 set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
 	$VERBOSE && echo "No Server marked as OpsiConfigserver, trying to set $FQDN as OpsiConfigserver for $ROOT_DN"
@@ -242,9 +240,9 @@ set -e
 if [ $ret != 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
-	
+
 	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
-	
+
 	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
 		--set username="pcpatch" \
@@ -265,9 +263,9 @@ if [ $UCS_3 = "1" ]; then
 	if [ $ret != 0 ]; then
 		# User pcpatch does not exist in ldap
 		$VERBOSE && echo "Adding user opsiconfd"
-		
+
 		pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
-		
+
 		udm users/user create "$@" \
 			--position="cn=users,$ROOT_DN" \
 			--set username="opsiconfd" \
@@ -279,11 +277,11 @@ if [ $UCS_3 = "1" ]; then
 			--set overridePWLength=1 \
 			--ignore_exists
 	fi
-	
+
 	udm groups/group modify "$@" \
 		--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 		--append users="uid=opsiconfd,cn=users,$ROOT_DN"
-	
+
 	# Remove users/groups from passwd/group
 	userdel pcpatch >/dev/null 2>/dev/null || true
 	userdel opsiconfd >/dev/null 2>/dev/null || true
@@ -303,7 +301,7 @@ fi
 udm groups/group modify "$@" \
 	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
 	--append users="uid=Administrator,cn=users,$ROOT_DN"
-	
+
 
 
 # --- Add samba shares ----------------------------------------------------------------------------------------------------------
@@ -416,7 +414,7 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-# 
+#
 
 if [ $UCS_3 = "1" ]; then
 	if [ -e /etc/init.d/samba4 ]; then
@@ -425,18 +423,18 @@ if [ $UCS_3 = "1" ]; then
 	if [ -e /etc/init.d/samba ]; then
 		/etc/init.d/samba reload
 	fi
-	
+
 	$VERBOSE && echo "Waiting for samba shares"
 	sleep 5
 	$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
-	
+
 	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
 	echo admin users = administrator join-backup @$fileadmingroup >> /etc/samba/shares.conf.d/opsi_depot_tmp
 	mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
 	ucr commit /etc/samba/shares.conf.d/opsi_depot
-	
+
 	ucr set samba4/ntacl/backend=native
-	
+
 fi
 
 # --- Configure dhcp ------------------------------------------------------------------------------------------------------------
@@ -494,30 +492,22 @@ fi
 
 # --- Configure opsi ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Configuring opsi"
-sed -i "s/^password\s*=.*/password = \"${LDAP_SECRET}\"/" /etc/opsi/backends/univention.conf
-if [ "$SERVER_ROLE" != "domaincontroller_master" ]; then
-	# Referrals don not seem to work (error: no write access to parent)
-	sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"${LDAP_MASTER}\",/" /etc/opsi/backends/univention.conf
-fi
-
 if [ $UCS_3 = "1" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 	$VERBOSE && echo "Checking security options for opsi"
-	
+
 	ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all=ACCEPT
 	ucr set security/packetfilter/package/opsi4ucs/udp/69/all=ACCEPT
 	ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all/en="Port for opsi-Webservice"
-	ucr set security/packetfilter/package/opsi4ucs/udp/69/all/en="Port for TFTPD" 
-	
+	ucr set security/packetfilter/package/opsi4ucs/udp/69/all/en="Port for TFTPD"
+
 	$VERBOSE && echo "Cleanup old opsi local-Filterrules"
-	
+
 	TEMPFILE=$(tempfile)
-	
+
 	grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
 	cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
 	/etc/init.d/univention-firewall restart
-else
-	ln -sf /etc/opsi/backendManager/dispatch.conf.univention /etc/opsi/backendManager/dispatch.conf
 fi
 
 #opsi-setup --init-current-config
@@ -547,8 +537,6 @@ else
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
 fi
-
-#sed -i "s/^\s*\"address\"\s*:.*/    \"address\":                      u\"localhost\"/" /etc/opsi/backends/univention.conf
 
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Commit changes"
