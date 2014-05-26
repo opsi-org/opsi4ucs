@@ -2906,6 +2906,22 @@ def initializeConfigs(configServer=None):
 			)
 		)
 
+	if 'clientconfig.dhcpd.filename' not in configIdents:
+		configs.append(
+			UnicodeConfig(
+				id=u'clientconfig.dhcpd.filename',
+				description=(
+					u"The name of the file that will be presented to the "
+					u"client on an TFTP request. For an client that should "
+					u"boot via UEFI this must include the term 'elilo'."
+				),
+				possibleValues=[u'elilo'],
+				defaultValues=[u''],
+				editable=True,
+				multiValue=False
+			)
+		)
+
 	if configs:
 		backend.config_createObjects(configs)
 	backend.backend_exit()
