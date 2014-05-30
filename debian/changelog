@@ -1,9 +1,10 @@
-opsi4ucs (4.0.4.7-1) UNRELEASED; urgency=low
+opsi4ucs (4.0.5.1-1) UNRELEASED; urgency=low
 
   * Using OPSI.Util.Task.ConfigureBackend.MySQL
   * Create configuration item "clientconfig.dhcpd.filename" on update
+  * Using OPSI.Util.Task.ConfigureBackend.ConfigurationData
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 26 May 2014 12:40:46 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 30 May 2014 11:49:58 +0200
 
 opsi4ucs (4.0.4.6-1) stable; urgency=low
 

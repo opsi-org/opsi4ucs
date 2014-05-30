@@ -63,6 +63,7 @@ from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
 	NoCertificateError, UnreadableCertificateError, createCertificate,
 	loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
+from OPSI.Util.Task.ConfigureBackend.ConfigurationData import initializeConfigs
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
 	configureMySQLBackend as configureMySQLBackendWithoutGUI
@@ -2744,8 +2745,9 @@ def initializeBackends():
 
 			#make sure the config server is present in all backends or we get reference error later on
 			backend.host_insertObject(configServer)
+
+	initializeConfigs(backend=backend, configServer=configServer)
 	backend.backend_exit()
-	initializeConfigs(configServer = configServer)
 
 	depotDir = '/var/lib/opsi/depot'
 	if not os.path.exists(depotDir):
@@ -2755,176 +2757,6 @@ def initializeBackends():
 				logger.warning(u"You have an old depot configuration. Using /opt/pcbin/install is depracted, please youse /var/lib/opsi/depot instead.")
 		except Exception as e:
 			logger.warning(u"Failed to create depot directory '%s': %s" % (depotDir, e))
-
-
-def initializeConfigs(configServer=None):
-	from OPSI.Backend.BackendManager import BackendManager
-	backend = BackendManager(
-		dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
-		backendConfigDir=u'/etc/opsi/backends',
-		extensionConfigDir=u'/etc/opsi/backendManager/extend.d',
-		depotbackend=False
-	)
-	backend.backend_createBase()
-
-	configs = []
-	configIdents = backend.config_getIdents(returnType = 'unicode')
-	if not 'clientconfig.configserver.url' in configIdents and configServer:
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.configserver.url',
-				description=u'URL(s) of opsi config service(s) to use',
-				possibleValues=[u'https://%s:4447/rpc' % configServer.getIpAddress()],
-				defaultValues=[u'https://%s:4447/rpc' % configServer.getIpAddress()],
-				editable=True,
-				multiValue=True
-			)
-		)
-	if not 'clientconfig.depot.id' in configIdents and configServer:
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.depot.id',
-				description=u'ID of the opsi depot to use',
-				possibleValues=[configServer.getId()],
-				defaultValues=[configServer.getId()],
-				editable=True,
-				multiValue=False
-			)
-		)
-	if not 'clientconfig.depot.dynamic' in configIdents:
-		configs.append(
-			BoolConfig(
-				id=u'clientconfig.depot.dynamic',
-				description=u'Use dynamic depot selection',
-				defaultValues=[False]
-			)
-		)
-	if not 'clientconfig.depot.drive' in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.depot.drive',
-				description=u'Drive letter for depot share',
-				possibleValues=[u'c:', u'd:', u'e:', u'f:', u'g:', u'h:', u'i:', u'j:', u'k:', u'l:', u'm:', u'n:', u'o:', u'p:', u'q:', u'r:', u's:', u't:', u'u:', u'v:', u'w:', u'x:', u'y:', u'z:'],
-				defaultValues=[u'p:'],
-				editable=False,
-				multiValue=False
-			)
-		)
-	if not 'clientconfig.depot.user' in configIdents:
-		depotuser = u'pcpatch'
-		depotdomain = getSysConfig()['winDomain']
-		if depotdomain:
-			depotuser = u'%s\\pcpatch' % depotdomain
-
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.depot.user',
-				description=u'User for depot share',
-				possibleValues=[],
-				defaultValues=["%s" % depotuser],
-				editable=True,
-				multiValue=False
-			)
-		)
-	if not 'clientconfig.depot.protocol' in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.depot.protocol',
-				description=u'Protocol for file transfer',
-				possibleValues=['cifs', 'webdav'],
-				defaultValues=['cifs'],
-				editable=False,
-				multiValue=False
-			)
-		)
-	if not 'clientconfig.windows.domain' in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.windows.domain',
-				description=u'Windows domain',
-				possibleValues=[],
-				defaultValues=[getSysConfig()['winDomain']],
-				editable=True,
-				multiValue=False
-			)
-		)
-	if not 'opsi-linux-bootimage.append' in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'opsi-linux-bootimage.append',
-				description=u'Extra options to append to kernel command line',
-				possibleValues=[u'acpi=off', u'irqpoll', u'noapic', 'pci=nomsi', 'vga=normal', 'reboot=b'],
-				defaultValues=[u''],
-				editable=True,
-				multiValue=True
-			)
-		)
-	if not 'license-management.use' in configIdents:
-		configs.append(
-			BoolConfig(
-				id=u'license-management.use',
-				description=u'Activate license management',
-				defaultValues=[False]
-			)
-		)
-	if not 'software-on-demand.active' in configIdents:
-		configs.append(
-			BoolConfig(
-				id=u'software-on-demand.active',
-				description=u'Activate software-on-demand',
-				defaultValues=[False]
-			)
-		)
-	if not 'software-on-demand.show-details' in configIdents:
-		configs.append(
-			BoolConfig(
-				id=u'software-on-demand.show-details',
-				description=u'Show more details for software-on-demand',
-				defaultValues=[False]
-			)
-		)
-	if not 'software-on-demand.product-group-ids' in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'software-on-demand.product-group-ids',
-				description=u'Product group ids containing products which are allowed to be installed on demand',
-				possibleValues=[u'software-on-demand'],
-				defaultValues=[u'software-on-demand'],
-				editable=True,
-				multiValue=True
-			)
-		)
-	if not 'product_sort_algorithm' in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'product_sort_algorithm',
-				description=u'Product sorting algorithm',
-				possibleValues=[u'algorithm1', u'algorithm2'],
-				defaultValues=[u'algorithm1'],
-				editable=False,
-				multiValue=False
-			)
-		)
-
-	if 'clientconfig.dhcpd.filename' not in configIdents:
-		configs.append(
-			UnicodeConfig(
-				id=u'clientconfig.dhcpd.filename',
-				description=(
-					u"The name of the file that will be presented to the "
-					u"client on an TFTP request. For an client that should "
-					u"boot via UEFI this must include the term 'elilo'."
-				),
-				possibleValues=[u'elilo'],
-				defaultValues=[u''],
-				editable=True,
-				multiValue=False
-			)
-		)
-
-	if configs:
-		backend.config_createObjects(configs)
-	backend.backend_exit()
 
 
 def editConfigDefaults():
