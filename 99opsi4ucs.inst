@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=12
+VERSION=13
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -87,7 +87,7 @@ fi
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
 set +e
 if [ $UCS_3 = "1" ]; then
-	if [ "SERVER_ROLE" = "memberserver" ]; then
+	if [ $SERVER_ROLE = "memberserver" ]; then
 		univention-ldapsearch -D "$LDAP_USER" -w "$LDAP_SECRET" -s base > /dev/null
 	else
 		univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
