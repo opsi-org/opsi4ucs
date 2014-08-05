@@ -60,8 +60,8 @@ from OPSI.Backend.File import *
 from OPSI.Backend.JSONRPC import *
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
-	NoCertificateError, UnreadableCertificateError, createCertificate,
-	loadConfigurationFromCertificate, renewCertificate)
+	OPSICONFD_CERTFILE, NoCertificateError, UnreadableCertificateError,
+	createCertificate, loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
 from OPSI.Util.Task.ConfigureBackend.ConfigurationData import initializeConfigs
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
@@ -2579,6 +2579,7 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 
 		renewCert()
 		setPasswdRights()
+		setRights(OPSICONFD_CERTFILE)
 		restartServices()
 		return
 
@@ -2642,6 +2643,7 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 
 	renewCert()
 	setPasswdRights()
+	setRights(OPSICONFD_CERTFILE)
 	restartServices()
 
 
