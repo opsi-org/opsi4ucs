@@ -1,4 +1,4 @@
-opsi4ucs (4.0.5.1-1) UNRELEASED; urgency=low
+opsi4ucs (4.0.5.1-1) experimental; urgency=low
 
   * Using OPSI.Util.Task.ConfigureBackend.MySQL
   * Create configuration item "clientconfig.dhcpd.filename" on update
