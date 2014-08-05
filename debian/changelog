@@ -4,6 +4,7 @@ opsi4ucs (4.0.5.1-1) UNRELEASED; urgency=low
   * Create configuration item "clientconfig.dhcpd.filename" on update
   * Using OPSI.Util.Task.ConfigureBackend.ConfigurationData
   * Renewing a certificate automatically sets rights on file
+  * Workaround for getopt not correctly reading in JSON objects.
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 05 Aug 2014 10:51:18 +0200
 

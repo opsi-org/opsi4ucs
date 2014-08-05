@@ -2991,13 +2991,27 @@ def main():
 					i += 1
 		elif opt == '--unattended':
 			logger.debug(u'Got unattended argument: {0}'.format(arg))
+
+			if args and not arg.strip().endswith('}'):
+				logger.debug("Probably wrong reading of arguments by getopt.")
+
+				tempArgs = [arg]
+				while args and not tempArgs[-1].strip().endswith('}'):
+					tempArgs.append(args.pop(0))
+					logger.debug("temp arguments are: {0}".format(tempArgs))
+
+				arg = ' '.join(tempArgs)
+				del tempArgs
+
 			unattended = json.loads(arg)
 
 	path = u'/'
-	if (len(args) > 0):
-		if (task == 'set-rights') and (len(args) == 1):
+	if len(args) > 0:
+		logger.debug("Additional arguments are: {0}".format(args))
+
+		if task == 'set-rights' and len(args) == 1:
 			path = os.path.abspath(forceFilename(args[0]))
-		elif (task == 'register-depot'):
+		elif task == 'register-depot':
 			pass
 		else:
 			usage()
