@@ -336,6 +336,10 @@ def configureSamba():
 def configureDHCPD():
 	logger.notice(u"Configuring dhcpd")
 
+	if not os.path.exists(DHCPD_CONF):
+		logger.warning("Can't find an dhcpd.conf. Aborting configuration.")
+		return
+
 	dhcpdConf = DHCPDConfFile(DHCPD_CONF)
 	dhcpdConf.parse()
 

@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.2-1) experimental; urgency=low
+
+  * --auto-configure-dhcpd does not fail on missing file
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 11 Aug 2014 17:33:00 +0200
+
 opsi4ucs (4.0.5.1-1) experimental; urgency=low
 
   * Using OPSI.Util.Task.ConfigureBackend.MySQL
