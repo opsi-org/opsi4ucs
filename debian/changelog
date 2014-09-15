@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.3-1) experimental; urgency=low
+
+  * 99opsi4ucs.inst: fix detection of Samba 4 and also work on UCS 3.2
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 15 Sep 2014 14:01:49 +0200
+
 opsi4ucs (4.0.5.2-1) experimental; urgency=low
 
   * --auto-configure-dhcpd does not fail on missing file

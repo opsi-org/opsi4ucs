@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=13
+VERSION=14
 VERBOSE=true
 
 if ! test -e "/usr/share/univention-join/.joined"; then
@@ -53,7 +53,7 @@ fi
 
 SAMBA_INIT_SCRIPT="/etc/init.d/samba"
 if [ "$(ucr get samba/domain/security)" == "ads" ]; then
-	if [ "UCS_VERSION" = "3.1" ]; then
+	if [ "$UCS_VERSION" = "3.1" -o "$UCS_VERSION" = "3.2" ]; then
 		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
 	fi
 	SAMBA4=1
