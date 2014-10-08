@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.4-1) UNRELEASED; urgency=low
+
+  * Make use of OPSI.System.Posix.getSambaServiceName
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 08 Oct 2014 14:41:09 +0200
+
 opsi4ucs (4.0.5.3-1) experimental; urgency=low
 
   * 99opsi4ucs.inst: fix detection of Samba 4 and also work on UCS 3.2

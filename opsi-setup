@@ -45,6 +45,7 @@ import sys
 import socket
 import time
 
+import OPSI.System.Posix as Posix
 import OPSI.Util.Task.ConfigureBackend as backendUtils
 from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import *
@@ -80,7 +81,7 @@ logger.setConsoleColor(True)
 
 LOG_FILE = u'/tmp/opsi-setup.log'
 SMB_CONF = u'/etc/samba/smb.conf'
-SMB_INIT = u'/etc/init.d/samba'
+SMB_INIT = u'service {name} '.format(name=Posix.getSambaServiceName(default="samba4"))
 DHCPD_CONF = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
 DHCPD_INIT = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
 OPSICONFD_USER = u'opsiconfd'
@@ -95,11 +96,6 @@ try:
 	FILE_ADMIN_GROUP = OpsiConfFile(OPSI_CONF).getOpsiFileAdminGroup()
 except:
 	FILE_ADMIN_GROUP = u'pcpatch'
-
-if os.path.exists(u'/etc/init.d/smbd'):
-	SMB_INIT = u'/etc/init.d/smbd'
-if os.path.exists(u'/etc/init.d/smb'):
-	SMB_INIT = u'/etc/init.d/smb'
 
 sysConfig = {}
 
