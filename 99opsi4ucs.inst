@@ -52,7 +52,9 @@ else
 fi
 
 SAMBA_INIT_SCRIPT="/etc/init.d/samba"
-if [ "$(ucr get samba/domain/security)" == "ads" ]; then
+eval "$(ucr shell samba4/role)"
+if [ -n "$samba4_role" ]; then
+	echo "The local UCS is configured as Samba/AD $samba4_role"
 	if [ "$UCS_VERSION" = "3.1" -o "$UCS_VERSION" = "3.2" ]; then
 		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
 	fi
