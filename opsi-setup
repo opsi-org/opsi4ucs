@@ -81,7 +81,6 @@ logger.setConsoleColor(True)
 
 LOG_FILE = u'/tmp/opsi-setup.log'
 SMB_CONF = u'/etc/samba/smb.conf'
-SMB_INIT = u'service {name} '.format(name=Posix.getSambaServiceName(default="samba4"))
 DHCPD_CONF = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
 DHCPD_INIT = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
 OPSICONFD_USER = u'opsiconfd'
@@ -198,6 +197,8 @@ def getSysConfig():
 
 def configureSamba():
 	logger.notice(u"Configuring samba")
+
+	smb_init_command = u'service {name} '.format(name=Posix.getSambaServiceName(default="samba4"))
 
 	f = codecs.open(SMB_CONF, 'r', 'utf-8')
 	lines = f.readlines()
@@ -324,7 +325,7 @@ def configureSamba():
 
 		logger.notice(u"   Reloading samba")
 		try:
-			execute(u'%s reload' % SMB_INIT)
+			execute(u'%s reload' % smb_init_command)
 		except Exception as e:
 			logger.warning(e)
 

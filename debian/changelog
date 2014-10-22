@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.5-1) experimental; urgency=low
+
+  * Only fetching the Samba init command if configuring Samba
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 22 Oct 2014 13:51:46 +0200
+
 opsi4ucs (4.0.5.4-2) experimental; urgency=low
 
   * Make use of OPSI.System.Posix.getSambaServiceName
