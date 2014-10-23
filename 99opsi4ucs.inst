@@ -542,10 +542,10 @@ if [ "$UCS_VERSION" = "3.2" ]; then
 	$VERBOSE && echo "Adding links to the UCS overview page"
 	ucr set ucs/web/overview/entries/admin/opsi-configed/description/de='Management-Interface für Client-Management mit <em>opsi</em> (Applet startet über Java-Webstart).'
 	ucr set ucs/web/overview/entries/admin/opsi-configed/description='Management Interface for Client-Management with <em>opsi</em> (Applet starts over Java-Webstart).'
-	ucr set ucs/web/overview/entries/admin/opsi-configed/icon: /icon/50x50/opsi-configed-50x50.png
+	ucr set ucs/web/overview/entries/admin/opsi-configed/icon=/icon/50x50/opsi-configed-50x50.png
 	ucr set ucs/web/overview/entries/admin/opsi-configed/label/de='opsi configed'
 	ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
-	ucr set ucs/web/overview/entries/admin/opsi-configed/link=https://@%@ldap/server/name@%@:4447/configed.jnlp
+	ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"
 	ucr set ucs/web/overview/entries/admin/opsi-configed/priority=50
 fi
 
