@@ -512,9 +512,6 @@ if [ $UCS_3 = "1" ]; then
 	/etc/init.d/univention-firewall restart
 fi
 
-#opsi-setup --init-current-config
-#opsi-setup --set-rights
-
 if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
 	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server"
