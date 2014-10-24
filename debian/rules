@@ -48,22 +48,12 @@ install: build
 	install -m 0755 99opsi4ucs.inst                 debian/opsi4ucs/usr/lib/univention-install/
 	install -m 0755 opsi-setup                      debian/opsi4ucs/usr/bin/opsi-setup
 	install -m 0755 opsi-set-rights                      debian/opsi4ucs/usr/bin/opsi-set-rights
-	#install -m 0644 files/opsi.schema               debian/opsi4ucs-ldap-schema/usr/share/univention-ldap/schema/
-
-	#cp -r conffiles/ldap debian/opsi4ucs-ldap-schema/etc/univention/templates/files/etc
-	#install -m 0644 conffiles/ldap/slapd.conf.d/11opsi-schema  debian/opsi4ucs-ldap-schema/etc/univention/templates/files/etc/ldap/slapd.conf.d/
-	#install -m 0644 conffiles/ldap/slapd.conf.d/60opsi-acls  debian/opsi4ucs-ldap-schema/etc/univention/templates/files/etc/ldap/slapd.conf.d/
-
-	#install -m 0644 debian/opsi4ucs-ldap-schema.univention-baseconfig debian/opsi4ucs-ldap-schema/etc/univention/templates/info/opsi4ucs-ldap-schema.info
 
 	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
 	cp -r conffiles/etc debian/opsi4ucs/etc/univention/templates/files/
 	install -m 0644 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
 
-	#install -m 0755 opsi_reinstall_listener.py     debian/opsi4ucs/usr/lib/univention-directory-listener/system/
-
 	find debian/opsi4ucs -iname ".svn" -exec rm -r {} \; || true
-	#find debian/opsi4ucs-ldap-schema -iname ".svn" -exec rm -r {} \; || true
 
 	dh_install
 
