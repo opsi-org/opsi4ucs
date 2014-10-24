@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.5-3) experimental; urgency=low
+
+  * Changed filename of Configed icon 
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 24 Oct 2014 10:47:20 +0200
+
 opsi4ucs (4.0.5.5-2) experimental; urgency=low
 
   * UCS 3.2: Integration in administration overview page
