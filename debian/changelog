@@ -1,4 +1,4 @@
-opsi4ucs (4.0.5.5-4) UNRELEASED; urgency=low
+opsi4ucs (4.0.5.5-4) experimental; urgency=low
 
   * Using newer version of Debhelper
 
