@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.6-1) UNRELEASED; urgency=low
+
+  * Using OPSI.Util.Task.UpdateBackend.MySQL
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 18 Dec 2014 11:48:38 +0100
+
 opsi4ucs (4.0.5.8-1) stable; urgency=low
 
   * Dependency univention-dhcp removed.
