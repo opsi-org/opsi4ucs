@@ -2,8 +2,9 @@ opsi4ucs (4.0.6.1-1) UNRELEASED; urgency=low
 
   * Using OPSI.Util.Task.UpdateBackend.MySQL
   * Using OPSI.Util.Task.Rights.setRights
+  * Removed LDAP schema files. 
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 08 Jan 2015 15:59:23 +0100
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 08 Jan 2015 16:01:46 +0100
 
 opsi4ucs (4.0.5.8-1) stable; urgency=low
 
