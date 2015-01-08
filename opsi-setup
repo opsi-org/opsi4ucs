@@ -94,7 +94,7 @@ OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
 
 try:
 	FILE_ADMIN_GROUP = OpsiConfFile(OPSI_CONF).getOpsiFileAdminGroup()
-except:
+except Exception:
 	FILE_ADMIN_GROUP = u'pcpatch'
 
 sysConfig = {}
