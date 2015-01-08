@@ -1,8 +1,9 @@
-opsi4ucs (4.0.5.6-1) UNRELEASED; urgency=low
+opsi4ucs (4.0.6.1-1) UNRELEASED; urgency=low
 
   * Using OPSI.Util.Task.UpdateBackend.MySQL
+  * Using OPSI.Util.Task.Rights.setRights
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 18 Dec 2014 11:48:38 +0100
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 08 Jan 2015 15:59:23 +0100
 
 opsi4ucs (4.0.5.8-1) stable; urgency=low
 
