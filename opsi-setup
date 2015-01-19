@@ -6,7 +6,7 @@ opsi-setup - Worker
 This module is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010, 2013-2014 uib GmbH
+Copyright (C) 2010, 2013-2015 uib GmbH
 
 http://www.uib.de/
 
@@ -51,6 +51,7 @@ from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import *
 from OPSI.Object import *
 from OPSI.System import *
+from OPSI.System.Posix import getDHCPDRestartCommand
 from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import *
 from OPSI.Util import *
@@ -84,7 +85,6 @@ logger.setConsoleColor(True)
 LOG_FILE = u'/tmp/opsi-setup.log'
 SMB_CONF = u'/etc/samba/smb.conf'
 DHCPD_CONF = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
-DHCPD_INIT = Posix.locateDHCPDInit(u'/etc/init.d/dhcp3-server')
 OPSICONFD_USER = u'opsiconfd'
 ADMIN_GROUP = u'opsiadmin'
 CLIENT_USER = u'pcpatch'
@@ -415,6 +415,7 @@ def configureDHCPD():
 				)
 				logger.notice(u"         filename set to %s" % filename)
 
+	restartCommand = getDHCPDRestartCommand(default=u'/etc/init.d/dhcp3-server restart')
 	if confChanged:
 		logger.notice(u"   Creating backup of %s" % DHCPD_CONF)
 		shutil.copy(DHCPD_CONF, DHCPD_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
@@ -424,12 +425,12 @@ def configureDHCPD():
 
 		logger.notice(u"   Restarting dhcpd")
 		try:
-			execute(u'%s restart' % DHCPD_INIT)
+			execute(restartCommand)
 		except Exception as e:
 			logger.warning(e)
 
 	logger.notice(u"Configuring sudoers")
-	patchSudoersFileToAllowRestartingDHCPD('{0} restart'.format(DHCPD_INIT))
+	patchSudoersFileToAllowRestartingDHCPD(restartCommand)
 
 	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
 	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]

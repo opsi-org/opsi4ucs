@@ -2,7 +2,8 @@ opsi4ucs (4.0.6.1-1) UNRELEASED; urgency=low
 
   * Using OPSI.Util.Task.UpdateBackend.MySQL
   * Using OPSI.Util.Task.Rights.setRights
-  * Removed LDAP schema files. 
+  * Removed LDAP schema files.
+  * Using OPSI.System.Posix.getDHCPDRestartCommand
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 08 Jan 2015 16:01:46 +0100
 
