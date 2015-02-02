@@ -5,7 +5,7 @@ opsi4ucs (4.0.6.1-1) UNRELEASED; urgency=low
   * Removed LDAP schema files.
   * Using OPSI.System.Posix.getDHCPDRestartCommand
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 08 Jan 2015 16:01:46 +0100
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 02 Feb 2015 16:57:31 +0100
 
 opsi4ucs (4.0.5.8-1) stable; urgency=low
 
