@@ -4,17 +4,11 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=15
+VERSION=16
 VERBOSE=true
 
-if ! test -e "/usr/share/univention-join/.joined"; then
-	echo "The server has not joined yet"
-	exit 1
-fi
-
-touch /usr/lib/univention-install/.index.txt
-
-test -n "`grep "opsi4ucs v${VERSION} successful" /usr/lib/univention-install/.index.txt`" && exit 1
+. /usr/share/univention-join/joinscripthelper.lib
+joinscript_init
 
 TFTPROOT="/var/lib/univention-client-boot"
 SERVER_ROLE=$(ucr get server/role)
@@ -63,39 +57,22 @@ else
 	SAMBA4=0
 fi
 
-
-
-## --- Determine UCS > 3.0 -------------------------------------------------------------------------------------------------------
-set +e
-dpkg --compare-versions "${UCS_VERSION}-${UCS_PATCHLEVEL}" ge "3.0-0"
-ret=$?
-set -e
-if [ $ret = 0 ]; then
-	UCS_3="1"
-	if [ $SAMBA4 = 1 ]; then
-		fileadmingroup="opsifileadmins"
-		sed -i "s/pcpatch/opsifileadmins/g" /etc/opsi/opsi.conf
-	else
-		fileadmingroup="pcpatch"
-	fi
-	LDAP_PORT=$(ucr get ldap/master/port)
+UCS_3="1"
+if [ $SAMBA4 = 1 ]; then
+	fileadmingroup="opsifileadmins"
+	sed -i "s/pcpatch/opsifileadmins/g" /etc/opsi/opsi.conf
 else
-	UCS_3="0"
 	fileadmingroup="pcpatch"
-	LDAP_PORT=$(ucr get ldap/port)
 fi
+LDAP_PORT=$(ucr get ldap/master/port)
 
 # --- Test ldap connection ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Testing ldap connection to $LDAP_MASTER"
 set +e
-if [ $UCS_3 = "1" ]; then
-	if [ $SERVER_ROLE = "memberserver" ]; then
-		univention-ldapsearch -D "$LDAP_USER" -w "$LDAP_SECRET" -s base > /dev/null
-	else
-		univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
-	fi
+if [ $SERVER_ROLE = "memberserver" ]; then
+	univention-ldapsearch -D "$LDAP_USER" -w "$LDAP_SECRET" -s base > /dev/null
 else
-	ldapsearch -x -D "$LDAP_USER" -w "$LDAP_SECRET" -h $LDAP_MASTER -b "$LDAP_USER" userPassword | grep "^userPassword:" >/dev/null
+	univention-ldapsearch -x userPassword | grep "^userPassword:" >/dev/null
 fi
 ret=$?
 set -e
@@ -144,11 +121,7 @@ fi
 set +e
 # old version
 # config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
-if [ $UCS_3 = "1" ];then
-	config_server="$(univention-ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
-else
-	config_server="$(ldapsearch -h $LDAP_MASTER -p $LDAP_PORT -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
-fi
+config_server="$(univention-ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 $VERBOSE && echo "Found configserver: $config_server"
 set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
@@ -257,47 +230,39 @@ if [ $ret != 0 ]; then
 		--ignore_exists
 fi
 
-if [ $UCS_3 = "1" ]; then
-	set +e
-	udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' 1>/dev/null
-	ret=$?
-	set -e
-	if [ $ret != 0 ]; then
-		# User pcpatch does not exist in ldap
-		$VERBOSE && echo "Adding user opsiconfd"
+set +e
+udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' 1>/dev/null
+ret=$?
+set -e
+if [ $ret != 0 ]; then
+	# User pcpatch does not exist in ldap
+	$VERBOSE && echo "Adding user opsiconfd"
 
-		pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
 
-		udm users/user create "$@" \
-			--position="cn=users,$ROOT_DN" \
-			--set username="opsiconfd" \
-			--set description="opsi configuration daemon user" \
-			--set unixhome="/var/lib/opsi" \
-			--set primaryGroup="cn=$fileadmingroup,cn=groups,$ROOT_DN" \
-			--set lastname="opsiconfd" \
-			--set password="${pass}" \
-			--set overridePWLength=1 \
-			--ignore_exists
-	fi
-
-	udm groups/group modify "$@" \
-		--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
-		--append users="uid=opsiconfd,cn=users,$ROOT_DN"
-
-	# Remove users/groups from passwd/group
-	userdel pcpatch >/dev/null 2>/dev/null || true
-	userdel opsiconfd >/dev/null 2>/dev/null || true
-	[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
-	cp /etc/group /tmp/.group.tmp.opsi4ucs
-	cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' | grep -v '^opsiconfd' >/etc/group || true
-	rm /tmp/.group.tmp.opsi4ucs
-else
-	userdel pcpatch >/dev/null 2>/dev/null || true
-	[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
-	cp /etc/group /tmp/.group.tmp.opsi4ucs
-	cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' >/etc/group || true
-	rm /tmp/.group.tmp.opsi4ucs
+	udm users/user create "$@" \
+		--position="cn=users,$ROOT_DN" \
+		--set username="opsiconfd" \
+		--set description="opsi configuration daemon user" \
+		--set unixhome="/var/lib/opsi" \
+		--set primaryGroup="cn=$fileadmingroup,cn=groups,$ROOT_DN" \
+		--set lastname="opsiconfd" \
+		--set password="${pass}" \
+		--set overridePWLength=1 \
+		--ignore_exists
 fi
+
+udm groups/group modify "$@" \
+	--dn "cn=opsiadmin,cn=groups,$ROOT_DN" \
+	--append users="uid=opsiconfd,cn=users,$ROOT_DN"
+
+# Remove users/groups from passwd/group
+userdel pcpatch >/dev/null 2>/dev/null || true
+userdel opsiconfd >/dev/null 2>/dev/null || true
+[ -e /tmp/.group.tmp.opsi4ucs ] && rm /tmp/.group.tmp.opsi4ucs
+cp /etc/group /tmp/.group.tmp.opsi4ucs
+cat /tmp/.group.tmp.opsi4ucs | grep -v '^pcpatch:' | grep -v '^opsiadmin:' | grep -v '^opsiconfd' >/etc/group || true
+rm /tmp/.group.tmp.opsi4ucs
 
 
 udm groups/group modify "$@" \
@@ -418,47 +383,35 @@ fi
 # Changing ntacl-backend settings to native (default)
 #
 
-if [ $UCS_3 = "1" ]; then
-	if [ -e /etc/init.d/samba4 ]; then
-		/etc/init.d/samba4 force-reload
-	fi
-	if [ -e /etc/init.d/samba ]; then
-		/etc/init.d/samba reload
-	fi
-
-	$VERBOSE && echo "Waiting for samba shares"
-	sleep 5
-	$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
-
-	grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
-	echo admin users = administrator join-backup @$fileadmingroup >> /etc/samba/shares.conf.d/opsi_depot_tmp
-	mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
-	ucr commit /etc/samba/shares.conf.d/opsi_depot
-
-	ucr set samba4/ntacl/backend=native
-
+if [ -e /etc/init.d/samba4 ]; then
+	/etc/init.d/samba4 force-reload
 fi
+if [ -e /etc/init.d/samba ]; then
+	/etc/init.d/samba reload
+fi
+
+$VERBOSE && echo "Waiting for samba shares"
+sleep 5
+$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
+
+grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
+echo admin users = administrator join-backup @$fileadmingroup >> /etc/samba/shares.conf.d/opsi_depot_tmp
+mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
+ucr commit /etc/samba/shares.conf.d/opsi_depot
+
+ucr set samba4/ntacl/backend=native
 
 # --- Configure dhcp ------------------------------------------------------------------------------------------------------------
 if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	set +e
-	if [ $UCS_3 = "1" ]; then
-		univention-ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
-	else
-		ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
-	fi
+	univention-ldapsearch -x -L -s base -b "cn=$DOMAIN,cn=dhcp,$ROOT_DN" | grep use-host-decl-names >/dev/null
 	ret=$?
 	set -e
 	if [ $ret != 0 ]; then
 		if [ $DHCPSERVER = "1" ]; then
 			$VERBOSE && echo "Adding dhcpStatement: use-host-decl-names on"
-			if [ $UCS_3 = "1" ]; then
-				echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-					| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "cn=admin,$ROOT_DN" -y "/etc/ldap.secret" >/dev/null
-			else
-				echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
-					| ldapmodify -x -h "$LDAP_MASTER" -D "cn=admin,$ROOT_DN" -w "$(cat /etc/ldap.secret)" >/dev/null
-			fi
+			echo -e "dn: cn=$DOMAIN,cn=dhcp,$ROOT_DN\nadd: dhcpStatements\ndhcpStatements: use-host-decl-names on\n" \
+				| ldapmodify -x -h "$LDAP_MASTER" -p $LDAP_PORT -ZZ -D "cn=admin,$ROOT_DN" -y "/etc/ldap.secret" >/dev/null
 		else
 			$VERBOSE && echo "DHCP-Server installation not found, skipping patching dhcp-server."
 		fi
@@ -494,23 +447,21 @@ fi
 
 # --- Configure opsi ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Configuring opsi"
-if [ $UCS_3 = "1" ]; then
-	ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
-	$VERBOSE && echo "Checking security options for opsi"
+ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
+$VERBOSE && echo "Checking security options for opsi"
 
-	ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all=ACCEPT
-	ucr set security/packetfilter/package/opsi4ucs/udp/69/all=ACCEPT
-	ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all/en="Port for opsi-Webservice"
-	ucr set security/packetfilter/package/opsi4ucs/udp/69/all/en="Port for TFTPD"
+ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all=ACCEPT
+ucr set security/packetfilter/package/opsi4ucs/udp/69/all=ACCEPT
+ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all/en="Port for opsi-Webservice"
+ucr set security/packetfilter/package/opsi4ucs/udp/69/all/en="Port for TFTPD"
 
-	$VERBOSE && echo "Cleanup old opsi local-Filterrules"
+$VERBOSE && echo "Cleanup old opsi local-Filterrules"
 
-	TEMPFILE=$(tempfile)
+TEMPFILE=$(tempfile)
 
-	grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
-	cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
-	/etc/init.d/univention-firewall restart
-fi
+grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
+cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
+/etc/init.d/univention-firewall restart
 
 if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
@@ -538,45 +489,29 @@ else
 fi
 
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
-if [ "$UCS_VERSION" = "3.2" ]; then
-	$VERBOSE && echo "Adding links to the UCS overview page"
-	ucr set ucs/web/overview/entries/admin/opsi-configed/description/de='Management-Interface für Client-Management mit <em>opsi</em> (Applet startet über Java-Webstart).'
-	ucr set ucs/web/overview/entries/admin/opsi-configed/description='Management Interface for Client-Management with <em>opsi</em> (Applet starts over Java-Webstart).'
-	ucr set ucs/web/overview/entries/admin/opsi-configed/icon=/icon/50x50/opsi-configed.png
-	ucr set ucs/web/overview/entries/admin/opsi-configed/label/de='opsi configed'
-	ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
-	ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"
-	ucr set ucs/web/overview/entries/admin/opsi-configed/priority=50
-fi
+$VERBOSE && echo "Adding links to the UCS overview page"
+ucr set ucs/web/overview/entries/admin/opsi-configed/description/de='Management-Interface für Client-Management mit <em>opsi</em> (Applet startet über Java-Webstart).'
+ucr set ucs/web/overview/entries/admin/opsi-configed/description='Management Interface for Client-Management with <em>opsi</em> (Applet starts over Java-Webstart).'
+ucr set ucs/web/overview/entries/admin/opsi-configed/icon=/icon/50x50/opsi-configed.png
+ucr set ucs/web/overview/entries/admin/opsi-configed/label/de='opsi configed'
+ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
+ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"
+ucr set ucs/web/overview/entries/admin/opsi-configed/priority=50
 
 $VERBOSE && echo "Commit changes"
 ucr commit /var/www/ucs-overview/de.html
 ucr commit /var/www/ucs-overview/en.html
-if [ $UCS_3 = "1" ]; then
-	ucr commit /etc/pam.d/opsi-auth
-	dpkg-reconfigure opsiconfd
-fi
+ucr commit /etc/pam.d/opsi-auth
+dpkg-reconfigure opsiconfd
 
 $VERBOSE && echo "Restarting services"
-if [ $UCS_3 = "1" ]; then
-	if [ $DHCPSERVER = "1" ]; then
-		/etc/init.d/univention-dhcp restart || true
-	elif [ -e "/etc/init.d/dhcp3-server" ]; then
-		/etc/init.d/dhcp3-server restart || true
-	fi
-	$SAMBA_INIT_SCRIPT reload || true
-else
-	if [ -e "/etc/init.d/dhcp3-server" ]; then
-		/etc/init.d/dhcp3-server restart || true
-	fi
+if [ $DHCPSERVER = "1" ]; then
+	/etc/init.d/univention-dhcp restart || true
+elif [ -e "/etc/init.d/dhcp3-server" ]; then
+	/etc/init.d/dhcp3-server restart || true
 fi
+$SAMBA_INIT_SCRIPT reload || true
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
 
-# --- Log success ---------------------------------------------------------------------------------------------------------------
-$VERBOSE && echo "Log join script success"
-test -n "`grep \"opsi4ucs v${VERSION} successful\" /usr/lib/univention-install/.index.txt`" || \
-	echo "opsi4ucs v${VERSION} successful" >>/usr/lib/univention-install/.index.txt
-
-
-$VERBOSE && echo "Done"
+joinscript_save_current_version
