@@ -1,3 +1,9 @@
+opsi4ucs (4.0.6.1-1) UNRELEASED; urgency=low
+
+  * Making sure /var/log/opsi/userlogin exists.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 11 Mar 2015 09:29:51 +0100
+
 opsi4ucs (4.0.5.5-4) experimental; urgency=low
 
   * Using newer version of Debhelper
