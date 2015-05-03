@@ -1,9 +1,9 @@
 opsi4ucs (4.0.5.7-1) testing; urgency=medium
 
   * Renaming pcpatch to opsifileadmins group, if exists in domain.
-  * Package-Dependencies changed: 
-	- dhcp3-server removed
-	- samba removed; univention-samba4 is now default
+  * Package-Dependencies changed:
+    - dhcp3-server removed
+    - samba removed; univention-samba4 is now default
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Sun, 03 May 2015 23:52:14 +0200
 
