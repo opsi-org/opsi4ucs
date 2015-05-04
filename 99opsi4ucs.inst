@@ -178,8 +178,8 @@ udm groups/group modify "$@" \
 set +e
 $VERBOSE && echo "Adding system users and group: $fileadmingroup"
 $VERBOSE && echo "Checking if pcpatch group exists"
-PCPATCH_DN = $(udm groups/group list "$@" --filter "(name=pcpatch)" | grep '^DN:' | cut -d " " -f2)
-if [ $PCPATCH_DN != "" ]; then
+PCPATCH_DN=$(udm groups/group list "$@" --filter "(name=pcpatch)" | grep '^DN:' | cut -d " " -f2)
+if [ "$PCPATCH_DN" != "" ]; then
 	$VERBOSE && echo "Group pcpatch found, renaming to opsifileadmins"
 	udm groups/group modify --dn "$PCPATCH_DN" --set name="$fileadmingroup"
 fi
