@@ -508,6 +508,10 @@ def configureClientUser():
 		if backend is not None:
 			backend.backend_exit()
 
+	if not password:
+		logger.warning("No password for pcpatch found. Generating random password.")
+		password = randomString(12)
+
 	logger.addConfidentialString(password)
 	execute('opsi-admin -d task setPcpatchPassword "%s"' % password)
 

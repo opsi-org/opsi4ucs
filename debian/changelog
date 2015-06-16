@@ -1,3 +1,9 @@
+opsi4ucs (4.0.5.6-1) UNRELEASED; urgency=medium
+
+  * Fix problem where no password would be obtained during user config.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 16 Jun 2015 14:59:08 +0200
+
 opsi4ucs (4.0.5.5-4) experimental; urgency=low
 
   * Using newer version of Debhelper
