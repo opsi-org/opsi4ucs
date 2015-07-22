@@ -467,18 +467,18 @@ def configureClientUser():
 	if not os.path.exists(idRsa):
 		logger.notice(u"   Creating RSA private key for user %s in '%s'" % (CLIENT_USER, idRsa))
 		execute(u"%s -N '' -t rsa -f %s" % ( which('ssh-keygen'), idRsa))
+
 	if not os.path.exists(authorizedKeys):
-		f = codecs.open(idRsaPub, 'r', 'utf-8')
-		f2 = codecs.open(authorizedKeys, 'w', 'utf-8')
-		f2.write(f.read())
-		f2.close()
-		f.close()
+		 with codecs.open(idRsaPub, 'r', 'utf-8') as f:
+			with codecs.open(authorizedKeys, 'w', 'utf-8') as f2:
+				f2.write(f.read())
+
 	setRights(sshDir)
 
 	password = None
 	backend = None
+	from OPSI.Backend.BackendManager import BackendManager
 	try:
-		from OPSI.Backend.BackendManager import BackendManager
 		backend = BackendManager(
 			dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
 			backendConfigDir=u'/etc/opsi/backends',
@@ -507,8 +507,13 @@ def configureClientUser():
 	except Exception as e:
 		logger.info(u"Failed to get client user (pcpatch) password: %s" % e)
 		password = randomString(12)
-	if backend:
-		backend.backend_exit()
+	finally:
+		if backend is not None:
+			backend.backend_exit()
+
+	if not password:
+		logger.warning("No password for pcpatch found. Generating random password.")
+		password = randomString(12)
 
 	logger.addConfidentialString(password)
 	execute('opsi-admin -d task setPcpatchPassword "%s"' % password)
