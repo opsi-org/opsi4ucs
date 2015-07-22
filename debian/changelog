@@ -4,6 +4,7 @@ opsi4ucs (4.0.6.1-1) UNRELEASED; urgency=low
   * Using OPSI.Util.Task.Rights.setRights
   * Removed LDAP schema files.
   * Using OPSI.System.Posix.getDHCPDRestartCommand
+  * Making sure /var/log/opsi/userlogin exists.
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 02 Feb 2015 16:57:31 +0100
 
