@@ -1,5 +1,3 @@
-opsi4ucs: dir-or-file-in-var-www var/www/icon/
-opsi4ucs: dir-or-file-in-var-www var/www/icon/50x50/
-opsi4ucs: dir-or-file-in-var-www var/www/icon/50x50/opsi-configed.png
-opsi4ucs: dir-or-file-in-var-www var/www/icon/opsi/
-opsi4ucs: dir-or-file-in-var-www var/www/icon/opsi/configed.png
+opsi4ucs: dir-or-file-in-var-www *
+opsi4ucs: no-copyright-file
+opsi4ucs: changelog-file-not-compressed changelog.Debian
