@@ -1,3 +1,11 @@
+opsi4ucs (4.0.6.1-1ubuntu1) UNRELEASED; urgency=medium
+
+  * refactored configureSamba in python-opsi 
+  * replaced configureSamba function in python-setup with import
+
+
+ -- Mathias Radtke <m.radtke@uib.de>  Wed, 29 Jul 2015 14:12:43 +0200
+
 opsi4ucs (4.0.6.1-1) experimental; urgency=low
 
   * Using OPSI.Util.Task.UpdateBackend.MySQL
