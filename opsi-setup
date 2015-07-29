@@ -48,7 +48,9 @@ import time
 import OPSI.System.Posix as Posix
 import OPSI.Util.Task.ConfigureBackend as backendUtils
 from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
-from OPSI.Types import *
+from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
+	forceHostId, forceInt, forceInstallationStatus, forceObjectId,
+	forceProductId, forceUnicodeList)
 from OPSI.Object import *
 from OPSI.System import *
 from OPSI.System.Posix import getDHCPDRestartCommand
