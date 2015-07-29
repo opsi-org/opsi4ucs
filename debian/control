@@ -2,6 +2,7 @@ Source: opsi4ucs
 Section: opsi
 Priority: optional
 Maintainer: uib GmbH <info@uib.de>
+Uploaders: Niko Wenselowski <n.wenselowski@uib.de>
 Build-Depends: debhelper (>= 7)
 Standards-Version: 3.9.4
 
