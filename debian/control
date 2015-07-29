@@ -3,7 +3,7 @@ Section: opsi
 Priority: optional
 Maintainer: uib GmbH <info@uib.de>
 Build-Depends: debhelper (>= 7)
-Standards-Version: 3.6.1
+Standards-Version: 3.9.4
 
 Package: opsi4ucs
 Section: opsi
