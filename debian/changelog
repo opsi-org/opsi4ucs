@@ -1,10 +1,13 @@
-opsi4ucs (4.0.6.1-1ubuntu1) UNRELEASED; urgency=medium
+opsi4ucs (4.0.6.2-1) experimental; urgency=medium
 
-  * refactored configureSamba in python-opsi 
+  [ Mathias Radtke ]
+  * refactored configureSamba in python-opsi
   * replaced configureSamba function in python-setup with import
 
+  [ Niko Wenselowski ]
+  * Removed unused code.
 
- -- Mathias Radtke <m.radtke@uib.de>  Wed, 29 Jul 2015 14:12:43 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 29 Jul 2015 15:15:01 +0200
 
 opsi4ucs (4.0.6.1-1) experimental; urgency=low
 
