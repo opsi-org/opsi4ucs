@@ -40,7 +40,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k
+	dh_prep
 	dh_installdirs
 
 	install -m 0644 files/dispatch.conf.jsonrpc     debian/opsi4ucs/etc/opsi/backendManager/
