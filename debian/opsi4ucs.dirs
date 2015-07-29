@@ -12,5 +12,6 @@ var/log/opsi
 var/log/opsi/clientconnect
 var/log/opsi/bootimage
 var/log/opsi/instlog
+var/log/opsi/userlogin
 var/www/icon/opsi
 var/www/icon/50x50
