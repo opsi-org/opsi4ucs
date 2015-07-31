@@ -51,7 +51,6 @@ from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
 from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
 	forceObjectId, forceProductId, forceUnicodeList)
-from OPSI.Object import *
 from OPSI.System.Posix import (execute, getDHCPDRestartCommand,
 	getEthernetDevices, getNetworkDeviceConfig, which)
 from OPSI.Util import blowfishDecrypt, getfqdn, randomString
