@@ -52,7 +52,6 @@ from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceHostId, forceInt, forceInstallationStatus, forceObjectId,
 	forceProductId, forceUnicodeList)
 from OPSI.Object import *
-from OPSI.System import *
 from OPSI.System.Posix import (execute, getDHCPDRestartCommand,
 	getEthernetDevices, getNetworkDeviceConfig, which)
 from OPSI.Util.File import *
