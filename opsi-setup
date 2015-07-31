@@ -59,7 +59,7 @@ from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import *
 from OPSI.Util import *
 from OPSI.UI import UIFactory
-from OPSI.Backend.LDAP import LDAPBackend
+from OPSI.Backend.LDAP import LDAPBackend, LDAPSession, LDAPObject, LDAPObjectSearch
 from OPSI.Backend.File import FileBackend
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
