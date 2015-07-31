@@ -58,7 +58,6 @@ from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
 	forceObjectId, forceProductId, forceUnicodeList)
 from OPSI.Util import blowfishDecrypt, getfqdn, randomString
-from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import (BackendDispatchConfigFile, HostKeyFile,
 	PackageControlFile, SysInfo)
 from OPSI.UI import UIFactory
