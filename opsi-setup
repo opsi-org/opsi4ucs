@@ -58,7 +58,6 @@ from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceObjectId, forceProductId, forceUnicodeList)
 from OPSI.Util import blowfishDecrypt, getfqdn, randomString
 from OPSI.Util.File import *
-from OPSI.Util.File.Opsi import *
 from OPSI.UI import UIFactory
 from OPSI.Backend.LDAP import LDAPBackend, LDAPSession, LDAPObject, LDAPObjectSearch
 from OPSI.Backend.File import FileBackend
