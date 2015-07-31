@@ -53,7 +53,8 @@ from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceProductId, forceUnicodeList)
 from OPSI.Object import *
 from OPSI.System import *
-from OPSI.System.Posix import getDHCPDRestartCommand
+from OPSI.System.Posix import (execute, getDHCPDRestartCommand,
+	getEthernetDevices, getNetworkDeviceConfig, which)
 from OPSI.Util.File import *
 from OPSI.Util.File.Opsi import *
 from OPSI.Util import *
