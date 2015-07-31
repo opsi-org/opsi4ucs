@@ -1,3 +1,9 @@
+opsi4ucs (4.0.6.2-5) UNRELEASED; urgency=medium
+
+  * Fix exception catching.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 31 Jul 2015 12:16:04 +0200
+
 opsi4ucs (4.0.6.2-4) experimental; urgency=medium
 
   * Updated ignores.
