@@ -26,6 +26,8 @@ configure-stamp:
 
 #Architecture
 build: build-stamp
+build-arch: build-stamp
+build-indep: build-stamp
 
 build-stamp: configure-stamp
 	dh_testdir
@@ -40,7 +42,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k
+	dh_prep
 	dh_installdirs
 
 	install -m 0644 files/dispatch.conf.jsonrpc     debian/opsi4ucs/etc/opsi/backendManager/
@@ -70,6 +72,5 @@ binary-indep: build install
 	dh_builddeb
 
 binary-arch: build install
-
 binary: binary-arch binary-indep
 .PHONY: build clean binary-indep binary-arch binary install configure
