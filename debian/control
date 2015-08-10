@@ -3,12 +3,13 @@ Section: opsi
 Priority: optional
 Maintainer: uib GmbH <info@uib.de>
 Build-Depends: debhelper (>= 7)
-Standards-Version: 3.6.1
+X-Python-Version: >= 2.6
+Standards-Version: 3.9.4
 
 Package: opsi4ucs
 Section: opsi
 Architecture: all
-Depends: python-opsi (>=4.0.5.11), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20140118), opsi-configed, samba | univention-samba4, dhcp3-server | univention-dhcp, sudo, wget
+Depends: debconf, python(>= 2.6.6-3~), python-opsi (>=4.0.5.11), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20140118), opsi-configed, samba | univention-samba4, dhcp3-server | univention-dhcp, sudo, wget, ${python:Depends}, ${misc:Depends}
 Description: opsi software deployment for ucs
  opsi4ucs integrates opsi into an ucs server.
  .
