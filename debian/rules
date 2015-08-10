@@ -47,6 +47,8 @@ install: build
 	dh_installdocs
 	dh_installchangelogs debian/changelog
 
+	gzip -9 debian/opsi4ucs/usr/share/doc/opsi4ucs/changelog
+
 	install -m 0644 files/dispatch.conf.jsonrpc     debian/opsi4ucs/etc/opsi/backendManager/
 	install -m 0644 files/configed.png              debian/opsi4ucs/var/www/icon/opsi/
 	install -m 0644 files/opsi-configed.png         debian/opsi4ucs/var/www/icon/50x50/
