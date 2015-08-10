@@ -1,3 +1,24 @@
+opsi4ucs (4.0.5.8-1) stable; urgency=low
+
+  * Dependency univention-dhcp removed.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 07 Jul 2015 10:28:18 +0200
+
+opsi4ucs (4.0.5.7-1) testing; urgency=medium
+
+  * Renaming pcpatch to opsifileadmins group, if exists in domain.
+  * Package-Dependencies changed:
+    - dhcp3-server removed
+    - samba removed; univention-samba4 is now default
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Sun, 03 May 2015 23:52:14 +0200
+
+opsi4ucs (4.0.5.6-1) testing; urgency=medium
+
+  * 99opsi4ucs.inst: Cleanup of script: works only with UCS 3.2 and higher
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 23 Feb 2015 17:04:43 +0100
+
 opsi4ucs (4.0.5.5-4) experimental; urgency=low
 
   * Using newer version of Debhelper
