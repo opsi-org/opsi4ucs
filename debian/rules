@@ -24,6 +24,9 @@ export DH_OPTIONS
 override_dh_install:
 	dh_install
 
+	# The joinscript needs executable rights
+	install -m 0755 99opsi4ucs.inst debian/opsi4ucs/usr/lib/univention-install/
+
 	install -m 755 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
 	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
 	cp -r conffiles/etc debian/opsi4ucs/etc/univention/templates/files/
