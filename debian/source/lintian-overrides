@@ -1,3 +1,1 @@
-opsi4ucs: dir-or-file-in-var-www *
 opsi4ucs: no-copyright-file
-opsi4ucs: changelog-file-not-compressed changelog.Debian
