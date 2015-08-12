@@ -14,63 +14,19 @@
 #export DH_VERBOSE=1
 
 # This has to be exported to make some magic below work.
-#export DH_OPTIONS
-
-configure: configure-stamp
-configure-stamp:
-	dh_testdir
-	# Add here commands to configure the package.
-
-	touch configure-stamp
+export DH_OPTIONS
 
 
-#Architecture
-build: build-stamp
-build-arch: build-stamp
-build-indep: build-stamp
+%:
+	dh $@ --with-python2
 
-build-stamp: configure-stamp
-	dh_testdir
-	touch build-stamp
 
-clean:
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp
-	dh_clean
-
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep
-	dh_installdirs
-
-	install -m 0644 files/dispatch.conf.jsonrpc     debian/opsi4ucs/etc/opsi/backendManager/
-	install -m 0644 files/configed.png              debian/opsi4ucs/var/www/icon/opsi/
-	install -m 0644 files/opsi-configed.png         debian/opsi4ucs/var/www/icon/50x50/
-	install -m 0755 99opsi4ucs.inst                 debian/opsi4ucs/usr/lib/univention-install/
-	install -m 0755 opsi-setup                      debian/opsi4ucs/usr/bin/opsi-setup
-	install -m 0755 opsi-set-rights                 debian/opsi4ucs/usr/bin/opsi-set-rights
-
-	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
-	cp -r conffiles/etc debian/opsi4ucs/etc/univention/templates/files/
-	install -m 0644 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
-
-	find debian/opsi4ucs -iname ".svn" -exec rm -r {} \; || true
-
+override_dh_install:
 	dh_install
 
-binary-indep: build install
-	dh_testdir -i
-	dh_testroot -i
-	dh_installdebconf
-	dh_installchangelogs -i
-	dh_shlibdeps
-	dh_md5sums
-	dh_gencontrol
-	dh_installdeb
-	dh_builddeb
+	# The joinscript needs executable rights
+	install -m 0755 99opsi4ucs.inst debian/opsi4ucs/usr/lib/univention-install/
 
-binary-arch: build install
-binary: binary-arch binary-indep
-.PHONY: build clean binary-indep binary-arch binary install configure
+	install -m 0644 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
+	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
+	cp -r conffiles/etc debian/opsi4ucs/etc/univention/templates/files/
