@@ -27,13 +27,17 @@ case "$1" in
 		fi
 
 		if [ -d "/etc/opsi/.ucs_temp" -a -d "/var/www/" ]; then
-			mkdir -p /var/www/icon/opsi/ || true
 			mkdir -p /var/www/icon/opsi/50x50 || true
 
-			cp /etc/opsi/.ucs_temp/configed.png /var/www/icon/opsi/
-			cp /etc/opsi/.ucs_temp/opsi-configed.png /var/www/icon/opsi/50x50/
+			if [ -e "/etc/opsi/.ucs_temp/configed.png" ]; then
+				cp /etc/opsi/.ucs_temp/configed.png /var/www/icon/opsi/
+			fi
 
-			rm -r /etc/opsi/.ucs_temp
+			if [ -e "/etc/opsi/.ucs_temp/opsi-configed.png" ]; then
+				cp /etc/opsi/.ucs_temp/opsi-configed.png /var/www/icon/opsi/50x50/
+			fi
+
+			rm -rf /etc/opsi/.ucs_temp
 		fi
 
 	;;
