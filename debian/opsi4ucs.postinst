@@ -25,6 +25,17 @@ case "$1" in
 		if [ "$UCSROLE" = "domaincontroller_master" -o "$UCSROLE" = "domaincontroller_backup" ]; then
 			/usr/lib/univention-install/99opsi4ucs.inst || true
 		fi
+
+		if [ -d "/etc/opsi/.ucs_temp" -a -d "/var/www/" ]; then
+			mkdir -p /var/www/icon/opsi/ || true
+			mkdir -p /var/www/icon/opsi/50x50 || true
+
+			cp /etc/opsi/.ucs_temp/configed.png /var/www/icon/opsi/
+			cp /etc/opsi/.ucs_temp/opsi-configed.png /var/www/icon/opsi/50x50/
+
+			rm -r /etc/opsi/.ucs_temp
+		fi
+
 	;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)

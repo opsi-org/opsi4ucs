@@ -2,6 +2,7 @@ etc/univention/templates/info
 etc/univention/templates/files
 etc/opsi/backends
 etc/opsi/backendManager
+etc/opsi/.ucs_temp
 home/opsiproducts
 usr/lib/univention-install
 usr/bin
@@ -12,5 +13,3 @@ var/log/opsi
 var/log/opsi/clientconnect
 var/log/opsi/bootimage
 var/log/opsi/instlog
-var/www/icon/opsi
-var/www/icon/50x50
