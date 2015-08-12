@@ -1,10 +1,8 @@
 #! /bin/bash -e
 
-# = = = = = = = = = = = = = = = = = = = = = = =
-# =  Copyright (C) 2006, 2007, 2008 uib GmbH  =
-# =           http://www.uib.de               =
-# =          All rights reserved.             =
-# = = = = = = = = = = = = = = = = = = = = = = =
+# Copyright (C) 2006-2015 uib GmbH
+# http://www.uib.de
+# All rights reserved.
 
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
@@ -28,11 +26,11 @@ case "$1" in
 			/usr/lib/univention-install/99opsi4ucs.inst || true
 		fi
 	;;
-	
+
 	abort-upgrade|abort-remove|abort-deconfigure)
-	
+
 	;;
-	
+
 	*)
 		echo "postinst called with unknown argument \`$1'" >&2
 		exit 1
@@ -41,6 +39,4 @@ esac
 
 test -x /usr/sbin/univention-config-registry && univention-config-registry register opsi4ucs || true
 
-
 exit 0
-
