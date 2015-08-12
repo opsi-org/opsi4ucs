@@ -32,10 +32,12 @@ case "$1" in
 
 			if [ -e "/etc/opsi/.ucs_temp/configed.png" ]; then
 				cp /etc/opsi/.ucs_temp/configed.png /var/www/icon/opsi/
+				chmod 644 /var/www/icon/opsi/configed.png
 			fi
 
 			if [ -e "/etc/opsi/.ucs_temp/opsi-configed.png" ]; then
 				cp /etc/opsi/.ucs_temp/opsi-configed.png /var/www/icon/50x50/
+				chmod 644 /var/www/icon/50x50/opsi-configed.png
 			fi
 
 			rm -rf /etc/opsi/.ucs_temp
