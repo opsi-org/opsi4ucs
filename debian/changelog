@@ -1,4 +1,4 @@
-opsi4ucs (4.0.6.3-1) UNRELEASED; urgency=medium
+opsi4ucs (4.0.6.3-1) experimental; urgency=medium
 
   * Fix exception catching.
   * Less wildcard imports
