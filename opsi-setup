@@ -1,35 +1,33 @@
-#!/usr/bin/python
-#-*- coding: utf-8 -*-
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# This module is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+
+# Copyright (C) 2010, 2013-2015 uib GmbH
+# http://www.uib.de/
+# All rights reserved.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-opsi-setup - Worker
+opsi-setup - swiss army knife for opsi administration.
 
-This module is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010, 2013-2015 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@author: Niko Wenselowski <n.wenselowski@uib.de>
-@license: GNU Affero General Public License version 3
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import codecs
@@ -47,20 +45,26 @@ import time
 
 import OPSI.System.Posix as Posix
 import OPSI.Util.Task.ConfigureBackend as backendUtils
-from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
-from OPSI.Types import *
-from OPSI.Object import *
-from OPSI.System import *
-from OPSI.System.Posix import getDHCPDRestartCommand
-from OPSI.Util.File import *
-from OPSI.Util.File.Opsi import *
-from OPSI.Util import *
-from OPSI.UI import UIFactory
-from OPSI.Backend.MySQL import *
-from OPSI.Backend.LDAP import *
-from OPSI.Backend.File import *
-from OPSI.Backend.JSONRPC import *
+from OPSI.Backend.LDAP import LDAPBackend, LDAPSession, LDAPObject, LDAPObjectSearch
+from OPSI.Backend.File import FileBackend
+from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
+from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
+from OPSI.Object import (ConfigState, HostGroup, LocalbootProduct,
+	NetbootProduct, ObjectToGroup, OpsiClient,
+	OpsiConfigserver, OpsiDepotserver, ProductDependency, ProductOnClient,
+	ProductOnDepot, ProductPropertyState, UnicodeConfig, UnicodeProductProperty)
+from OPSI.System.Posix import (execute, getDHCPDRestartCommand,
+	getEthernetDevices, getNetworkDeviceConfig, which)
+from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
+	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
+	forceObjectId, forceProductId, forceUnicodeList)
+from OPSI.UI import UIFactory
+from OPSI.Util import blowfishDecrypt, getfqdn, randomString
+from OPSI.Util.File import (DHCPDConfFile, DHCPDConf_Block,
+	DHCPDConf_Parameter, IniFile)
+from OPSI.Util.File.Opsi import (BackendDispatchConfigFile, HostKeyFile,
+	PackageControlFile, SysInfo)
 from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
 	OPSICONFD_CERTFILE, NoCertificateError, UnreadableCertificateError,
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
@@ -71,10 +75,10 @@ from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	configureMySQLBackend as configureMySQLBackendWithoutGUI
 )
 from OPSI.Util.Task.Rights import setRights
+from OPSI.Util.Task.Samba import configureSamba
 from OPSI.Util.Task.Sudoers import (
 	patchSudoersFileForOpsi, patchSudoersFileToAllowRestartingDHCPD
 )
-from OPSI.Util.Task.Samba import configureSamba
 from OPSI.Util.Task.UpdateBackend.MySQL import updateMySQLBackend
 
 
@@ -93,6 +97,8 @@ CLIENT_USER = u'pcpatch'
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
 
 sysConfig = {}
+ipAddress = None
+backendConfig = {}
 
 
 def getSysConfig():
@@ -1332,7 +1338,7 @@ def updateFileBackend():
 
 							updatedConfigStates.append(ConfigState(configId=configId, objectId=clientId, values=[value]))
 
-			except Exceptionas as e:
+			except Exception as e:
 				logger.warning(u"Could not get all information on client: %s" % e)
 
 			backend.host_createObjects([OpsiClient.fromHash(oldClientDict)])
@@ -1381,7 +1387,7 @@ def updateFileBackend():
 
 				for option in ini.options(section):
 					if (option.lower() == u'parentgroupid'):
-						updatedGroup['parentGroupId'] = ini.get(section, option)
+						updatedGroup['parentGroupId'] = ini.get(section, option)  # TODO: unknown variable
 						if (not ini.get(section, option) in parentGroupIdList):
 							parentGroupIdList.append(ini.get(section, option))
 						continue
