@@ -1,8 +1,9 @@
-opsi4ucs (4.0.6.2-5) UNRELEASED; urgency=medium
+opsi4ucs (4.0.6.3-1) UNRELEASED; urgency=medium
 
   * Fix exception catching.
+  * Less wildcard imports
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 31 Jul 2015 12:16:04 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 19 Aug 2015 11:23:08 +0200
 
 opsi4ucs (4.0.6.2-4) experimental; urgency=medium
 
