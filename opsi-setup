@@ -99,6 +99,8 @@ CLIENT_USER = u'pcpatch'
 OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
 
 sysConfig = {}
+ipAddress = None
+backendConfig = {}
 
 
 def getSysConfig():
