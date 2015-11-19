@@ -54,17 +54,16 @@ from OPSI.Object import (ConfigState, HostGroup, LocalbootProduct,
 	NetbootProduct, ObjectToGroup, OpsiClient,
 	OpsiConfigserver, OpsiDepotserver, ProductDependency, ProductOnClient,
 	ProductOnDepot, ProductPropertyState, UnicodeConfig, UnicodeProductProperty)
-from OPSI.System.Posix import (execute, getDHCPDRestartCommand,
-	getEthernetDevices, getNetworkDeviceConfig, which)
+from OPSI.System.Posix import (execute, getEthernetDevices,
+	getNetworkDeviceConfig, which)
 from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
 	forceObjectId, forceProductId, forceUnicodeList)
 from OPSI.UI import UIFactory
 from OPSI.Util import blowfishDecrypt, getfqdn, randomString
-from OPSI.Util.File import (DHCPDConfFile, DHCPDConf_Block,
-	DHCPDConf_Parameter, IniFile)
+from OPSI.Util.File import IniFile
 from OPSI.Util.File.Opsi import (BackendDispatchConfigFile, HostKeyFile,
-	PackageControlFile, SysInfo)
+	PackageControlFile)
 from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
 	OPSICONFD_CERTFILE, NoCertificateError, UnreadableCertificateError,
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
@@ -77,9 +76,7 @@ from OPSI.Util.Task.ConfigureBackend.MySQL import (
 )
 from OPSI.Util.Task.Rights import setRights
 from OPSI.Util.Task.Samba import configureSamba
-from OPSI.Util.Task.Sudoers import (
-	patchSudoersFileForOpsi, patchSudoersFileToAllowRestartingDHCPD
-)
+from OPSI.Util.Task.Sudoers import patchSudoersFileForOpsi
 from OPSI.Util.Task.UpdateBackend.MySQL import updateMySQLBackend
 
 
