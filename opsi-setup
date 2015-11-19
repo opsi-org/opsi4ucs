@@ -70,6 +70,7 @@ from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
 from OPSI.Util.Task.ConfigureBackend.ConfigurationData import initializeConfigs
+from OPSI.Util.Task.ConfigureBackend.DHCPD import configureDHCPD
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
 	configureMySQLBackend as configureMySQLBackendWithoutGUI
@@ -184,124 +185,6 @@ def getSysConfig():
 	logger.notice(u"   win domain   : %s" % sysConfig['winDomain'])
 
 	return sysConfig
-
-
-def configureDHCPD():
-	logger.notice(u"Configuring dhcpd")
-
-	if not os.path.exists(DHCPD_CONF):
-		logger.warning("Can't find an dhcpd.conf. Aborting configuration.")
-		return
-
-	dhcpdConf = DHCPDConfFile(DHCPD_CONF)
-	dhcpdConf.parse()
-
-	confChanged = False
-	if dhcpdConf.getGlobalBlock().getParameters_hash().get('use-host-decl-names', False):
-		logger.info(u"   use-host-decl-names already enabled")
-	else:
-		confChanged = True
-		dhcpdConf.getGlobalBlock().addComponent(
-			DHCPDConf_Parameter(
-				startLine=-1,
-				parentBlock=dhcpdConf.getGlobalBlock(),
-				key='use-host-decl-names',
-				value=True
-			)
-		)
-
-	subnets = dhcpdConf.getGlobalBlock().getBlocks('subnet', recursive=True)
-	if not subnets:
-		confChanged = True
-		logger.notice(u"   No subnets found, adding subnet")
-		dhcpdConf.getGlobalBlock().addComponent(
-			DHCPDConf_Block(
-				startLine=-1,
-				parentBlock=dhcpdConf.getGlobalBlock(),
-				type='subnet',
-				settings=['subnet', getSysConfig()['subnet'], 'netmask', getSysConfig()['netmask']] ) )
-
-	for subnet in dhcpdConf.getGlobalBlock().getBlocks('subnet', recursive=True):
-		logger.info(u"   Found subnet %s/%s" % (subnet.settings[1], subnet.settings[3]))
-		groups = subnet.getBlocks('group')
-		if not groups:
-			confChanged = True
-			logger.notice(u"      No groups found, adding group")
-			subnet.addComponent(
-				DHCPDConf_Block(
-					startLine=-1,
-					parentBlock=subnet,
-					type= 'group',
-					settings=['group']
-				)
-			)
-
-		for group in subnet.getBlocks('group'):
-			logger.info(u"      Configuring group")
-			params = group.getParameters_hash(inherit = 'global')
-			if params.get('next-server'):
-				logger.info(u"         next-server already set")
-			else:
-				confChanged = True
-				group.addComponent(
-					DHCPDConf_Parameter(
-						startLine=-1,
-						parentBlock=group,
-						key='next-server',
-						value=getSysConfig()['ipAddress']
-					)
-				)
-				logger.notice(u"   next-server set to %s" % getSysConfig()['ipAddress'])
-			if params.get('filename'):
-				logger.info(u"         filename already set")
-			else:
-				confChanged = True
-				filename = 'linux/pxelinux.0'
-				if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-					filename = 'opsi/pxelinux.0'
-				group.addComponent(
-					DHCPDConf_Parameter(
-						startLine=-1,
-						parentBlock=group,
-						key='filename',
-						value=filename
-					)
-				)
-				logger.notice(u"         filename set to %s" % filename)
-
-	restartCommand = getDHCPDRestartCommand(default=u'/etc/init.d/dhcp3-server restart')
-	if confChanged:
-		logger.notice(u"   Creating backup of %s" % DHCPD_CONF)
-		shutil.copy(DHCPD_CONF, DHCPD_CONF + u'.' + time.strftime("%Y-%m-%d_%H:%M"))
-
-		logger.notice(u"   Writing new %s" % DHCPD_CONF)
-		dhcpdConf.generate()
-
-		logger.notice(u"   Restarting dhcpd")
-		try:
-			execute(restartCommand)
-		except Exception as e:
-			logger.warning(e)
-
-	logger.notice(u"Configuring sudoers")
-	patchSudoersFileToAllowRestartingDHCPD(restartCommand)
-
-	opsiconfdUid  = pwd.getpwnam(OPSICONFD_USER)[2]
-	adminGroupGid = grp.getgrnam(ADMIN_GROUP)[2]
-	os.chown(DHCPD_CONF, opsiconfdUid, adminGroupGid)
-	os.chmod(DHCPD_CONF, 0664)
-
-	sysinfo = SysInfo()
-	if 'Red Hat Enterprise Linux' in sysinfo.distribution or 'CentOS' in sysinfo.distribution:
-		dhcpDir = os.path.dirname(DHCPD_CONF)
-		if dhcpDir == '/etc':
-			return
-
-		logger.notice(
-			'Detected Red Hat-family system. Providing rights on "{dir}" '
-			'to group "{group}"'.format(dir=dhcpDir, group=ADMIN_GROUP)
-		)
-		os.chown(dhcpDir, -1, adminGroupGid)
 
 
 def configureClientUser():

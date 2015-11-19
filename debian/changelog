@@ -1,3 +1,9 @@
+opsi4ucs (4.0.6.5-1) UNRELEASED; urgency=medium
+
+  * Using OPSI.Util.Task.ConfigureBackend.DHCPD
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 19 Nov 2015 14:56:24 +0100
+
 opsi4ucs (4.0.6.4-1) testing; urgency=medium
 
   * Fixing Bug in 99opsi4ucs.ins joinscript:
