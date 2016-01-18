@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=18
+VERSION=19
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -364,7 +364,7 @@ if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding samba share opsi_images"
 	udm shares/share create "$@" \
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
-		--set name=opsi_workbench \
+		--set name=opsi_images \
 		--set host=$FQDN \
 		--set path=/var/lib/opsi/ntfs-images \
 		--set owner=$USERID \

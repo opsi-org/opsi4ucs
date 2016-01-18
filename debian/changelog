@@ -4,6 +4,12 @@ opsi4ucs (4.0.6.5-1) experimental; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 19 Nov 2015 14:56:24 +0100
 
+opsi4ucs (4.0.6.4-2) stable; urgency=low
+
+  * 99opsi4ucs.ins: Fixed samba-share opsi_images name in udm command.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 18 Jan 2016 13:40:40 +0100
+
 opsi4ucs (4.0.6.4-1) testing; urgency=medium
 
   * Fixing Bug in 99opsi4ucs.ins joinscript:
