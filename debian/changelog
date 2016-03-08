@@ -1,3 +1,10 @@
+opsi4ucs (4.0.6.6-1) experimental; urgency=medium
+
+  * opsi-setup: Fix problem during config initialisation if a existing
+    OpsiConfigserver is found.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 08 Mar 2016 10:48:33 +0100
+
 opsi4ucs (4.0.6.5-1) experimental; urgency=medium
 
   * Using OPSI.Util.Task.ConfigureBackend.DHCPD

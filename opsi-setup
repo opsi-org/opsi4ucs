@@ -4,7 +4,7 @@
 # This module is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2010, 2013-2015 uib GmbH
+# Copyright (C) 2010, 2013-2016 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 
@@ -1926,6 +1926,9 @@ def initializeBackends():
 
 			#make sure the config server is present in all backends or we get reference error later on
 			backend.host_insertObject(configServer)
+
+		# initializeConfigs does only handle a single object
+		configServer = configServer[0]
 
 	initializeConfigs(backend=backend, configServer=configServer)
 	backend.backend_exit()
