@@ -1,4 +1,4 @@
-opsi4ucs (4.0.6.6-1) UNRELEASED; urgency=medium
+opsi4ucs (4.0.6.6-1) experimental; urgency=medium
 
   * opsi-setup: Fix problem during config initialisation if a existing
     OpsiConfigserver is found.
