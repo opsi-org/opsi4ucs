@@ -4,7 +4,7 @@
 # This module is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2010, 2013-2015 uib GmbH
+# Copyright (C) 2010, 2013-2016 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 
@@ -54,17 +54,16 @@ from OPSI.Object import (ConfigState, HostGroup, LocalbootProduct,
 	NetbootProduct, ObjectToGroup, OpsiClient,
 	OpsiConfigserver, OpsiDepotserver, ProductDependency, ProductOnClient,
 	ProductOnDepot, ProductPropertyState, UnicodeConfig, UnicodeProductProperty)
-from OPSI.System.Posix import (execute, getDHCPDRestartCommand,
-	getEthernetDevices, getNetworkDeviceConfig, which)
+from OPSI.System.Posix import (execute, getEthernetDevices,
+	getNetworkDeviceConfig, which)
 from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
 	forceObjectId, forceProductId, forceUnicodeList)
 from OPSI.UI import UIFactory
 from OPSI.Util import blowfishDecrypt, getfqdn, randomString
-from OPSI.Util.File import (DHCPDConfFile, DHCPDConf_Block,
-	DHCPDConf_Parameter, IniFile)
+from OPSI.Util.File import IniFile
 from OPSI.Util.File.Opsi import (BackendDispatchConfigFile, HostKeyFile,
-	PackageControlFile, SysInfo)
+	PackageControlFile)
 from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
 	OPSICONFD_CERTFILE, NoCertificateError, UnreadableCertificateError,
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
@@ -77,9 +76,7 @@ from OPSI.Util.Task.ConfigureBackend.MySQL import (
 )
 from OPSI.Util.Task.Rights import setRights
 from OPSI.Util.Task.Samba import configureSamba
-from OPSI.Util.Task.Sudoers import (
-	patchSudoersFileForOpsi, patchSudoersFileToAllowRestartingDHCPD
-)
+from OPSI.Util.Task.Sudoers import patchSudoersFileForOpsi
 from OPSI.Util.Task.UpdateBackend.MySQL import updateMySQLBackend
 
 
@@ -1846,8 +1843,8 @@ def setPasswdRights():
 
 def initializeBackends():
 	if not os.path.exists(u'/etc/opsi/passwd'):
-		f = codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8')
-		f.close()
+		with codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8'):
+			pass
 		setPasswdRights()
 
 	from OPSI.Backend.BackendManager import BackendManager
@@ -1865,9 +1862,6 @@ def initializeBackends():
 		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating config server '%s'" % getSysConfig()['fqdn'])
-			#depotLocalUrl  = u'file:///opt/pcbin/install'
-			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 
@@ -1898,9 +1892,6 @@ def initializeBackends():
 		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating depot server '%s'" % getSysConfig()['fqdn'])
-			#depotLocalUrl  = u'file:///opt/pcbin/install'
-			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 
@@ -1935,6 +1926,9 @@ def initializeBackends():
 
 			#make sure the config server is present in all backends or we get reference error later on
 			backend.host_insertObject(configServer)
+
+		# initializeConfigs does only handle a single object
+		configServer = configServer[0]
 
 	initializeConfigs(backend=backend, configServer=configServer)
 	backend.backend_exit()
