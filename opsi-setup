@@ -1843,8 +1843,8 @@ def setPasswdRights():
 
 def initializeBackends():
 	if not os.path.exists(u'/etc/opsi/passwd'):
-		f = codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8')
-		f.close()
+		with codecs.open(u'/etc/opsi/passwd', 'w', 'utf-8'):
+			pass
 		setPasswdRights()
 
 	from OPSI.Backend.BackendManager import BackendManager
