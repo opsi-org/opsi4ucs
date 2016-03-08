@@ -58,7 +58,7 @@ from OPSI.System.Posix import (execute, getEthernetDevices,
 	getNetworkDeviceConfig, which)
 from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
 	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
-	forceObjectId, forceProductId, forceUnicodeList)
+	forceList, forceObjectId, forceProductId, forceUnicodeList)
 from OPSI.UI import UIFactory
 from OPSI.Util import blowfishDecrypt, getfqdn, randomString
 from OPSI.Util.File import IniFile
@@ -1888,6 +1888,9 @@ def initializeBackends():
 			logger.notice(u"Converting depot server '%s' to config server" % getSysConfig()['fqdn'])
 			configServer = OpsiConfigserver.fromHash(depot[0].toHash())
 			backend.host_createObjects(configServer)
+
+			# list expected in further processing
+			configServer = [configServer]
 	else:
 		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
@@ -1913,6 +1916,7 @@ def initializeBackends():
 				isMasterDepot=True,
 				masterDepotId=None,
 			)
+
 	if configServer:
 		if configServer[0].id == getSysConfig()['fqdn']:
 			configServer = backend.host_getObjects(type='OpsiConfigserver')
@@ -1928,7 +1932,7 @@ def initializeBackends():
 			backend.host_insertObject(configServer)
 
 		# initializeConfigs does only handle a single object
-		configServer = configServer[0]
+		configServer = forceList(configServer)[0]
 
 	initializeConfigs(backend=backend, configServer=configServer)
 	backend.backend_exit()
