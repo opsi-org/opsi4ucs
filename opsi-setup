@@ -1862,9 +1862,6 @@ def initializeBackends():
 		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating config server '%s'" % getSysConfig()['fqdn'])
-			#depotLocalUrl  = u'file:///opt/pcbin/install'
-			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 
@@ -1895,9 +1892,6 @@ def initializeBackends():
 		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])
 		if not depot:
 			logger.notice(u"Creating depot server '%s'" % getSysConfig()['fqdn'])
-			#depotLocalUrl  = u'file:///opt/pcbin/install'
-			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
 			depotLocalUrl = u'file:///var/lib/opsi/depot'
 			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
 
