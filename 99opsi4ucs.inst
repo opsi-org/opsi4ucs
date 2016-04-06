@@ -10,6 +10,9 @@ VERBOSE=true
 . /usr/share/univention-join/joinscripthelper.lib
 joinscript_init
 
+# Required for reading network information
+. /usr/share/univention-lib/base.sh
+
 TFTPROOT="/var/lib/univention-client-boot"
 SERVER_ROLE=$(ucr get server/role)
 OPSI_ROLE="configserver"
@@ -77,18 +80,10 @@ fi
 
 
 # --- Get network config --------------------------------------------------------------------------------------------------------
-for iface in `ifconfig -a | grep "^[[:alnum:]]" | cut -d " " -f 1`; do
-	ip=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
-	NETMASK=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $7}'`
-	GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
-	if [ "$ip" != "" ]; then
-		if [ "$IPADDRESS" = "" ]; then
-			IPADDRESS="$ip"
-		fi
-		[ "$IPADDRESS" = "$ip" ] && break
-	fi
-done
+IPADDRESS=`get_default_ip_address`
+GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
 
+NETMASK=`get_default_netmask`
 [ "$NETMASK" = "" ] && NETMASK="255.255.255.0"
 
 if [ "$IPADDRESS" != "" ]; then
