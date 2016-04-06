@@ -211,7 +211,7 @@ if [ $ret != 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
 
-	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c32`
 
 	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
