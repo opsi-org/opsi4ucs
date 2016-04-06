@@ -1,10 +1,10 @@
 #! /bin/bash -e
 
-# Copyright (C) 2014-2015 uib GmbH
+# Copyright (C) 2014-2016 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=19
+VERSION=20
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -146,7 +146,7 @@ $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
 ## --- Deleting existing opsi extended-attribute ------------------------------------------------------------------------
-udm settings/extended_attribute remove $@ \
+udm settings/extended_attribute remove "$@" \
 	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
@@ -190,7 +190,7 @@ set -e
 
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group $fileadmingroup"
-	udm groups/group create $@ \
+	udm groups/group create "$@" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="$fileadmingroup" \
 		--set description="opsi file admin group" \
