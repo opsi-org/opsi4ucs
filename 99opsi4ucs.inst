@@ -12,6 +12,8 @@ joinscript_init
 
 # Required for reading network information
 . /usr/share/univention-lib/base.sh
+# Required for ucs_addServiceToLocalhost
+. /usr/share/univention-lib/ldap.sh
 
 TFTPROOT="/var/lib/univention-client-boot"
 SERVER_ROLE=$(ucr get server/role)
@@ -109,9 +111,7 @@ $VERBOSE && echo "Found configserver: $config_server"
 set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
 	$VERBOSE && echo "No Server marked as OpsiConfigserver, trying to set $FQDN as OpsiConfigserver for $ROOT_DN"
-	udm computers/$SERVER_ROLE modify "$@" --dn $(ucr get ldap/hostdn) --append service=OpsiConfigserver
-	$VERBOSE && echo "Creating Service Entry for UMC."
-	udm settings/service create "$@" --ignore_exists --position "cn=services,cn=univention,$ROOT_DN" --set name=OpsiConfigserver
+	ucs_addServiceToLocalhost "OpsiConfigserver" "$@"
 
 elif [ "$config_server" != ".$DOMAIN" -a "$config_server" != "$FQDN" ]; then
 	OPSI_ROLE="depotserver"
