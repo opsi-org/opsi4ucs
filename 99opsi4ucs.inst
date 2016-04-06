@@ -109,8 +109,6 @@ fi
 
 # --- Determine opsi role -------------------------------------------------------------------------------------------------------
 set +e
-# old version
-# config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
 config_server="$(univention-ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 $VERBOSE && echo "Found configserver: $config_server"
 set -e
