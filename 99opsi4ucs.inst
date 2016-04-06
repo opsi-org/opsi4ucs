@@ -273,12 +273,8 @@ udm container/cn create "$@" \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
-#fileadminuserdn=$(udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' | cut -d ":" -f 2)
-#fileadmingroupdn=$(udm groups/group list "$@" --filter "(cn=opsifileadmins)" | grep '^DN:' | cut -d ":" -f 2)
-
 USERID=$(getent passwd opsiconfd | cut -d ":" -f 3)
 GROUPID=$(getent group opsifileadmins | cut -d ":" -f 3)
-
 
 set +e
 udm shares/share list "$@" --filter "(name=opsi_depot_rw)" | grep '^DN:' | grep $FQDN 1>/dev/null
@@ -376,7 +372,6 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-#
 
 if [ -e /etc/init.d/samba4 ]; then
 	/etc/init.d/samba4 force-reload
