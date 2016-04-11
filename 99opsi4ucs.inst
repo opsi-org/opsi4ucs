@@ -233,7 +233,7 @@ if [ $ret != 0 ]; then
 	# User opsiconfd does not exist in ldap
 	$VERBOSE && echo "Adding user opsiconfd"
 
-	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+	pass=`makepasswd --chars=32`
 
 	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
