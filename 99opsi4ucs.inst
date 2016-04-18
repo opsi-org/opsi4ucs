@@ -498,10 +498,6 @@ ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
 ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"
 ucr set ucs/web/overview/entries/admin/opsi-configed/priority=50
 
-$VERBOSE && echo "Commit changes"
-ucr commit /var/www/ucs-overview/de.html
-ucr commit /var/www/ucs-overview/en.html
-ucr commit /etc/pam.d/opsi-auth
 dpkg-reconfigure opsiconfd
 
 $VERBOSE && echo "Restarting services"
