@@ -382,12 +382,9 @@ fi
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
-$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
 
-grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
-echo admin users = administrator join-backup @$fileadmingroup >> /etc/samba/shares.conf.d/opsi_depot_tmp
-mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
-ucr commit /etc/samba/shares.conf.d/opsi_depot
+$VERBOSE && echo "Setting samba/acl/allow/execute/always=true"
+ucr set samba/acl/allow/execute/always=true
 
 ucr set samba4/ntacl/backend=native
 
