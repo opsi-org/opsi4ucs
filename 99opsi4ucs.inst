@@ -322,8 +322,6 @@ if [ $ret != 0 ]; then
 		--set sambaWriteable=0 \
 		--set sambaBrowseable=1 \
 		--set sambaPublic=0 \
-		--set sambaOplocks=0 \
-		--set sambaLevel2Oplocks=0 \
 		--set sambaCustomSettings='"follow symlinks" yes' \
 		--ignore_exists
 fi
