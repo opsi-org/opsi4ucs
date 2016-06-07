@@ -1,3 +1,9 @@
+opsi4ucs (4.0.6.7-2) stable; urgency=medium
+
+  * Depend on univention-s4-connector if running with Samba 4.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Jun 2016 15:05:03 +0200
+
 opsi4ucs (4.0.6.7-1) experimental; urgency=medium
 
   * opsi-setup: Fix another problem during config initialisiation.
