@@ -1,14 +1,19 @@
 #! /bin/bash -e
 
-# Copyright (C) 2014-2015 uib GmbH
+# Copyright (C) 2014-2016 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=19
+VERSION=20
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
 joinscript_init
+
+# Required for reading network information
+. /usr/share/univention-lib/base.sh
+# Required for ucs_addServiceToLocalhost
+. /usr/share/univention-lib/ldap.sh
 
 TFTPROOT="/var/lib/univention-client-boot"
 SERVER_ROLE=$(ucr get server/role)
@@ -77,18 +82,10 @@ fi
 
 
 # --- Get network config --------------------------------------------------------------------------------------------------------
-for iface in `ifconfig -a | grep "^[[:alnum:]]" | cut -d " " -f 1`; do
-	ip=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $3}'`
-	NETMASK=`ifconfig $iface | grep "\:[[:digit:]]*\." | sed "s/:/ /g" | awk '{ printf $7}'`
-	GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
-	if [ "$ip" != "" ]; then
-		if [ "$IPADDRESS" = "" ]; then
-			IPADDRESS="$ip"
-		fi
-		[ "$IPADDRESS" = "$ip" ] && break
-	fi
-done
+IPADDRESS=`get_default_ip_address`
+GATEWAY=`route -n | grep ^0.0.0.0 | awk '{ printf $2}'`
 
+NETMASK=`get_default_netmask`
 [ "$NETMASK" = "" ] && NETMASK="255.255.255.0"
 
 if [ "$IPADDRESS" != "" ]; then
@@ -109,16 +106,12 @@ fi
 
 # --- Determine opsi role -------------------------------------------------------------------------------------------------------
 set +e
-# old version
-# config_server=$(ldapsearch -x -L -s sub -b "$ROOT_DN" "(objectClass=opsiConfigserver)" | grep -i '^opsiHostId:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null)
 config_server="$(univention-ldapsearch -x -L -s sub -b "$ROOT_DN" "(univentionService=OpsiConfigserver)" | grep -i '^cn:' | head -n1 | cut -d ':' -f2 | tr -d ' ' 2>/dev/null).$DOMAIN"
 $VERBOSE && echo "Found configserver: $config_server"
 set -e
 if [ "$config_server" == ".$DOMAIN" ]; then
 	$VERBOSE && echo "No Server marked as OpsiConfigserver, trying to set $FQDN as OpsiConfigserver for $ROOT_DN"
-	udm computers/$SERVER_ROLE modify "$@" --dn $(ucr get ldap/hostdn) --append service=OpsiConfigserver
-	$VERBOSE && echo "Creating Service Entry for UMC."
-	udm settings/service create "$@" --ignore_exists --position "cn=services,cn=univention,$ROOT_DN" --set name=OpsiConfigserver
+	ucs_addServiceToLocalhost "OpsiConfigserver" "$@"
 
 elif [ "$config_server" != ".$DOMAIN" -a "$config_server" != "$FQDN" ]; then
 	OPSI_ROLE="depotserver"
@@ -146,7 +139,7 @@ $VERBOSE && echo "     Broadcast        : $BROADCAST"
 $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
 ## --- Deleting existing opsi extended-attribute ------------------------------------------------------------------------
-udm settings/extended_attribute remove $@ \
+udm settings/extended_attribute remove "$@" \
 	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
@@ -190,7 +183,7 @@ set -e
 
 if [ $ret != 0 ]; then
 	$VERBOSE && echo "Adding group $fileadmingroup"
-	udm groups/group create $@ \
+	udm groups/group create "$@" \
 		--position="cn=groups,$ROOT_DN" \
 		--set name="$fileadmingroup" \
 		--set description="opsi file admin group" \
@@ -218,7 +211,7 @@ if [ $ret != 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
 
-	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+	pass=`makepasswd --chars=32`
 
 	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
@@ -240,7 +233,7 @@ if [ $ret != 0 ]; then
 	# User opsiconfd does not exist in ldap
 	$VERBOSE && echo "Adding user opsiconfd"
 
-	pass=`< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12`
+	pass=`makepasswd --chars=32`
 
 	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
@@ -280,12 +273,8 @@ udm container/cn create "$@" \
 	--position="cn=shares,$ROOT_DN" \
 	--set name=$FQDN
 
-#fileadminuserdn=$(udm users/user list "$@" --filter "(uid=opsiconfd)" | grep '^DN:' | cut -d ":" -f 2)
-#fileadmingroupdn=$(udm groups/group list "$@" --filter "(cn=opsifileadmins)" | grep '^DN:' | cut -d ":" -f 2)
-
 USERID=$(getent passwd opsiconfd | cut -d ":" -f 3)
 GROUPID=$(getent group opsifileadmins | cut -d ":" -f 3)
-
 
 set +e
 udm shares/share list "$@" --filter "(name=opsi_depot_rw)" | grep '^DN:' | grep $FQDN 1>/dev/null
@@ -383,7 +372,6 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-#
 
 if [ -e /etc/init.d/samba4 ]; then
 	/etc/init.d/samba4 force-reload
@@ -394,12 +382,9 @@ fi
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
-$VERBOSE && echo "Removing vfs objects = acl_xattr from shares"
 
-grep -v "vfs objects = acl_xattr" /etc/samba/shares.conf.d/opsi_depot | grep -v "admin users" > /etc/samba/shares.conf.d/opsi_depot_tmp
-echo admin users = administrator join-backup @$fileadmingroup >> /etc/samba/shares.conf.d/opsi_depot_tmp
-mv /etc/samba/shares.conf.d/opsi_depot_tmp /etc/samba/shares.conf.d/opsi_depot
-ucr commit /etc/samba/shares.conf.d/opsi_depot
+$VERBOSE && echo "Setting samba/acl/allow/execute/always=true"
+ucr set samba/acl/allow/execute/always=true
 
 ucr set samba4/ntacl/backend=native
 
@@ -510,10 +495,6 @@ ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
 ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"
 ucr set ucs/web/overview/entries/admin/opsi-configed/priority=50
 
-$VERBOSE && echo "Commit changes"
-ucr commit /var/www/ucs-overview/de.html
-ucr commit /var/www/ucs-overview/en.html
-ucr commit /etc/pam.d/opsi-auth
 dpkg-reconfigure opsiconfd
 
 $VERBOSE && echo "Restarting services"
