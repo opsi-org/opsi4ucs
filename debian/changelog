@@ -1,3 +1,11 @@
+opsi4ucs (4.0.7.1-1) testing; urgency=medium
+
+  * 99opsi4ucs.ins: Do not set oplocks on shares.
+  * 99opsi4ucs.ins: Various refactorings after kind suggestion from
+    Stefan Gohmann of Univention.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 12 Jul 2016 15:44:00 +0200
+
 opsi4ucs (4.0.6.7-2) stable; urgency=medium
 
   * Depend on univention-s4-connector if running with Samba 4.
