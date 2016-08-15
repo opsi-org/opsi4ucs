@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=20
+VERSION=21
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -14,6 +14,8 @@ joinscript_init
 . /usr/share/univention-lib/base.sh
 # Required for ucs_addServiceToLocalhost
 . /usr/share/univention-lib/ldap.sh
+# Required for check for synchronised opsifileadmin group
+. /usr/share/univention-lib/ucr.sh
 
 TFTPROOT="/var/lib/univention-client-boot"
 SERVER_ROLE=$(ucr get server/role)
@@ -468,17 +470,26 @@ else
 		$VERBOSE && echo "Automatic Registration of Server as opsi-Depotserver could not be done, because serverole: $SERVER_ROLE was detected, please execute opsi-setup --register-depot after installation."
 		ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 	fi
+
 	set +e
-	$VERBOSE && echo "Check for opsi fileadmingroup."
-	getent group $fileadmingroup >/dev/null 2>/dev/null
-	if [ $? != 0 ]; then
-		if [ -e "/usr/lib/univention-pam/ldap-group-to-file.py" ]; then
-			python /usr/lib/univention-pam/ldap-group-to-file.py >/dev/null 2>/dev/null || true
-		else
-			sleep 20
+	$VERBOSE && echo -n "Check for opsi fileadmingroup "
+	count=0
+	while [ $count -le 600 ]; do
+		getent group "$fileadmingroup" >/dev/null 2>/dev/null && break
+		$VERBOSE && echo -n "."
+		# restart samba-ad-dc every 200 seconds
+		if [ "$count" = 20 ] || [ "$count" = 400 ]; then
+			if is_ucr_true nss/group/cachefile && test -e /usr/lib/univention-pam/ldap-group-to-file.py; then
+				python /usr/lib/univention-pam/ldap-group-to-file.py >/dev/null 2>/dev/null || true
+			else
+				nscd -i group
+			fi
 		fi
-	fi
+		sleep 1
+		count=$((count+1))
+	done
 	set -e
+
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
 fi
