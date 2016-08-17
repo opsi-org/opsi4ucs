@@ -10,7 +10,7 @@ Standards-Version: 3.9.4
 Package: opsi4ucs
 Section: opsi
 Architecture: all
-Depends: debconf, python(>= 2.6.6-3~), python-opsi (>=4.0.6.35), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20140118), opsi-configed, univention-samba4 | univention-samba, univention-s4-connector | univention-samba, sudo, wget, debconf, ${python:Depends}, ${misc:Depends}
+Depends: debconf, python(>= 2.6.6-3~), python-opsi (>=4.0.6.35), opsiconfd (>=4.0), opsipxeconfd (>=4.0), opsi-utils (>=4.0), opsi-linux-bootimage (>=20140118), opsi-configed, univention-samba4 | univention-samba, univention-s4-connector | univention-samba, sudo, wget, ${python:Depends}, ${misc:Depends}
 Description: opsi software deployment for ucs
  opsi4ucs integrates opsi into an ucs server.
  .
