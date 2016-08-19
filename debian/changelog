@@ -1,3 +1,12 @@
+opsi4ucs (4.0.7.1-2) experimental; urgency=medium
+
+  * 99opsi4ucs.inst: Wait up to 10 minutes for the opsifileadmingroup
+    to be synchronised to the local host.
+    Thanks to Stefan Gohmann of Univention for the patch.
+  * Removed duplicate dependency to debconf.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 19 Aug 2016 09:46:42 +0200
+
 opsi4ucs (4.0.7.1-1) testing; urgency=medium
 
   * 99opsi4ucs.ins: Do not set oplocks on shares.
