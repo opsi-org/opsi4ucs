@@ -468,7 +468,6 @@ if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master"
 else
 	if [ "$OPSI_ROLE" = "depotserver" ]; then
 		$VERBOSE && echo "Automatic Registration of Server as opsi-Depotserver could not be done, because serverole: $SERVER_ROLE was detected, please execute opsi-setup --register-depot after installation."
-		ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 	fi
 
 	set +e
