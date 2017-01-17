@@ -1,10 +1,10 @@
 #! /bin/bash -e
 
-# Copyright (C) 2014-2016 uib GmbH
+# Copyright (C) 2014-2017 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=21
+VERSION=22
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -444,7 +444,7 @@ fi
 
 # --- Configure opsi ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Configuring opsi"
-ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
+test -e /etc/opsi/backendManager/dispatch.conf || ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 $VERBOSE && echo "Checking security options for opsi"
 
 ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all=ACCEPT
