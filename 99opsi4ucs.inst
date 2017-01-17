@@ -444,7 +444,6 @@ fi
 
 # --- Configure opsi ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Configuring opsi"
-test -e /etc/opsi/backendManager/dispatch.conf || ln -sf /etc/opsi/backendManager/dispatch.conf.default /etc/opsi/backendManager/dispatch.conf
 $VERBOSE && echo "Checking security options for opsi"
 
 ucr set security/packetfilter/package/opsi4ucs/tcp/4447/all=ACCEPT
