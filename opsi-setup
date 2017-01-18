@@ -1723,7 +1723,7 @@ def restartServices():
 
 
 def renewOpsiconfdCert(unattendedConfiguration=None):
-	def renewCert():
+	def makeCert():
 		if certificateExisted:
 			renewCertificate(
 				yearsUntilExpiration=certparams['expires'],
@@ -1762,7 +1762,7 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 		certparams.update(unattendedConfiguration)
 		logger.debug(u"Configuration for unattended certificate renewal: {0}".format(certparams))
 
-		renewCert()
+		makeCert()
 		setPasswdRights()
 		setRights(OPSICONFD_CERTFILE)
 		restartServices()
@@ -1775,21 +1775,19 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 	try:
 		while True:
 			values = [
-				{"name": u"Country", "value": certparams["country"]},
-				{"name": u"State", "value": certparams["state"]},
-				{"name": u"Locality", "value": certparams["locality"]},
-				{"name": u"Organization", "value": certparams["organization"]},
-				{"name": u"OrganizationUnit", "value": certparams["organizationalUnit"]},
-				{"name": u"Hostname", "value": certparams["commonName"]},
-				{"name": u"Emailaddress", "value": certparams["emailAddress"]},
-				{"name": u"Expires (Years)", "value": certparams["expires"]},
+				{"name": u"Country", "value": certparams["country"] or ''},
+				{"name": u"State", "value": certparams["state"] or ''},
+				{"name": u"Locality", "value": certparams["locality"] or ''},
+				{"name": u"Organization", "value": certparams["organization"] or ''},
+				{"name": u"OrganizationUnit", "value": certparams["organizationalUnit"] or ''},
+				{"name": u"Hostname", "value": certparams["commonName"] or ''},
+				{"name": u"Emailaddress", "value": certparams["emailAddress"] or ''},
+				{"name": u"Expires (Years)", "value": certparams["expires"] or ''},
 			]
 			values = ui.getValues(title=u'Renew opsiconfd Certificate', width=70, height=15, entries=values)
 
 			if values is None:
-				raise Exception(u"Canceled")
-
-			error = None
+				raise RuntimeError(u"Canceled")
 
 			certparams["country"] = values[0]["value"]
 			certparams["state"] = values[1]["value"]
@@ -1798,6 +1796,8 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 			certparams["organizationalUnit"] = values[4]["value"]
 			certparams["commonName"] = values[5]["value"]
 			certparams["emailAddress"] = values[6]["value"]
+
+			error = None
 
 			if error is None:
 				if not certparams["commonName"] == forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF)):
@@ -1818,15 +1818,7 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 		ui.exit()
 		logger.setConsoleLevel(consoleLevel)
 
-	if certificateExisted:
-		renewCertificate(
-			yearsUntilExpiration=certparams['expires'],
-			config=certparams
-		)
-	else:
-		createCertificate(config=certparams)
-
-	renewCert()
+	makeCert()
 	setPasswdRights()
 	setRights(OPSICONFD_CERTFILE)
 	restartServices()
