@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=22
+VERSION=23
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -225,6 +225,8 @@ if [ $ret != 0 ]; then
 		--set password="${pass}" \
 		--set overridePWLength=1 \
 		--ignore_exists
+
+	opsi-admin -d method user_setCredentials 'pcpatch' "${pass}"
 fi
 
 set +e
