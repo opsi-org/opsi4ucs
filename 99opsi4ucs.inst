@@ -226,6 +226,9 @@ if [ $ret != 0 ]; then
 		--set overridePWLength=1 \
 		--ignore_exists
 
+	# Group must be present in /var/lib/extrausers/group
+	# -> grep until there :)
+	sleep 60
 	opsi-admin -d method user_setCredentials 'pcpatch' "${pass}"
 fi
 
