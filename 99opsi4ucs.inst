@@ -237,7 +237,7 @@ if [ $ret != 0 ]; then
 	done
 	set -e
 
-	opsi-admin -d method user_setCredentials 'pcpatch' "${pass}" || echo "Setting the opsi credentials for the user pcpatch failed! Please run 'opsi-admin -d task setPcpatchPassword' manually afterwards!"
+	opsi-admin -d method user_setCredentials 'pcpatch' "${pass}" || echo "WARNING: Setting the opsi credentials for the user pcpatch failed! Please run 'opsi-admin -d method user_setCredentials pcpatch ${pass}' manually afterwards!"
 fi
 
 set +e
