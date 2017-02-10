@@ -1,3 +1,20 @@
+opsi4ucs (4.0.7.2-2) testing; urgency=medium
+
+  * Removed obsolete files.
+  * Wait up to 10 minutes to have the opsifileadmin group synced before
+    setting the credentials for pcpatch in opsi.
+  * Provide an error message if setting the credentials for pcpatch in opsi
+    fails to make sure an administrator can manually fix the problem.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 10 Feb 2017 11:30:26 +0100
+
+opsi4ucs (4.0.7.2-1) experimental; urgency=medium
+
+  * 99opsi4ucs.inst: Setting the password of the pcpatch user after
+    creating it.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 18 Jan 2017 14:49:26 +0100
+
 opsi4ucs (4.0.7.1-3) experimental; urgency=medium
 
   * 99opsi4ucs.inst: Linking dispatch.conf will only be done on an opsi depot

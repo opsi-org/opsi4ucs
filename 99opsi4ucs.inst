@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=22
+VERSION=24
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -225,6 +225,19 @@ if [ $ret != 0 ]; then
 		--set password="${pass}" \
 		--set overridePWLength=1 \
 		--ignore_exists
+
+	set +e
+	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced..."
+	count=0
+	while [ $count -le 600 ]; do
+		grep "$fileadmingroup" /var/lib/extrausers/group >/dev/null 2>/dev/null && break
+		$VERBOSE && echo -n "."
+		sleep 1
+		count=$((count+1))
+	done
+	set -e
+
+	opsi-admin -d method user_setCredentials 'pcpatch' "${pass}" || echo "WARNING: Setting the opsi credentials for the user pcpatch failed! Please run 'opsi-admin -d method user_setCredentials pcpatch ${pass}' manually afterwards!"
 fi
 
 set +e
