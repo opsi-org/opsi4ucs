@@ -1,3 +1,9 @@
+opsi4ucs (4.0.7.2-3) testing; urgency=medium
+
+  * Setting the credentials waits until the backend was initialised.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 15 Feb 2017 14:45:14 +0100
+
 opsi4ucs (4.0.7.2-2) testing; urgency=medium
 
   * Removed obsolete files.
