@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=25
+VERSION=26
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -504,6 +504,7 @@ else
 
 	if [ $pcpatchUserMissing != 0 ]; then
 		opsi-admin -d method user_setCredentials 'pcpatch' "${pcpatchpassword}"
+		opsi-admin -d task setPcpatchPassword "${pcpatchpassword}"
 	fi
 fi
 
