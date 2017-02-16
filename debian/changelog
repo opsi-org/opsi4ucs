@@ -1,3 +1,12 @@
+opsi4ucs (4.0.7.3-1) testing; urgency=medium
+
+  * opsi-setup: init-current-config will not set the pcpatch password
+    to a random value.
+  * If the pcpatch user is created during a run of the join script we then
+    set the password to the known value afterwards.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 16 Feb 2017 15:56:48 +0100
+
 opsi4ucs (4.0.7.2-3) testing; urgency=medium
 
   * Setting the credentials waits until the backend was initialised.
