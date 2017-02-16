@@ -504,6 +504,7 @@ else
 
 	if [ $pcpatchUserMissing != 0 ]; then
 		opsi-admin -d method user_setCredentials 'pcpatch' "${pcpatchpassword}"
+		opsi-admin -d task setPcpatchPassword "${pcpatchpassword}"
 	fi
 fi
 
