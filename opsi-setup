@@ -4,7 +4,7 @@
 # This module is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2010, 2013-2016 uib GmbH
+# Copyright (C) 2010, 2013-2017 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 
@@ -200,57 +200,14 @@ def configureClientUser():
 		os.mkdir(sshDir)
 	if not os.path.exists(idRsa):
 		logger.notice(u"   Creating RSA private key for user %s in '%s'" % (CLIENT_USER, idRsa))
-		execute(u"%s -N '' -t rsa -f %s" % ( which('ssh-keygen'), idRsa))
+		execute(u"%s -N '' -t rsa -f %s" % (which('ssh-keygen'), idRsa))
 
 	if not os.path.exists(authorizedKeys):
-		 with codecs.open(idRsaPub, 'r', 'utf-8') as f:
+		with codecs.open(idRsaPub, 'r', 'utf-8') as f:
 			with codecs.open(authorizedKeys, 'w', 'utf-8') as f2:
 				f2.write(f.read())
 
 	setRights(sshDir)
-
-	password = None
-	backend = None
-	from OPSI.Backend.BackendManager import BackendManager
-	try:
-		backend = BackendManager(
-			dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
-			backendConfigDir=u'/etc/opsi/backends',
-			extensionConfigDir=u'/etc/opsi/backendManager/extend.d',
-			depotBackend=True
-		)
-		depot = backend.host_getObjects(type='OpsiDepotserver', id=getSysConfig()['fqdn'])[0]
-
-		configserverId = None
-		for configserver in backend.host_getObjects(type='OpsiConfigserver'):
-			if (configserver.id == getSysConfig()['fqdn']):
-				configserverId = None
-				break
-			else:
-				configserverId = configserver.id
-
-		if configserverId:
-			try:
-				jsonrpcBackend = JSONRPCBackend(address=configserverId, username=depot.id, password=depot.opsiHostKey)
-				password = blowfishDecrypt(depot.opsiHostKey, jsonrpcBackend.user_getCredentials(username=u'pcpatch', hostId=depot.id)['password'])
-				jsonrpcBackend.backend_exit()
-			except Exception as e:
-				logger.info(u"Failed to get client user (pcpatch) password from configserver: %s" % e)
-		if not password:
-			password = blowfishDecrypt(depot.opsiHostKey, backend.user_getCredentials(username=u'pcpatch', hostId=depot.id)['password'])
-	except Exception as e:
-		logger.info(u"Failed to get client user (pcpatch) password: %s" % e)
-		password = randomString(12)
-	finally:
-		if backend is not None:
-			backend.backend_exit()
-
-	if not password:
-		logger.warning("No password for pcpatch found. Generating random password.")
-		password = randomString(12)
-
-	logger.addConfidentialString(password)
-	execute('opsi-admin -d task setPcpatchPassword "%s"' % password)
 
 
 def update(fromVersion=None):
