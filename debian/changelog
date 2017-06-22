@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.1-2) testing; urgency=medium
+
+  * Merged changes from opsi4ucs 4.0.7.4.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 22 Jun 2017 16:49:13 +0200
+
 opsi4ucs (4.1.1.1-1) stable; urgency=medium
 
   * Remove references to obsolete LDAP support.
