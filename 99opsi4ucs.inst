@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=24
+VERSION=27
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -207,13 +207,13 @@ fi
 
 set +e
 udm users/user list "$@" --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
-ret=$?
+pcpatchUserMissing=$?
 set -e
-if [ $ret != 0 ]; then
+if [ $pcpatchUserMissing != 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
 
-	pass=`makepasswd --chars=32`
+	pcpatchpassword=`makepasswd --chars=32`
 
 	udm users/user create "$@" \
 		--position="cn=users,$ROOT_DN" \
@@ -222,7 +222,7 @@ if [ $ret != 0 ]; then
 		--set unixhome="/var/lib/opsi" \
 		--set primaryGroup="cn=$fileadmingroup,cn=groups,$ROOT_DN" \
 		--set lastname="pcpatch" \
-		--set password="${pass}" \
+		--set password="${pcpatchpassword}" \
 		--set overridePWLength=1 \
 		--ignore_exists
 
@@ -236,8 +236,6 @@ if [ $ret != 0 ]; then
 		count=$((count+1))
 	done
 	set -e
-
-	opsi-admin -d method user_setCredentials 'pcpatch' "${pass}" || echo "WARNING: Setting the opsi credentials for the user pcpatch failed! Please run 'opsi-admin -d method user_setCredentials pcpatch ${pass}' manually afterwards!"
 fi
 
 set +e

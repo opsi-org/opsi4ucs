@@ -5,6 +5,27 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
 
+opsi4ucs (4.0.7.4-1) testing; urgency=medium
+
+  * Removed workarounds for automatic member support from the joinscript.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 22 Jun 2017 16:35:21 +0200
+
+opsi4ucs (4.0.7.3-1) testing; urgency=medium
+
+  * opsi-setup: init-current-config will not set the pcpatch password
+    to a random value.
+  * If the pcpatch user is created during a run of the join script we then
+    set the password to the known value afterwards.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 16 Feb 2017 15:56:48 +0100
+
+opsi4ucs (4.0.7.2-3) testing; urgency=medium
+
+  * Setting the credentials waits until the backend was initialised.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 15 Feb 2017 14:45:14 +0100
+
 opsi4ucs (4.0.7.2-2) testing; urgency=medium
 
   * Removed obsolete files.
