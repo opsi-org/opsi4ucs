@@ -191,7 +191,7 @@ def update(fromVersion=None):
 			(regex, backends) = entry
 			if not re.search(regex, 'backend_createBase'):
 				continue
-			if not 'jsonrpc' in backends:
+			if 'jsonrpc' not in backends:
 				isConfigServer = True
 			break
 	except Exception as e:
@@ -814,7 +814,7 @@ def configureMySQLBackend(unattendedConfiguration=None):
 	if unattendedConfiguration is not None:
 		errorTemplate = u"Missing '{key}' in unattended configuration."
 		for key in ('dbAdminUser', 'dbAdminPass'):
-			if not key in unattendedConfiguration:
+			if key not in unattendedConfiguration:
 				raise Exception(errorTemplate.format(key=key))
 
 		dbAdminUser = unattendedConfiguration['dbAdminUser']
@@ -1498,7 +1498,7 @@ def editConfigDefaults():
 					continue
 
 				possibleValues = configs[selectedConfig].getPossibleValues()
-				if not value in possibleValues:
+				if value not in possibleValues:
 					possibleValues.append(value)
 					configs[selectedConfig].setPossibleValues(possibleValues)
 				configs[selectedConfig].setDefaultValues(value)
