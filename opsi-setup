@@ -1264,7 +1264,7 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 			error = None
 
 			if error is None:
-				if not certparams["commonName"] == forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF)):
+				if certparams["commonName"] != getLocalFqdn():
 					error = "Hostname must be the FQDN from Server"
 
 			if error is None:
