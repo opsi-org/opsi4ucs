@@ -97,75 +97,37 @@ ipAddress = None
 backendConfig = {}
 
 
+def getDistribution():
+	distribution = ''
+	try:
+		f = os.popen('lsb_release -d 2>/dev/null')
+		distribution = f.read().split(':')[1].strip()
+		f.close()
+	except:
+		pass
+	return distribution
+
+
 def getSysConfig():
 	global sysConfig
 	if sysConfig:
 		return sysConfig
 
-	sysConfig['distributor'] = u'unknown'
-	sysConfig['distribution'] = u'unknown'
-	try:
-		f = os.popen('lsb_release -i 2>/dev/null')
-		sysConfig['distributor'] = f.read().split(':')[1].strip()
-		f.close()
-		f = os.popen('lsb_release -d 2>/dev/null')
-		sysConfig['distribution'] = f.read().split(':')[1].strip()
-		f.close()
-	except Exception as e:
-		logger.warning(u"Failed to get distributor/distribution: %s" % e)
-
 	logger.notice(u"Getting current system config")
-	if ipAddress:
-		sysConfig['ipAddress'] = ipAddress
-	try:
-		sysConfig['fqdn'] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
-	except:
-		raise Exception(u"Failed to get fully qualified domain name, got '%s'" % getfqdn(conf=OPSI_GLOBAL_CONF))
 
+	distri = Distribution()
+	sysConfig['distributor'] = distri.distributor
+	sysConfig['distribution'] = getDistribution()
+
+	if not sysConfig['distributor'] or not sysConfig['distribution']:
+		logger.warning(u"Failed to get distributor/distribution")
+
+	sysConfig.update(getNetworkConfiguration(ipAddress))
+
+	sysConfig['fqdn'] = getLocalFqdn()
 	sysConfig['hostname'] = sysConfig['fqdn'].split(u'.')[0]
 	sysConfig['domain'] = u'.'.join(sysConfig['fqdn'].split(u'.')[1:])
-	if 'ipAddress' not in sysConfig:
-		sysConfig['ipAddress'] = socket.gethostbyname(sysConfig['fqdn'])
-		if sysConfig['ipAddress'].split(u'.')[0] in ('127', '169'):
-			sysConfig['ipAddress'] = None
-	sysConfig['hardwareAddress'] = None
-
-	for device in getEthernetDevices():
-		devconf = getNetworkDeviceConfig(device)
-		if devconf['ipAddress'] and devconf['ipAddress'].split(u'.')[0] not in ('127', '169'):
-			if not sysConfig['ipAddress']:
-				sysConfig['ipAddress'] = devconf['ipAddress']
-			if (sysConfig['ipAddress'] == devconf['ipAddress']):
-				sysConfig['netmask'] = devconf['netmask']
-				sysConfig['hardwareAddress'] = devconf['hardwareAddress']
-				break
-
-	if not sysConfig['ipAddress']:
-		raise Exception(u"Failed to get a valid ip address for fqdn '%s'" % sysConfig['fqdn'])
-
-	if not sysConfig.get('netmask'):
-		sysConfig['netmask'] = u'255.255.255.0'
-
-	sysConfig['broadcast'] = u''
-	sysConfig['subnet'] = u''
-	for i in range(4):
-		if sysConfig['broadcast']:
-			sysConfig['broadcast'] += u'.'
-		if sysConfig['subnet']:
-			sysConfig['subnet']    += u'.'
-
-		sysConfig['subnet'] += u'%d' % ( int(sysConfig['ipAddress'].split(u'.')[i]) & int(sysConfig['netmask'].split(u'.')[i]) )
-		sysConfig['broadcast'] += u'%d' % ( int(sysConfig['ipAddress'].split(u'.')[i]) | int(sysConfig['netmask'].split(u'.')[i]) ^ 255 )
-
-	sysConfig['winDomain'] = u''
-	if os.path.exists(SMB_CONF):
-		f = codecs.open(SMB_CONF, 'r', 'utf-8')
-		for line in f.readlines():
-			match = re.search('^\s*workgroup\s*=\s*(\S+)\s*$', line)
-			if match:
-				sysConfig['winDomain'] = match.group(1).upper()
-				break
-		f.close()
+	sysConfig['winDomain'] = readWindowsDomainFromSambaConfig(SMB_CONF)
 
 	logger.notice(u"System information:")
 	logger.notice(u"   distributor  : %s" % sysConfig['distributor'])
