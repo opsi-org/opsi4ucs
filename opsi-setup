@@ -32,65 +32,52 @@ opsi-setup - swiss army knife for opsi administration.
 
 import codecs
 import getopt
-import grp
 import json
 import os
 import pwd
 import re
 import shutil
 import sys
-import socket
 import time
 
-import OPSI.System.Posix as Posix
 import OPSI.Util.Task.ConfigureBackend as backendUtils
-from OPSI.Backend.File import FileBackend
+from OPSI.Backend.BackendManager import BackendManager
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Backend.Backend import ExtendedConfigDataBackend
+from OPSI.Config import DEFAULT_DEPOT_USER as CLIENT_USER
 from OPSI.Logger import Logger, LOG_NOTICE, LOG_NONE, LOG_DEBUG, LOG_INFO
-from OPSI.Object import (ConfigState, HostGroup, LocalbootProduct,
-	NetbootProduct, ObjectToGroup, OpsiClient,
-	OpsiConfigserver, OpsiDepotserver, ProductDependency, ProductOnClient,
-	ProductOnDepot, ProductPropertyState, UnicodeConfig, UnicodeProductProperty)
-from OPSI.System.Posix import (execute, getEthernetDevices,
-	getNetworkDeviceConfig, which)
-from OPSI.Types import (forceActionRequest, forceFilename, forceGroupId,
-	forceHostId, forceInt, forceInstallationStatus, forceIpAddress,
-	forceList, forceObjectId, forceProductId, forceUnicodeList)
+from OPSI.Object import OpsiDepotserver
+from OPSI.System.Posix import (
+	Distribution, execute, getLocalFqdn, getNetworkConfiguration, which)
+from OPSI.Types import (
+	forceFilename, forceInt, forceIpAddress, forceUnicodeList)
 from OPSI.UI import UIFactory
-from OPSI.Util import blowfishDecrypt, getfqdn, randomString
-from OPSI.Util.File import IniFile
-from OPSI.Util.File.Opsi import (BackendDispatchConfigFile, HostKeyFile,
-	PackageControlFile)
-from OPSI.Util.Task.Certificate import (DEFAULT_CERTIFICATE_PARAMETERS,
-	OPSICONFD_CERTFILE, NoCertificateError, UnreadableCertificateError,
+from OPSI.Util.File.Opsi import BackendDispatchConfigFile
+from OPSI.Util.Task.Certificate import (
+	DEFAULT_CERTIFICATE_PARAMETERS,	OPSICONFD_CERTFILE,
+	NoCertificateError, UnreadableCertificateError,
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
-from OPSI.Util.Task.ConfigureBackend.ConfigurationData import initializeConfigs
+from OPSI.Util.Task.ConfigureBackend.ConfigurationData import (
+	_getServerAddress as getServerAddress, initializeConfigs,
+	readWindowsDomainFromSambaConfig)
 from OPSI.Util.Task.ConfigureBackend.DHCPD import configureDHCPD
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
 	configureMySQLBackend as configureMySQLBackendWithoutGUI
 )
-from OPSI.Util.Task.Rights import setRights
-from OPSI.Util.Task.Samba import configureSamba
+from OPSI.Util.Task.InitializeBackend import (
+	_getServerConfig as getServerConfig, initializeBackends)
+from OPSI.Util.Task.Rights import setPasswdRights, setRights
+from OPSI.Util.Task.Samba import SMB_CONF, configureSamba
 from OPSI.Util.Task.Sudoers import patchSudoersFileForOpsi
+from OPSI.Util.Task.UpdateBackend.File import updateFileBackend
 from OPSI.Util.Task.UpdateBackend.MySQL import updateMySQLBackend
 
+LOG_FILE = u'/tmp/opsi-setup.log'
 
 logger = Logger()
-
 logger.setConsoleLevel(LOG_NOTICE)
 logger.setConsoleColor(True)
-
-LOG_FILE = u'/tmp/opsi-setup.log'
-SMB_CONF = u'/etc/samba/smb.conf'
-DHCPD_CONF = Posix.locateDHCPDConfig(u'/etc/dhcp3/dhcpd.conf')
-OPSICONFD_USER = u'opsiconfd'
-ADMIN_GROUP = u'opsiadmin'
-CLIENT_USER = u'pcpatch'
-
-OPSI_GLOBAL_CONF = u'/etc/opsi/global.conf'
 
 sysConfig = {}
 ipAddress = None
@@ -345,233 +332,267 @@ def registerDepot(username=None, password=None, configserver=None):
 		adminPass = password
 
 		try:
-			jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
+			jsonrpcBackend = JSONRPCBackend(address=config['address'], username=adminUser, password=adminPass)
 			if not jsonrpcBackend.accessControl_userIsAdmin():
 				raise Exception(u"User '%s' is not an admin user" % adminUser)
 		except Exception as e:
 			logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
 		logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
 
-		depots = jsonrpcBackend.host_getObjects(id = getSysConfig()['fqdn'])
+		depots = jsonrpcBackend.host_getObjects(id=getLocalFqdn())
 		if depots:
 			# Already exists
 			depot = depots[0]
-			if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u''
-			if not depot.masterDepotId:   depot.masterDepotId = u''
-			if not depot.hardwareAddress: depot.hardwareAddress = getSysConfig()['hardwareAddress'] or u''
-			if not depot.ipAddress:       depot.ipAddress = getSysConfig()['ipAddress'] or u''
-			if not depot.networkAddress:  depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
-			if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
-			if not depot.masterDepotId:   depot.masterDepotId = None
+			if not depot.depotWebdavUrl:
+				depot.depotWebdavUrl = u''
+			if not depot.masterDepotId:
+				depot.masterDepotId = u''
+			if not depot.hardwareAddress:
+				depot.hardwareAddress = getSysConfig()['hardwareAddress'] or u''
+			if not depot.ipAddress:
+				depot.ipAddress = getSysConfig()['ipAddress'] or u''
+			if not depot.networkAddress:
+				depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
+			if not depot.depotWebdavUrl:
+				depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
+			if not depot.masterDepotId:
+				depot.masterDepotId = None
+
+			if not depot.workbenchLocalUrl:
+				depot.workbenchLocalUrl = u'file:///var/lib/opsi/workbench'
+
+			if not depot.workbenchRemoteUrl:
+				depotAddress = getServerAddress(depot.depotRemoteUrl)
+				remoteWorkbenchPath = u'smb://{}/opsi_workbench'.format(depotAddress)
+				depot.workbenchRemoteUrl = remoteWorkbenchPath
 		else:
-			#depotLocalUrl  = u'file:///opt/pcbin/install'
-			#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-			#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-			depotLocalUrl = u'file:///var/lib/opsi/depot'
-			depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
+			serverConfig = getServerConfig(getSysConfig()['fqdn'], getSysConfig())
 
-			depot = OpsiDepotserver(
-					id                  = getSysConfig()['fqdn'],
-					opsiHostKey         = None,
-					depotLocalUrl       = depotLocalUrl,
-					depotRemoteUrl      = depotRemoteUrl,
-					depotWebdavUrl      = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
-					repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
-					repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
-					description         = u'',
-					notes               = u'',
-					hardwareAddress     = getSysConfig()['hardwareAddress'] or u'',
-					ipAddress           = getSysConfig()['ipAddress'] or u'',
-					inventoryNumber     = u'',
-					networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
-					maxBandwidth        = 0,
-					isMasterDepot       = True,
-					masterDepotId       = None,
-			)
+			for key in ('description', 'notes', 'hardwareAddress', 'ipAddress', 'inventoryNumber'):
+				if not serverConfig[key]:
+					# We want to make sure this is set to an empty
+					# string for the UI
+					serverConfig[key] = u''
 
-
+			depot = OpsiDepotserver(serverConfig)
 	else:
 		consoleLevel = logger.getConsoleLevel()
 		logger.setConsoleLevel(LOG_NONE)
-		ui = UIFactory(type = 'snack')
+		ui = UIFactory(type='snack')
 		try:
 			adminUser = u'root'
 			adminPass = u''
 			messageBox = None
 			while True:
 				values = [
-					{ "name": u"Config server",             "value": config['address'] },
-					{ "name": u"Opsi admin user",           "value": adminUser },
-					{ "name": u"Opsi admin password",       "value": adminPass, "password": True }
+					{"name": u"Config server", "value": config['address']},
+					{"name": u"Opsi admin user", "value": adminUser},
+					{"name": u"Opsi admin password", "value": adminPass, "password": True}
 				]
-				values = ui.getValues(title = u'Config server connection', width = 70, height = 10, entries = values)
+				values = ui.getValues(title=u'Config server connection', width=70, height=10, entries=values)
 				if values is None:
 					raise Exception(u"Canceled")
 
-				config['address']  = values[0]["value"]
-				adminUser          = values[1]["value"]
-				adminPass          = values[2]["value"]
+				config['address'] = values[0]["value"]
+				adminUser = values[1]["value"]
+				adminPass = values[2]["value"]
 
-				messageBox = ui.createMessageBox(width = 70, height = 20, title = u'Register depot', text = u'')
+				messageBox = ui.createMessageBox(width=70, height=20, title=u'Register depot', text=u'')
 				# Connect to config server
 				logger.notice(u"Connecting to config server '%s' as user '%s'" % (config['address'], adminUser))
 				messageBox.addText(u"Connecting to config server '%s' as user '%s'\n" % (config['address'], adminUser))
 
 				try:
-					jsonrpcBackend = JSONRPCBackend(address = config['address'], username = adminUser, password = adminPass)
+					jsonrpcBackend = JSONRPCBackend(address=config['address'], username=adminUser, password=adminPass)
 					if not jsonrpcBackend.accessControl_userIsAdmin():
 						raise Exception(u"User '%s' is not an admin user" % adminUser)
 				except Exception as e:
 					messageBox.hide()
 					logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
-					ui.showError(text = u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e),
-							title = u'Failed to connect', width = 70, height = 6, seconds = 0)
+					ui.showError(
+						text=u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e),
+						title=u'Failed to connect',
+						width=70, height=6, seconds=0
+					)
 					continue
 				logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
 				messageBox.addText(u"Successfully connected to config server '%s' as user '%s'\n" % (config['address'], adminUser))
 				break
 
-			depots = jsonrpcBackend.host_getObjects(id = getSysConfig()['fqdn'])
+			depots = jsonrpcBackend.host_getObjects(id=getSysConfig()['fqdn'])
 			if depots:
 				# Already exists
 				depot = depots[0]
-				if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u''
-				if not depot.masterDepotId:   depot.masterDepotId = u''
-				if not depot.hardwareAddress: depot.hardwareAddress = getSysConfig()['hardwareAddress'] or u''
-				if not depot.ipAddress:       depot.ipAddress = getSysConfig()['ipAddress'] or u''
-				if not depot.networkAddress:  depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
-				if not depot.depotWebdavUrl:  depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
-			else:
-				#depotLocalUrl  = u'file:///opt/pcbin/install'
-				#depotRemoteUrl = u'smb://%s/opt_pcbin/install' % getSysConfig()['hostname']
-				#if (getSysConfig()['distribution'].lower().find('suse linux enterprise server') != -1):
-				depotLocalUrl = u'file:///var/lib/opsi/depot'
-				depotRemoteUrl = u'smb://%s/opsi_depot' % getSysConfig()['hostname']
+				if not depot.depotWebdavUrl:
+					depot.depotWebdavUrl = u''
+				if not depot.masterDepotId:
+					depot.masterDepotId = u''
+				if not depot.hardwareAddress:
+					depot.hardwareAddress = getSysConfig()['hardwareAddress'] or u''
+				if not depot.ipAddress:
+					depot.ipAddress = getSysConfig()['ipAddress'] or u''
+				if not depot.networkAddress:
+					depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
+				if not depot.depotWebdavUrl:
+					depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
 
-				depot = OpsiDepotserver(
-						id                  = getSysConfig()['fqdn'],
-						opsiHostKey         = None,
-						depotLocalUrl       = depotLocalUrl,
-						depotRemoteUrl      = depotRemoteUrl,
-						depotWebdavUrl      = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn'],
-						repositoryLocalUrl  = u'file:///var/lib/opsi/repository',
-						repositoryRemoteUrl = u'webdavs://%s:4447/repository' % getSysConfig()['fqdn'],
-						description         = u'',
-						notes               = u'',
-						hardwareAddress     = getSysConfig()['hardwareAddress'] or u'',
-						ipAddress           = getSysConfig()['ipAddress'] or u'',
-						inventoryNumber     = u'',
-						networkAddress      = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask']),
-						maxBandwidth        = 0,
-						isMasterDepot       = True,
-						masterDepotId       = None,
-				)
+				if not depot.workbenchLocalUrl:
+					depot.workbenchLocalUrl = u'file:///var/lib/opsi/workbench'
+
+				if not depot.workbenchRemoteUrl:
+					depotAddress = getServerAddress(depot.depotRemoteUrl)
+					remoteWorkbenchPath = u'smb://{}/opsi_workbench'.format(depotAddress)
+					depot.workbenchRemoteUrl = remoteWorkbenchPath
+			else:
+				serverConfig = getServerConfig(getSysConfig()['fqdn'], getSysConfig())
+
+				for key in ('description', 'notes', 'hardwareAddress', 'ipAddress', 'inventoryNumber'):
+					if not serverConfig[key]:
+						# We want to make sure this is set to an empty
+						# string for the UI
+						serverConfig[key] = u''
+
+				depot = OpsiDepotserver(serverConfig)
+
 			while True:
-				if (depot.maxBandwidth < 0):
+				if depot.maxBandwidth < 0:
 					depot.maxBandwidth = 0
-				if (depot.maxBandwidth > 0):
-					depot.maxBandwidth = int(depot.maxBandwidth/1000)
+				if depot.maxBandwidth > 0:
+					depot.maxBandwidth = int(depot.maxBandwidth / 1000)
 
 				values = [
-					{ "name": u"Description",                 "value": depot.description          },
-					{ "name": u"Inventory number",            "value": depot.inventoryNumber      },
-					{ "name": u"Notes",                       "value": depot.notes                },
-					{ "name": u"Ip address",                  "value": depot.ipAddress            },
-					{ "name": u"Hardware address",            "value": depot.hardwareAddress      },
-					{ "name": u"Network address",             "value": depot.networkAddress       },
-					{ "name": u"Maximum bandwidth (kbyte/s)", "value": depot.maxBandwidth         },
-					{ "name": u"Local depot url",             "value": depot.depotLocalUrl        },
-					{ "name": u"Remote depot url",            "value": depot.depotRemoteUrl       },
-					{ "name": u"Depot webdav url",            "value": depot.depotWebdavUrl       },
-					{ "name": u"Local repository url",        "value": depot.repositoryLocalUrl   },
-					{ "name": u"Remote repository url",       "value": depot.repositoryRemoteUrl  },
-					{ "name": u"Is master depot",             "value": depot.isMasterDepot        },
-					{ "name": u"Master depot id",             "value": depot.masterDepotId or u'' },
+					{"name": u"Description", "value": depot.description},
+					{"name": u"Inventory number", "value": depot.inventoryNumber},
+					{"name": u"Notes", "value": depot.notes},
+					{"name": u"Ip address", "value": depot.ipAddress},
+					{"name": u"Hardware address", "value": depot.hardwareAddress},
+					{"name": u"Network address", "value": depot.networkAddress},
+					{"name": u"Maximum bandwidth (kbyte/s)", "value": depot.maxBandwidth},
+					{"name": u"Local depot url", "value": depot.depotLocalUrl},
+					{"name": u"Remote depot url", "value": depot.depotRemoteUrl},
+					{"name": u"Depot webdav url", "value": depot.depotWebdavUrl},
+					{"name": u"Local repository url", "value": depot.repositoryLocalUrl},
+					{"name": u"Remote repository url", "value": depot.repositoryRemoteUrl},
+					{"name": u"Local workbench url", "value": depot.workbenchLocalUrl},
+					{"name": u"Remote workbench url", "value": depot.workbenchRemoteUrl},
+					{"name": u"Is master depot", "value": depot.isMasterDepot},
+					{"name": u"Master depot id", "value": depot.masterDepotId or u''},
 
 				]
-				values = ui.getValues(title = u'Depot server settings', width = 70, height = 16, entries = values)
+				values = ui.getValues(
+					title=u'Depot server settings',
+					width=70, height=16, entries=values
+				)
 				if values is None:
 					raise Exception(u"Canceled")
 
 				error = None
 				try:
-					depot.setDescription( values[0].get('value') )
+					depot.setDescription(values[0].get('value'))
 				except Exception as e:
-					if not error: error = u'Invalid description'
+					if not error:
+						error = u'Invalid description'
 
 				try:
-					depot.setInventoryNumber( values[1].get('value') )
+					depot.setInventoryNumber(values[1].get('value'))
 				except Exception as e:
-					if not error: error = u'Inventory number invalid'
+					if not error:
+						error = u'Inventory number invalid'
 
 				try:
-					depot.setNotes( values[2].get('value') )
+					depot.setNotes(values[2].get('value'))
 				except Exception as e:
-					if not error: error = u'Invalid notes'
+					if not error:
+						error = u'Invalid notes'
 
 				try:
-					depot.setIpAddress( values[3].get('value') )
+					depot.setIpAddress(values[3].get('value'))
 				except Exception as e:
-					if not error: error = u'Invalid ip address'
+					if not error:
+						error = u'Invalid ip address'
 
 				try:
-					depot.setHardwareAddress( values[4].get('value') )
+					depot.setHardwareAddress(values[4].get('value'))
 				except Exception as e:
-					if not error: error = u'Invalid hardware address'
+					if not error:
+						error = u'Invalid hardware address'
 
 				try:
-					depot.setNetworkAddress( values[5].get('value') )
+					depot.setNetworkAddress(values[5].get('value'))
 				except Exception as e:
-					if not error: error = u'Invalid network address'
+					if not error:
+						error = u'Invalid network address'
 
 				try:
-					depot.setMaxBandwidth( forceInt(values[6].get('value'))*1000 )
+					depot.setMaxBandwidth(forceInt(values[6].get('value')) * 1000)
 				except Exception as e:
-					if not error: error = u'Invalid maximum bandwidth'
+					if not error:
+						error = u'Invalid maximum bandwidth'
 
 				try:
-					depot.setDepotLocalUrl( values[7].get('value') )
+					depot.setDepotLocalUrl(values[7].get('value'))
 				except Exception as e:
-					if not error: error = u'Depot local url invalid'
+					if not error:
+						error = u'Depot local url invalid'
 
 				try:
-					depot.setDepotRemoteUrl( values[8].get('value') )
+					depot.setDepotRemoteUrl(values[8].get('value'))
 				except Exception as e:
-					if not error: error = u'Depot remote url invalid'
+					if not error:
+						error = u'Depot remote url invalid'
 
 				try:
 					if values[9].get('value'):
-						depot.setDepotWebdavUrl( values[9].get('value') )
+						depot.setDepotWebdavUrl(values[9].get('value'))
 					else:
 						depot.depotWebdavUrl = None
 				except Exception as e:
-					if not error: error = u'Depot webdav url invalid'
+					if not error:
+						error = u'Depot webdav url invalid'
 
 				try:
-					depot.setRepositoryLocalUrl( values[10].get('value') )
+					depot.setRepositoryLocalUrl(values[10].get('value'))
 				except Exception as e:
-					if not error: error = u'Repository local url invalid'
+					if not error:
+						error = u'Repository local url invalid'
 
 				try:
-					depot.setRepositoryRemoteUrl( values[11].get('value') )
+					depot.setRepositoryRemoteUrl(values[11].get('value'))
 				except Exception as e:
-					if not error: error = u'Repository remote url invalid'
+					if not error:
+						error = u'Repository remote url invalid'
 
 				try:
-					depot.setIsMasterDepot( values[12].get('value') )
+					depot.setWorkbenchLocalUrl(values[12].get('value'))
 				except Exception as e:
-					if not error: error = u'Invalid value for is master depot'
+					if not error:
+						error = u'Workbench local url invalid'
 
 				try:
-					if values[13].get('value'):
-						depot.setMasterDepotId( values[13].get('value') )
+					depot.setWorkbenchRemoteUrl(values[13].get('value'))
+				except Exception as e:
+					if not error:
+						error = u'Workbench remote url invalid'
+
+				try:
+					depot.setIsMasterDepot(values[14].get('value'))
+				except Exception as e:
+					if not error:
+						error = u'Invalid value for is master depot'
+
+				try:
+					if values[15].get('value'):
+						depot.setMasterDepotId(values[15].get('value'))
 					else:
 						depot.masterDepotId = None
 				except Exception as e:
-					if not error: error = u'Master depot id invalid'
+					if not error:
+						error = u'Master depot id invalid'
 
 				if error:
-					ui.showError(title = u'Bad value', text = error, width = 50, height = 5)
+					ui.showError(
+						title=u'Bad value', text=error, width=50, height=5
+					)
 					continue
 
 				break
