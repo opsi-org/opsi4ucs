@@ -199,7 +199,6 @@ def update(fromVersion=None):
 
 	if isConfigServer:
 		try:
-			from OPSI.Backend.BackendManager import BackendManager
 			backend = BackendManager(
 				dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
 				backendConfigDir=u'/etc/opsi/backends',
@@ -1404,7 +1403,6 @@ def initializeBackends():
 
 
 def editConfigDefaults():
-	from OPSI.Backend.BackendManager import BackendManager
 	backend = BackendManager(
 		dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
 		backendConfigDir=u'/etc/opsi/backends',
