@@ -210,17 +210,6 @@ def update(fromVersion=None):
 		except Exception as e:
 			logger.warning(e)
 
-	# 4.0 => 4.0.1
-	"""
-	link = '/var/lib/opsi/depot'
-	source = '/opt/pcbin/install'
-	if not os.path.exists(link) and os.path.exists(source):
-		try:
-			os.symlink(source, link)
-		except Exception, e:
-			logger.warning(u"Failed to create symlink '%s' pointing to '%s': %s" % (link, source, e))
-	"""
-
 	# 4.0.3 => 4.0.4
 	depotDir = '/var/lib/opsi/depot'
 	if not os.path.exists(depotDir):
