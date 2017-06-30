@@ -63,13 +63,13 @@ from OPSI.Util.Task.ConfigureBackend.ConfigurationData import (
 from OPSI.Util.Task.ConfigureBackend.DHCPD import configureDHCPD
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
-	configureMySQLBackend as configureMySQLBackendWithoutGUI
-)
+	configureMySQLBackend as configureMySQLBackendWithoutGUI)
 from OPSI.Util.Task.InitializeBackend import (
 	_getServerConfig as getServerConfig, initializeBackends)
 from OPSI.Util.Task.Rights import setPasswdRights, setRights
 from OPSI.Util.Task.Samba import SMB_CONF, configureSamba
 from OPSI.Util.Task.Sudoers import patchSudoersFileForOpsi
+from OPSI.Util.Task.UpdateBackend.ConfigurationData import updateBackendData
 from OPSI.Util.Task.UpdateBackend.File import updateFileBackend
 from OPSI.Util.Task.UpdateBackend.MySQL import updateMySQLBackend
 
