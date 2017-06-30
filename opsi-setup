@@ -601,18 +601,19 @@ def registerDepot(username=None, password=None, configserver=None):
 	backendUtils.updateConfigFile(backendConfigFile, config)
 
 	logger.notice(u"Updating dispatch config '%s'" % dispatchConfigFile)
-	lines = []
-	f = codecs.open(dispatchConfigFile, 'r', 'utf-8')
-	for line in f.readlines():
-		if line.strip() and line.strip()[0] not in (';', '#'):
-			break
-		lines.append(line)
-	f.close()
-	f = codecs.open(dispatchConfigFile, 'w', 'utf-8')
-	f.writelines(lines)
-	f.write("backend_.* : jsonrpc, opsipxeconfd, dhcpd\n")
-	f.write(".*         : jsonrpc\n")
-	f.close()
+
+	# We want to keep lines that are currently commented out and only
+	# replace the currently active backend configuration
+	with codecs.open(dispatchConfigFile, 'r', 'utf-8') as originalDispatchConfig:
+		lines = [
+			line for line in originalDispatchConfig
+			if line.strip().startswith((';', '#'))
+		]
+
+	with codecs.open(dispatchConfigFile, 'w', 'utf-8') as newDispatchConfig:
+		newDispatchConfig.writelines(lines)
+		newDispatchConfig.write("backend_.* : jsonrpc, opsipxeconfd, dhcpd\n")
+		newDispatchConfig.write(".*         : jsonrpc\n")
 	logger.notice(u"Dispatch config '%s' updated" % dispatchConfigFile)
 
 	setRights()
