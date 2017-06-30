@@ -873,7 +873,7 @@ def configureMySQLBackend(unattendedConfiguration=None):
 		logger.setConsoleLevel(consoleLevel)
 
 
-def registerDepot(username = None, password = None, configserver = None):
+def registerDepot(username=None, password=None, configserver=None):
 	backendConfigFile = u'/etc/opsi/backends/jsonrpc.conf'
 	dispatchConfigFile = u'/etc/opsi/backendManager/dispatch.conf'
 
@@ -1127,10 +1127,10 @@ def registerDepot(username = None, password = None, configserver = None):
 			logger.setConsoleLevel(consoleLevel)
 
 	logger.notice(u"Creating depot '%s'" % depot.id)
-	jsonrpcBackend.host_createObjects([ depot ])
+	jsonrpcBackend.host_createObjects([depot])
 
 	logger.notice(u"Getting depot '%s'" % depot.id)
-	depots = jsonrpcBackend.host_getObjects(id = depot.id)
+	depots = jsonrpcBackend.host_getObjects(id=depot.id)
 	if not depots:
 		raise Exception(u"Failed to create depot")
 	depot = depots[0]
@@ -1140,7 +1140,7 @@ def registerDepot(username = None, password = None, configserver = None):
 
 	logger.notice(u"Testing connection to config server as user '%s'" % config['username'])
 	try:
-		jsonrpcBackend = JSONRPCBackend(address = config['address'], username = config['username'], password = config['password'])
+		jsonrpcBackend = JSONRPCBackend(address=config['address'], username=config['username'], password=config['password'])
 	except Exception as e:
 		raise Exception(u"Failed to connect to config server as user '%s': %s" % (config['username'], e))
 	logger.notice(u"Successfully connected to config server as user '%s'" % config['username'])
@@ -1554,7 +1554,6 @@ def main():
 	password = None
 	configserver = None
 	unattended = None
-
 
 	for (opt, arg) in opts:
 		if opt in ("-h", "--help"):
