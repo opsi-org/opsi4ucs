@@ -1,3 +1,12 @@
+opsi4ucs (4.1.1.2-1) testing; urgency=medium
+
+  * Depending on opsi 4.1 packages.
+  * Many internal refactorings to re-use functionality present in python-opsi.
+  * Using new method for updating the file backend for opsi 4.1.
+  * Server setup does take the new workbench attributes into account.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 30 Jun 2017 16:34:06 +0200
+
 opsi4ucs (4.1.1.1-2) testing; urgency=medium
 
   * Merged changes from opsi4ucs 4.0.7.4.
@@ -10,6 +19,12 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
     This removes support for --update-ldap and --update-univention.
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
+
+opsi4ucs (4.0.7.4-2) stable; urgency=medium
+
+  * Remove leftover from git merge.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 30 Jun 2017 14:21:10 +0200
 
 opsi4ucs (4.0.7.4-1) testing; urgency=medium
 
