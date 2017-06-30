@@ -11,6 +11,12 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
 
+opsi4ucs (4.0.7.4-2) stable; urgency=medium
+
+  * Remove leftover from git merge.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 30 Jun 2017 14:21:10 +0200
+
 opsi4ucs (4.0.7.4-1) testing; urgency=medium
 
   * Removed workarounds for automatic member support from the joinscript.
