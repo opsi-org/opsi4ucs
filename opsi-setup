@@ -58,8 +58,7 @@ from OPSI.Util.Task.Certificate import (
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
 from OPSI.Util.Task.ConfigureBackend.ConfigurationData import (
-	_getServerAddress as getServerAddress, initializeConfigs,
-	readWindowsDomainFromSambaConfig)
+	initializeConfigs, readWindowsDomainFromSambaConfig)
 from OPSI.Util.Task.ConfigureBackend.DHCPD import configureDHCPD
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
@@ -69,9 +68,11 @@ from OPSI.Util.Task.InitializeBackend import (
 from OPSI.Util.Task.Rights import setPasswdRights, setRights
 from OPSI.Util.Task.Samba import SMB_CONF, configureSamba
 from OPSI.Util.Task.Sudoers import patchSudoersFileForOpsi
-from OPSI.Util.Task.UpdateBackend.ConfigurationData import updateBackendData
+from OPSI.Util.Task.UpdateBackend.ConfigurationData import (
+	getServerAddress, updateBackendData)
 from OPSI.Util.Task.UpdateBackend.File import updateFileBackend
 from OPSI.Util.Task.UpdateBackend.MySQL import updateMySQLBackend
+
 
 LOG_FILE = u'/tmp/opsi-setup.log'
 
