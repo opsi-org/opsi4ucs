@@ -675,11 +675,11 @@ def renewOpsiconfdCert(unattendedConfiguration=None):
 			u'failed: {0}'.format(err)
 		)
 		certparams = DEFAULT_CERTIFICATE_PARAMETERS
-		certparams["commonName"] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
+		certparams["commonName"] = getLocalFqdn()
 	except NoCertificateError:
 		certificateExisted = False
 		certparams = DEFAULT_CERTIFICATE_PARAMETERS
-		certparams["commonName"] = forceHostId(getfqdn(conf=OPSI_GLOBAL_CONF))
+		certparams["commonName"] = getLocalFqdn()
 
 	if 'expires' not in certparams:
 		certparams['expires'] = "2"  # Not included in existing cert
