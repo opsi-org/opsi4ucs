@@ -208,6 +208,58 @@ def configureClientUser():
 				f2.write(f.read())
 
 	setRights(sshDir)
+	setPasswordForClientUser()
+
+
+def setPasswordForClientUser():
+	from OPSI.Backend.BackendManager import BackendManager
+
+	fqdn = getSysConfig()['fqdn']
+
+	password = None
+	backend = None
+	try:
+		backend = BackendManager(
+			dispatchConfigFile=u'/etc/opsi/backendManager/dispatch.conf',
+			backendConfigDir=u'/etc/opsi/backends',
+			extensionConfigDir=u'/etc/opsi/backendManager/extend.d',
+			depotBackend=True
+		)
+		depot = backend.host_getObjects(type='OpsiDepotserver', id=fqdn)[0]
+
+		configserverId = None
+		for configserver in backend.host_getObjects(type='OpsiConfigserver'):
+			if configserver.id == fqdn:
+				configserverId = None
+				break
+			else:
+				configserverId = configserver.id
+
+		if configserverId:
+			jsonrpcBackend = None
+			try:
+				jsonrpcBackend = JSONRPCBackend(address=configserverId, username=depot.id, password=depot.opsiHostKey)
+				password = blowfishDecrypt(depot.opsiHostKey, jsonrpcBackend.user_getCredentials(username=u'pcpatch', hostId=depot.id)['password'])
+			except Exception as error:
+				logger.info(u"Failed to get client user (pcpatch) password from configserver: %s" % error)
+			finally:
+				if jsonrpcBackend is not None:
+					jsonrpcBackend.backend_exit()
+
+		if not password:
+			password = blowfishDecrypt(depot.opsiHostKey, backend.user_getCredentials(username=u'pcpatch', hostId=depot.id)['password'])
+	except Exception as error:
+		logger.info(u"Failed to get client user (pcpatch) password: %s" % error)
+	finally:
+		if backend is not None:
+			backend.backend_exit()
+
+	if not password:
+		logger.warning("No password for pcpatch found. Generating random password.")
+		password = randomString(32)
+
+	logger.addConfidentialString(password)
+	execute('opsi-admin -d task setPcpatchPassword "%s"' % password)
 
 
 def update(fromVersion=None):
