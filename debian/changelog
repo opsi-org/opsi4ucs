@@ -20,6 +20,12 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
 
+opsi4ucs (4.0.7.5-1) testing; urgency=medium
+
+  * Re-introduce setting the pcpatch password during --init-current-config.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 05 Jul 2017 11:36:08 +0200
+
 opsi4ucs (4.0.7.4-2) stable; urgency=medium
 
   * Remove leftover from git merge.
