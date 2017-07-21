@@ -375,7 +375,7 @@ def registerDepot(username=None, password=None, configserver=None):
 					# string for the UI
 					serverConfig[key] = u''
 
-			depot = OpsiDepotserver(serverConfig)
+			depot = OpsiDepotserver(**serverConfig)
 	else:
 		consoleLevel = logger.getConsoleLevel()
 		logger.setConsoleLevel(LOG_NONE)
@@ -453,7 +453,7 @@ def registerDepot(username=None, password=None, configserver=None):
 						# string for the UI
 						serverConfig[key] = u''
 
-				depot = OpsiDepotserver(serverConfig)
+				depot = OpsiDepotserver(**serverConfig)
 
 			while True:
 				if depot.maxBandwidth < 0:
