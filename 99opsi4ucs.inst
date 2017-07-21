@@ -341,7 +341,7 @@ if [ $ret != 0 ]; then
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_workbench \
 		--set host=$FQDN \
-		--set path=/home/opsiproducts \
+		--set path=/var/lib/opsi/workbench \
 		--set owner=$USERID \
 		--set group=$GROUPID \
 		--set directorymode=0755 \
