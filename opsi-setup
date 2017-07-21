@@ -53,7 +53,7 @@ from OPSI.Types import (
 from OPSI.UI import UIFactory
 from OPSI.Util.File.Opsi import BackendDispatchConfigFile
 from OPSI.Util.Task.Certificate import (
-	DEFAULT_CERTIFICATE_PARAMETERS,	OPSICONFD_CERTFILE,
+	DEFAULT_CERTIFICATE_PARAMETERS, OPSICONFD_CERTFILE,
 	NoCertificateError, UnreadableCertificateError,
 	createCertificate, loadConfigurationFromCertificate, renewCertificate)
 from OPSI.Util.Task.CleanupBackend import cleanupBackend
@@ -880,7 +880,7 @@ def usage():
 	print u"   --auto-configure-samba        patch smb.conf"
 	print u"   --auto-configure-dhcpd        patch dhcpd.conf"
 	print u"   --renew-opsiconfd-cert        renew opsiconfd-cert"
-	print u"   --patch-sudoers-file	         patching sudoers file for tasks in opsiadmin context."
+	print u"   --patch-sudoers-file          patching sudoers file for tasks in opsiadmin context."
 	print u""
 
 
@@ -893,7 +893,7 @@ def main():
 			[
 				'help', 'log-file=', 'ip-address=', 'backend-config=',
 				'init-current-config', 'set-rights', 'auto-configure-samba',
-				'auto-configure-dhcpd',	'register-depot', 'configure-mysql',
+				'auto-configure-dhcpd', 'register-depot', 'configure-mysql',
 				'update-mysql', 'update-file', 'edit-config-defaults',
 				'cleanup-backend', 'update-from=', 'binddata=',
 				'renew-opsiconfd-cert', 'patch-sudoers-file', 'unattended='
