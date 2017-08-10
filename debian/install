@@ -1,5 +1,5 @@
 files/dispatch.conf.jsonrpc etc/opsi/backendManager/
-files/configed.png etc/opsi/.ucs_temp/
+files/configed.png var/www/icon/opsi/
 files/opsi-configed.png etc/opsi/.ucs_temp/
 99opsi4ucs.inst usr/lib/univention-install/
 opsi-setup usr/bin/
