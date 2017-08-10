@@ -1,6 +1,6 @@
 #! /bin/bash -e
 
-# Copyright (C) 2006-2015 uib GmbH
+# Copyright (C) 2006-2017 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
@@ -19,10 +19,10 @@
 
 VERBOSE=true
 
-UCSROLE=$(ucr get server/role)
-
 case "$1" in
 	configure)
+		UCSROLE=$(ucr get server/role)
+
 		# run join script
 		if [ "$UCSROLE" = "domaincontroller_master" -o "$UCSROLE" = "domaincontroller_backup" ]; then
 			/usr/lib/univention-install/99opsi4ucs.inst || true
