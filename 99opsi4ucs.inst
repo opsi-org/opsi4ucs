@@ -507,7 +507,7 @@ fi
 $VERBOSE && echo "Adding links to the UCS overview page"
 ucr set ucs/web/overview/entries/admin/opsi-configed/description/de='Management-Interface für Client-Management mit opsi (mittels Java Webstart)'
 ucr set ucs/web/overview/entries/admin/opsi-configed/description='Management Interface for Client-Management with opsi (with Java Webstart)'
-ucr set ucs/web/overview/entries/admin/opsi-configed/icon=/icon/50x50/opsi-configed.png
+ucr set ucs/web/overview/entries/admin/opsi-configed/icon="/icon/50x50/opsi-configed.png"
 ucr set ucs/web/overview/entries/admin/opsi-configed/label/de='opsi configed'
 ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
 ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"

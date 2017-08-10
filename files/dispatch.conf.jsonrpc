@@ -33,5 +33,5 @@
 #       .*                 : ldap
 #
 
-backend_.*         : jsonrpc, opsipxeconfd, dhcpd
+backend_.*         : jsonrpc, opsipxeconfd
 .*                 : jsonrpc
