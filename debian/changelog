@@ -1,3 +1,9 @@
+opsi4ucs (4.0.7.5-3) stable; urgency=medium
+
+  * Moved config registry file to follow current conventions.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 14 Aug 2017 10:25:45 +0200
+
 opsi4ucs (4.0.7.5-2) testing; urgency=medium
 
   * Updated entry on UCS overview.
