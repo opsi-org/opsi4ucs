@@ -3,7 +3,7 @@ Section: opsi
 Priority: optional
 Maintainer: uib GmbH <info@uib.de>
 Uploaders: Niko Wenselowski <n.wenselowski@uib.de>
-Build-Depends: debhelper (>= 7.0.50~)
+Build-Depends: debhelper (>= 7.0.50~), univention-config-dev
 X-Python-Version: >= 2.6
 Standards-Version: 3.9.4
 
@@ -11,6 +11,8 @@ Package: opsi4ucs
 Section: opsi
 Architecture: all
 Depends: debconf,
+	univention-join (>= 5.0.20-1),
+	shell-univention-lib (>= 2.0.17-1),
 	python(>= 2.6.6-3~),
 	python-opsi (>=4.0.6.35),
 	opsiconfd (>=4.0),
