@@ -1,3 +1,10 @@
+opsi4ucs (4.0.7.5-4) stable; urgency=medium
+
+  * Installing into config registry is done in dh_auto_install now.
+  * Using standard debian packaging to deploy the files to the appropriate directory.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 14 Aug 2017 10:57:25 +0200
+
 opsi4ucs (4.0.7.5-3) stable; urgency=medium
 
   * Moved config registry file to follow current conventions.
