@@ -22,12 +22,5 @@ override_dh_auto_install:
 	dh_auto_install
 
 
-override_dh_install:
-	dh_install
-
-	# The joinscript needs executable rights
-	install -m 0755 99opsi4ucs.inst debian/opsi4ucs/usr/lib/univention-install/
-
-
 %:
 	dh $@ --with-python2
