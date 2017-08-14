@@ -21,12 +21,16 @@ export DH_OPTIONS
 	dh $@ --with-python2
 
 
+override_dh_auto_install:
+	univention-install-config-registry
+	dh_auto_install
+
+
 override_dh_install:
 	dh_install
 
 	# The joinscript needs executable rights
 	install -m 0755 99opsi4ucs.inst debian/opsi4ucs/usr/lib/univention-install/
 
-	install -m 0644 debian/opsi4ucs.univention-baseconfig debian/opsi4ucs/etc/univention/templates/info/opsi4ucs.info
 	cp -r conffiles/var debian/opsi4ucs/etc/univention/templates/files/
 	cp -r conffiles/etc debian/opsi4ucs/etc/univention/templates/files/
