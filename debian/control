@@ -3,7 +3,7 @@ Section: opsi
 Priority: optional
 Maintainer: uib GmbH <info@uib.de>
 Uploaders: Niko Wenselowski <n.wenselowski@uib.de>
-Build-Depends: debhelper (>= 7.0.50~), univention-config-dev
+Build-Depends: debhelper (>= 7.0.50~), univention-config-dev, ifupdown
 X-Python-Version: >= 2.6
 Standards-Version: 3.9.4
 

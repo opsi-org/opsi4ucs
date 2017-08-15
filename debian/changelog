@@ -1,3 +1,10 @@
+opsi4ucs (4.0.7.5-7) testing; urgency=medium
+
+  * Build-Depends for ifupdown added as a workaround for broken project
+    configuration on OBS.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 15 Aug 2017 10:33:09 +0200
+
 opsi4ucs (4.0.7.5-6) stable; urgency=medium
 
   * Using UCS tools to call join script automatically.
