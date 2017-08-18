@@ -21,12 +21,8 @@ VERBOSE=true
 
 case "$1" in
 	configure)
-		UCSROLE=$(ucr get server/role)
-
-		# run join script
-		if [ "$UCSROLE" = "domaincontroller_master" -o "$UCSROLE" = "domaincontroller_backup" ]; then
-			/usr/lib/univention-install/99opsi4ucs.inst || true
-		fi
+		. /usr/share/univention-lib/base.sh
+		call_joinscript 99opsi4ucs.inst
 
 		if [ -d "/etc/opsi/.ucs_temp" -a -d "/var/www/" ]; then
 			mkdir -p /var/www/icon/50x50 || true
@@ -38,7 +34,6 @@ case "$1" in
 
 			rm -rf /etc/opsi/.ucs_temp
 		fi
-
 	;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)
