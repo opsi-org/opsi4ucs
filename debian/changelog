@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.3-3) testing; urgency=medium
+
+  * based on 4.0.7.5-8.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 06 Nov 2017 11:36:22 +0100
+
 opsi4ucs (4.1.1.3-2) testing; urgency=medium
 
   * Locating opsi_workbench at /var/lib/opsi/workbench.
