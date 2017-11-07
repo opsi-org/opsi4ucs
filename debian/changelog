@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-4) testing; urgency=medium
+
+  * Join-script: automatically creating /etc/opsi/opsiconfd.pem.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 15:39:00 +0100
+
 opsi4ucs (4.1.1.4-3) testing; urgency=medium
 
   * Join-script: making use of the "service" command.
