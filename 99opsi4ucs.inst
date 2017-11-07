@@ -439,13 +439,13 @@ ln -sf /tftpboot/linux/chain.c32 $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot-x64.bz2 $TFTPROOT/
 if [ -e /tftpboot/linux/ldlinux.c32 ]; then
-       ln -sf /tftpboot/linux/ldlinux.c32 $TFTPROOT/
+	   ln -sf /tftpboot/linux/ldlinux.c32 $TFTPROOT/
 fi
 if [ -e /tftpboot/linux/libcom32.c32 ]; then
-       ln -sf /tftpboot/linux/libcom32.c32 $TFTPROOT/
+	   ln -sf /tftpboot/linux/libcom32.c32 $TFTPROOT/
 fi
 if [ -e /tftpboot/linux/libutil.c32 ]; then
-       ln -sf /tftpboot/linux/libutil.c32 $TFTPROOT/
+	   ln -sf /tftpboot/linux/libutil.c32 $TFTPROOT/
 fi
 
 if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
