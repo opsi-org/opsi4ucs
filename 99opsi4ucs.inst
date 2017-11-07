@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=28
+VERSION=41
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
