@@ -374,13 +374,7 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-
-if [ -e /etc/init.d/samba4 ]; then
-	/etc/init.d/samba4 force-reload
-fi
-if [ -e /etc/init.d/samba ]; then
-	/etc/init.d/samba reload
-fi
+/usr/sbin/service samba reload || true
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
