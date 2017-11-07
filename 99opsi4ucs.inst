@@ -227,7 +227,7 @@ if [ $pcpatchUserMissing != 0 ]; then
 		--ignore_exists
 
 	set +e
-	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced..."
+	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced:"
 	count=0
 	while [ $count -le 600 ]; do
 		grep "$fileadmingroup" /var/lib/extrausers/group >/dev/null 2>/dev/null && break
@@ -235,6 +235,7 @@ if [ $pcpatchUserMissing != 0 ]; then
 		sleep 1
 		count=$((count+1))
 	done
+	$VERBOSE && echo -n "OK"
 	set -e
 fi
 
@@ -481,7 +482,7 @@ else
 	fi
 
 	set +e
-	$VERBOSE && echo -n "Check for opsi fileadmingroup "
+	$VERBOSE && echo -n "Check for opsi fileadmingroup:"
 	count=0
 	while [ $count -le 600 ]; do
 		getent group "$fileadmingroup" >/dev/null 2>/dev/null && break
@@ -497,6 +498,7 @@ else
 		sleep 1
 		count=$((count+1))
 	done
+	$VERBOSE && echo -n "OK"
 	set -e
 
 	opsi-setup --init-current-config
