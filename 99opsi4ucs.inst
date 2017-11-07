@@ -508,9 +508,7 @@ dpkg-reconfigure opsiconfd
 
 $VERBOSE && echo "Restarting services"
 if [ $DHCPSERVER = "1" ]; then
-	/etc/init.d/univention-dhcp restart || true
-elif [ -e "/etc/init.d/dhcp3-server" ]; then
-	/etc/init.d/dhcp3-server restart || true
+	/usr/sbin/service univention-dhcp restart || true
 fi
 /usr/sbin/service samba reload || true
 /usr/sbin/service opsiconfd restart || true
