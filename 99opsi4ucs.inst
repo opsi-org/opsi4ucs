@@ -235,7 +235,7 @@ if [ $pcpatchUserMissing != 0 ]; then
 		sleep 1
 		count=$((count+1))
 	done
-	$VERBOSE && echo -n "OK"
+	$VERBOSE && echo "OK"
 	set -e
 fi
 
