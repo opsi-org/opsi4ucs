@@ -413,7 +413,7 @@ if [ ! -d "$TFTPROOT" ]; then
 fi
 TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
 update-inetd --add "${TFTPLINE}"
-/etc/init.d/openbsd-inetd reload
+/usr/sbin/service openbsd-inetd reload
 
 $VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
 ln -sf /tftpboot/linux/install $TFTPROOT/
@@ -453,7 +453,7 @@ TEMPFILE=$(tempfile)
 
 grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
 cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
-/etc/init.d/univention-firewall restart
+/usr/sbin/service univention-firewall restart
 
 if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
