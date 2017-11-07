@@ -501,6 +501,36 @@ else
 	$VERBOSE && echo -n "OK"
 	set -e
 
+	if [ "$OPSI_ROLE" != "depotserver" ]; then
+		if [ -e "/etc/mysql.secret" ]; then
+			$VERBOSE && echo "Checking for MySQL configuration..."
+
+			set +e
+			MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
+			if [ -z "$MYSQL_CONFIGURED" ]; then
+				$VERBOSE && echo "mysql configured in dispatch.conf"
+
+				MYSQL_PW=$(cat "/etc/mysql.secret")
+				MYSQL_ALREADY_CONFIGURED=$(grep "$MYSQL_PW" /etc/opsi/backends/mysql.conf)
+
+				if [ ! -z "$MYSQL_ALREADY_CONFIGURED" ]; then
+					$VERBOSE && echo "Attempting MySQL configuration..."
+					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
+					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
+					$VERBOSE && echo "Finished setting up MySQL backend."
+				else
+					$VERBOSE && echo "MySQL already configured. Nothing to do."
+				fi
+
+				# not keeping the password around.
+				unset MYSQL_PW
+			else
+				$VERBOSE && echo "mysql not configured in dispatch.conf"
+			fi
+			set -e
+		fi
+	fi
+
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
 fi
