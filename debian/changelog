@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-3) testing; urgency=medium
+
+  * Join-script: making use of the "service" command.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 13:47:02 +0100
+
 opsi4ucs (4.1.1.4-2) testing; urgency=medium
 
   * Join-script: small output change.
