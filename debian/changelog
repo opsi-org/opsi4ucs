@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-2) testing; urgency=medium
+
+  * Join-script: small output change.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 13:18:04 +0100
+
 opsi4ucs (4.1.1.4-1) testing; urgency=medium
 
   * Added missing import in opsi-setup.
