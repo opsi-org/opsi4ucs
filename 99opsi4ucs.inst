@@ -52,15 +52,6 @@ else
 	DHCPSERVER=0
 fi
 
-SAMBA_INIT_SCRIPT="/etc/init.d/samba"
-eval "$(ucr shell samba4/role)"
-if [ -n "$samba4_role" ]; then
-	echo "The local UCS is configured as Samba/AD $samba4_role"
-	if [ "$UCS_VERSION" = "3.1" -o "$UCS_VERSION" = "3.2" ]; then
-		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
-	fi
-fi
-
 LDAP_PORT=$(ucr get ldap/master/port)
 
 # --- Test ldap connection ------------------------------------------------------------------------------------------------------
@@ -384,13 +375,7 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-
-if [ -e /etc/init.d/samba4 ]; then
-	/etc/init.d/samba4 force-reload
-fi
-if [ -e /etc/init.d/samba ]; then
-	/etc/init.d/samba reload
-fi
+/usr/sbin/service samba reload || true
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
@@ -429,7 +414,7 @@ if [ ! -d "$TFTPROOT" ]; then
 fi
 TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
 update-inetd --add "${TFTPLINE}"
-/etc/init.d/openbsd-inetd reload
+/usr/sbin/service openbsd-inetd reload
 
 $VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
 ln -sf /tftpboot/linux/install $TFTPROOT/
@@ -469,7 +454,7 @@ TEMPFILE=$(tempfile)
 
 grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
 cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
-/etc/init.d/univention-firewall restart
+/usr/sbin/service univention-firewall restart
 
 if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
@@ -550,12 +535,10 @@ dpkg-reconfigure opsiconfd
 
 $VERBOSE && echo "Restarting services"
 if [ $DHCPSERVER = "1" ]; then
-	/etc/init.d/univention-dhcp restart || true
-elif [ -e "/etc/init.d/dhcp3-server" ]; then
-	/etc/init.d/dhcp3-server restart || true
+	/usr/sbin/service univention-dhcp restart || true
 fi
-$SAMBA_INIT_SCRIPT reload || true
-/etc/init.d/opsiconfd restart || true
-/etc/init.d/opsipxeconfd restart || true
+/usr/sbin/service samba reload || true
+/usr/sbin/service opsiconfd restart || true
+/usr/sbin/service opsipxeconfd restart || true
 
 joinscript_save_current_version
