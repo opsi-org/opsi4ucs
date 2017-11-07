@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-1) testing; urgency=medium
+
+  * Added missing import in opsi-setup.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 12:04:48 +0100
+
 opsi4ucs (4.1.1.3-6) testing; urgency=medium
 
   * Join-script: Correct check if mysql is already setup.
