@@ -512,7 +512,7 @@ else
 				MYSQL_PW=$(cat "/etc/mysql.secret")
 				MYSQL_ALREADY_CONFIGURED=$(grep "$MYSQL_PW" /etc/opsi/backends/mysql.conf)
 
-				if [ ! -z "$MYSQL_ALREADY_CONFIGURED" ]; then
+				if [ -z "$MYSQL_ALREADY_CONFIGURED" ]; then
 					$VERBOSE && echo "Attempting MySQL configuration..."
 					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
 					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
