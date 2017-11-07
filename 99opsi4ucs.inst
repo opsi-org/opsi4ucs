@@ -502,14 +502,13 @@ else
 	set -e
 
 	if [ "$OPSI_ROLE" != "depotserver" ]; then
-		if [ -e "/etc/mysql.secret" ]; then
-			$VERBOSE && echo "Checking for MySQL configuration..."
+		set +e
+		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
 
-			set +e
-			MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
-			if [ -z "$MYSQL_CONFIGURED" ]; then
-				$VERBOSE && echo "mysql configured in dispatch.conf"
+		if [ ! -z "$MYSQL_CONFIGURED" ]; then
+			$VERBOSE && echo "mysql configured in dispatch.conf."
 
+			if [ -e "/etc/mysql.secret" ]; then
 				MYSQL_PW=$(cat "/etc/mysql.secret")
 				MYSQL_ALREADY_CONFIGURED=$(grep "$MYSQL_PW" /etc/opsi/backends/mysql.conf)
 
@@ -525,10 +524,12 @@ else
 				# not keeping the password around.
 				unset MYSQL_PW
 			else
-				$VERBOSE && echo "mysql not configured in dispatch.conf"
+				$VERBOSE && echo "mysql configured in dispatch.conf but not installed!"
 			fi
-			set -e
+		else
+			$VERBOSE && echo "mysql not configured in dispatch.conf"
 		fi
+		set -e
 	fi
 
 	opsi-setup --init-current-config
