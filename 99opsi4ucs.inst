@@ -498,7 +498,7 @@ else
 		sleep 1
 		count=$((count+1))
 	done
-	$VERBOSE && echo -n "OK"
+	$VERBOSE && echo "OK"
 	set -e
 
 	if [ "$OPSI_ROLE" != "depotserver" ]; then
