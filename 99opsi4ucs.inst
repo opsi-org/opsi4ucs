@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=28
+VERSION=41
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -227,7 +227,7 @@ if [ $pcpatchUserMissing != 0 ]; then
 		--ignore_exists
 
 	set +e
-	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced..."
+	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced:"
 	count=0
 	while [ $count -le 600 ]; do
 		grep "$fileadmingroup" /var/lib/extrausers/group >/dev/null 2>/dev/null && break
@@ -235,6 +235,7 @@ if [ $pcpatchUserMissing != 0 ]; then
 		sleep 1
 		count=$((count+1))
 	done
+	$VERBOSE && echo -n "OK"
 	set -e
 fi
 
@@ -438,13 +439,13 @@ ln -sf /tftpboot/linux/chain.c32 $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
 ln -sf /tftpboot/linux/miniroot-x64.bz2 $TFTPROOT/
 if [ -e /tftpboot/linux/ldlinux.c32 ]; then
-       ln -sf /tftpboot/linux/ldlinux.c32 $TFTPROOT/
+	   ln -sf /tftpboot/linux/ldlinux.c32 $TFTPROOT/
 fi
 if [ -e /tftpboot/linux/libcom32.c32 ]; then
-       ln -sf /tftpboot/linux/libcom32.c32 $TFTPROOT/
+	   ln -sf /tftpboot/linux/libcom32.c32 $TFTPROOT/
 fi
 if [ -e /tftpboot/linux/libutil.c32 ]; then
-       ln -sf /tftpboot/linux/libutil.c32 $TFTPROOT/
+	   ln -sf /tftpboot/linux/libutil.c32 $TFTPROOT/
 fi
 
 if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
@@ -481,7 +482,7 @@ else
 	fi
 
 	set +e
-	$VERBOSE && echo -n "Check for opsi fileadmingroup "
+	$VERBOSE && echo -n "Check for opsi fileadmingroup:"
 	count=0
 	while [ $count -le 600 ]; do
 		getent group "$fileadmingroup" >/dev/null 2>/dev/null && break
@@ -497,7 +498,39 @@ else
 		sleep 1
 		count=$((count+1))
 	done
+	$VERBOSE && echo "OK"
 	set -e
+
+	if [ "$OPSI_ROLE" != "depotserver" ]; then
+		set +e
+		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
+
+		if [ ! -z "$MYSQL_CONFIGURED" ]; then
+			$VERBOSE && echo "mysql configured in dispatch.conf."
+
+			if [ -e "/etc/mysql.secret" ]; then
+				MYSQL_PW=$(cat "/etc/mysql.secret")
+				MYSQL_ALREADY_CONFIGURED=$(grep "$MYSQL_PW" /etc/opsi/backends/mysql.conf)
+
+				if [ -z "$MYSQL_ALREADY_CONFIGURED" ]; then
+					$VERBOSE && echo "Attempting MySQL configuration..."
+					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
+					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
+					$VERBOSE && echo "Finished setting up MySQL backend."
+				else
+					$VERBOSE && echo "MySQL already configured. Nothing to do."
+				fi
+
+				# not keeping the password around.
+				unset MYSQL_PW
+			else
+				$VERBOSE && echo "mysql configured in dispatch.conf but not installed!"
+			fi
+		else
+			$VERBOSE && echo "mysql not configured in dispatch.conf"
+		fi
+		set -e
+	fi
 
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
