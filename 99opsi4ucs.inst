@@ -402,43 +402,6 @@ if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	fi
 fi
 
-# --- Configure tftp ------------------------------------------------------------------------------------------------------------
-update-inetd --remove tftp
-if [ ! -d "$TFTPROOT" ]; then
-	$VERBOSE && echo "Creating $TFTPROOT"
-	mkdir $TFTPROOT
-	ln -sf /tftpboot/linux/pxelinux.0 $TFTPROOT/
-	$VERBOSE && echo "Setting rights for $TFTPROOT"
-	chmod 755 $TFTPROOT
-	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
-fi
-TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
-update-inetd --add "${TFTPLINE}"
-/usr/sbin/service openbsd-inetd reload
-
-$VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
-ln -sf /tftpboot/linux/install $TFTPROOT/
-ln -sf /tftpboot/linux/install-x64 $TFTPROOT/
-ln -sf /tftpboot/linux/menu.c32 $TFTPROOT/
-ln -sf /tftpboot/linux/chain.c32 $TFTPROOT/
-ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
-ln -sf /tftpboot/linux/miniroot-x64.bz2 $TFTPROOT/
-if [ -e /tftpboot/linux/ldlinux.c32 ]; then
-	   ln -sf /tftpboot/linux/ldlinux.c32 $TFTPROOT/
-fi
-if [ -e /tftpboot/linux/libcom32.c32 ]; then
-	   ln -sf /tftpboot/linux/libcom32.c32 $TFTPROOT/
-fi
-if [ -e /tftpboot/linux/libutil.c32 ]; then
-	   ln -sf /tftpboot/linux/libutil.c32 $TFTPROOT/
-fi
-
-if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
-	find "$TFTPROOT/pxelinux.cfg" -mindepth 1 -maxdepth 1 -exec mv "{}" "/tftpboot/linux/pxelinux.cfg/" \;
-	rmdir $TFTPROOT/pxelinux.cfg
-	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
-fi
-
 # --- Configure opsi ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Configuring opsi"
 $VERBOSE && echo "Checking security options for opsi"
