@@ -419,6 +419,19 @@ grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4
 cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
 /usr/sbin/service univention-firewall restart
 
+if [ -e "/etc/univention/ssl/$FQDN/cert.pem" -a -e "/etc/univention/ssl/$FQDN/private.key" ]; then
+	$VERBOSE && echo "Creating opsiconfd.pem"
+
+	cat /etc/univention/ssl/$FQDN/private.key > /etc/opsi/opsiconfd.pem
+	grep -A 50 "BEGIN CERTIFICATE" /etc/univention/ssl/$FQDN/cert.pem >> /etc/opsi/opsiconfd.pem
+	chmod 600 /etc/opsi/opsiconfd.pem
+	chown opsiconfd: /etc/opsi/opsiconfd.pem || true
+else
+	if [ ! -e "/etc/opsi/opsiconfd.pem" ]; then
+		$VERBOSE && echo "WARNING: Unable to automatically create opsiconfd.pem! You need to create /etc/opsi/opsiconfd.pem manually!"
+	fi
+fi
+
 if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
 	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server"

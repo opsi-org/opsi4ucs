@@ -1,9 +1,15 @@
-opsi4ucs (4.1.1.4-4) experimental; urgency=medium
+opsi4ucs (4.1.1.4-5) experimental; urgency=medium
 
   * Join-script: removed tftpd configuarion
   * Join-script: removed opsi-linux-bootimage linking
 
  -- Mathias Radtke <m.radtke@uib.de>  Wed, 08 Nov 2017 09:10:16 +0100
+ 
+opsi4ucs (4.1.1.4-4) testing; urgency=medium
+
+  * Join-script: automatically creating /etc/opsi/opsiconfd.pem.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 15:39:00 +0100
 
 opsi4ucs (4.1.1.4-3) testing; urgency=medium
 
