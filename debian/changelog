@@ -1,3 +1,10 @@
+opsi4ucs (4.1.1.4-4)experimental; urgency=medium
+
+  * Join-script: removed tftpd configuarion
+  * Join-script: removed opsi-linux-bootimage linking
+
+ -- Mathias Radtke <m.radtke@uib.de>  Wed, 08 Nov 2017 09:10:16 +0100
+
 opsi4ucs (4.1.1.4-3) testing; urgency=medium
 
   * Join-script: making use of the "service" command.
