@@ -1,4 +1,4 @@
-opsi4ucs (4.1.1.4-4)experimental; urgency=medium
+opsi4ucs (4.1.1.4-4) experimental; urgency=medium
 
   * Join-script: removed tftpd configuarion
   * Join-script: removed opsi-linux-bootimage linking
