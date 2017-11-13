@@ -466,7 +466,7 @@ else
 		set +e
 		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
 
-		if [ ! -z "$MYSQL_CONFIGURED" ]; then
+		if [ -n "$MYSQL_CONFIGURED" ]; then
 			$VERBOSE && echo "mysql configured in dispatch.conf."
 
 			if [ -e "/etc/mysql.secret" ]; then
