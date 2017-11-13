@@ -495,8 +495,6 @@ else
 			else
 				$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not installed!"
 			fi
-		else
-			$VERBOSE && echo "mysql not configured in dispatch.conf"
 		fi
 
 		FILE_BACKEND_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep file)
