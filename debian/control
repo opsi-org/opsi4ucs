@@ -11,6 +11,7 @@ Package: opsi4ucs
 Section: opsi
 Architecture: all
 Depends: debconf,
+	dpkg,
 	univention-join (>= 5.0.20-1),
 	shell-univention-lib (>= 2.0.17-1),
 	python(>= 2.7),
