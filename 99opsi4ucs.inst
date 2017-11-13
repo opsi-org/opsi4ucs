@@ -478,9 +478,15 @@ else
 
 			if [ -e "/etc/mysql.secret" ]; then
 				MYSQL_PW=$(cat "/etc/mysql.secret")
-				MYSQL_ALREADY_CONFIGURED=$(grep "$MYSQL_PW" /etc/opsi/backends/mysql.conf)
 
-				if [ -z "$MYSQL_ALREADY_CONFIGURED" ]; then
+				# Python snippet to check the configuration by...
+				# * loading config
+				# * extracting required connection information
+				# * trying to connect
+				python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)"
+				MYSQL_ALREADY_CONFIGURED=$?
+
+				if [ $MYSQL_ALREADY_CONFIGURED -ne 0]; then
 					$VERBOSE && echo "Attempting MySQL configuration..."
 					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
 					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
