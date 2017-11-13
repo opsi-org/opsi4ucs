@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-7) testing; urgency=medium
+
+  * Changed check if mysql backend is already configured.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 13 Nov 2017 17:29:13 +0100
+
 opsi4ucs (4.1.1.4-6) testing; urgency=medium
 
   * Automatic backend update for installations coming from versions
