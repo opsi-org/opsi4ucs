@@ -493,7 +493,7 @@ else
 				# not keeping the password around.
 				unset MYSQL_PW
 			else
-				$VERBOSE && echo "mysql configured in dispatch.conf but not installed!"
+				$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not installed!"
 			fi
 		else
 			$VERBOSE && echo "mysql not configured in dispatch.conf"
