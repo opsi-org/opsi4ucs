@@ -462,7 +462,7 @@ else
 	$VERBOSE && echo "OK"
 	set -e
 
-	if [ "$OPSI_ROLE" != "depotserver" ]; then
+	if [ "$OPSI_ROLE" = "configserver" ]; then
 		set +e
 		if [ -e /tmp/update_backends.opsi4ucs ]; then
 			UPDATE_BACKENDS=true
