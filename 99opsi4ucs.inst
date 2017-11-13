@@ -462,11 +462,18 @@ else
 	$VERBOSE && echo "OK"
 	set -e
 
-	if [ "$OPSI_ROLE" != "depotserver" ]; then
+	if [ "$OPSI_ROLE" = "configserver" ]; then
 		set +e
+		if [ -e /tmp/update_backends.opsi4ucs ]; then
+			UPDATE_BACKENDS=true
+			rm /tmp/update_backends.opsi4ucs
+		else
+			UPDATE_BACKENDS=false
+		fi
+
 		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
 
-		if [ ! -z "$MYSQL_CONFIGURED" ]; then
+		if [ -n "$MYSQL_CONFIGURED" ]; then
 			$VERBOSE && echo "mysql configured in dispatch.conf."
 
 			if [ -e "/etc/mysql.secret" ]; then
@@ -479,16 +486,20 @@ else
 					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
 					$VERBOSE && echo "Finished setting up MySQL backend."
 				else
-					$VERBOSE && echo "MySQL already configured. Nothing to do."
+					$VERBOSE && echo "MySQL already configured."
+					$UPDATE_BACKENDS && opsi-setup --update-mysql
 				fi
 
 				# not keeping the password around.
 				unset MYSQL_PW
 			else
-				$VERBOSE && echo "mysql configured in dispatch.conf but not installed!"
+				$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not installed!"
 			fi
-		else
-			$VERBOSE && echo "mysql not configured in dispatch.conf"
+		fi
+
+		FILE_BACKEND_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep file)
+		if [ -n "$FILE_BACKEND_CONFIGURED" -a $UPDATE_BACKENDS ]; then
+			opsi-setup --update-file
 		fi
 		set -e
 	fi
