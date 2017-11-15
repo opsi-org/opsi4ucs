@@ -472,34 +472,35 @@ else
 		fi
 
 		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
-
 		if [ -n "$MYSQL_CONFIGURED" ]; then
 			$VERBOSE && echo "mysql configured in dispatch.conf."
 
-			if [ -e "/etc/mysql.secret" ]; then
-				MYSQL_PW=$(cat "/etc/mysql.secret")
+			# Python snippet to check the configuration by...
+			# * loading config
+			# * extracting required connection information
+			# * trying to connect
+			python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)" &>/dev/null
+			MYSQL_ALREADY_CONFIGURED=$?
 
-				# Python snippet to check the configuration by...
-				# * loading config
-				# * extracting required connection information
-				# * trying to connect
-				python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)" &>/dev/null
-				MYSQL_ALREADY_CONFIGURED=$?
+			if [ $MYSQL_ALREADY_CONFIGURED -ne 0 ]; then
+				$VERBOSE && echo "Unable to connect to MySQL."
+				if [ -e "/etc/mysql.secret" ]; then
+					MYSQL_PW=$(cat "/etc/mysql.secret")
 
-				if [ $MYSQL_ALREADY_CONFIGURED -ne 0]; then
-					$VERBOSE && echo "Attempting MySQL configuration..."
+					$VERBOSE && echo "Attempting automatic configuration for MySQL backend..."
 					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
 					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
 					$VERBOSE && echo "Finished setting up MySQL backend."
-				else
-					$VERBOSE && echo "MySQL already configured."
-					$UPDATE_BACKENDS && opsi-setup --update-mysql
-				fi
 
-				# not keeping the password around.
-				unset MYSQL_PW
+					# not keeping the password around.
+					unset MYSQL_PW
+				else
+					$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not properly configured!"
+					$VERBOSE && echo "WARNING: No automatic configuration possible - is mysql-server installed?"
+				fi
 			else
-				$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not installed!"
+				$VERBOSE && echo "MySQL connection possible."
+				$UPDATE_BACKENDS && opsi-setup --update-mysql
 			fi
 		fi
 
