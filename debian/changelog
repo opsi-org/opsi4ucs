@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-9) testing; urgency=medium
+
+  * Fix key decryption.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 15 Nov 2017 15:25:19 +0100
+
 opsi4ucs (4.1.1.4-8) testing; urgency=medium
 
   * Suppressing output from MySQL connectivity check.
