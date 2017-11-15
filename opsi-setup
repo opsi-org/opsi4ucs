@@ -161,8 +161,6 @@ def configureClientUser():
 
 
 def setPasswordForClientUser():
-	from OPSI.Backend.BackendManager import BackendManager
-
 	fqdn = getSysConfig()['fqdn']
 
 	password = None
