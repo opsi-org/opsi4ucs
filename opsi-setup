@@ -51,7 +51,7 @@ from OPSI.System.Posix import (
 from OPSI.Types import (
 	forceFilename, forceInt, forceIpAddress, forceUnicodeList)
 from OPSI.UI import UIFactory
-from OPSI.Util import randomString
+from OPSI.Util import blowfishDecrypt, randomString
 from OPSI.Util.File.Opsi import BackendDispatchConfigFile
 from OPSI.Util.Task.Certificate import (
 	DEFAULT_CERTIFICATE_PARAMETERS, OPSICONFD_CERTFILE,
@@ -161,8 +161,6 @@ def configureClientUser():
 
 
 def setPasswordForClientUser():
-	from OPSI.Backend.BackendManager import BackendManager
-
 	fqdn = getSysConfig()['fqdn']
 
 	password = None
