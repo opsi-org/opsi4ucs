@@ -483,7 +483,7 @@ else
 				# * loading config
 				# * extracting required connection information
 				# * trying to connect
-				python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)"
+				python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)" &>/dev/null
 				MYSQL_ALREADY_CONFIGURED=$?
 
 				if [ $MYSQL_ALREADY_CONFIGURED -ne 0]; then
