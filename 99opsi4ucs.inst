@@ -209,7 +209,7 @@ set +e
 udm users/user list "$@" --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
 pcpatchUserMissing=$?
 set -e
-if [ $pcpatchUserMissing != 0 ]; then
+if [ $pcpatchUserMissing -ne 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
 
