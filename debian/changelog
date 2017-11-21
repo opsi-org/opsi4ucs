@@ -1,3 +1,9 @@
+opsi4ucs (4.0.7.5-9) stable; urgency=medium
+
+  * Fix: Trigger group sync for fileadmingroup every 200 seconds.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 21 Nov 2017 14:30:45 +0100
+
 opsi4ucs (4.0.7.5-8) testing; urgency=medium
 
   * Removed Build-Depends workaround.
