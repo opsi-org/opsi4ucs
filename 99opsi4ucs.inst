@@ -200,7 +200,7 @@ set +e
 udm users/user list "$@" --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
 pcpatchUserMissing=$?
 set -e
-if [ $pcpatchUserMissing != 0 ]; then
+if [ $pcpatchUserMissing -ne 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
 
@@ -425,7 +425,7 @@ if [ -e "/etc/univention/ssl/$FQDN/cert.pem" -a -e "/etc/univention/ssl/$FQDN/pr
 	cat /etc/univention/ssl/$FQDN/private.key > /etc/opsi/opsiconfd.pem
 	grep -A 50 "BEGIN CERTIFICATE" /etc/univention/ssl/$FQDN/cert.pem >> /etc/opsi/opsiconfd.pem
 	chmod 600 /etc/opsi/opsiconfd.pem
-	chown opsiconfd: /etc/opsi/opsiconfd.pem || true
+	chown opsiconfd:root /etc/opsi/opsiconfd.pem || true
 else
 	if [ ! -e "/etc/opsi/opsiconfd.pem" ]; then
 		$VERBOSE && echo "WARNING: Unable to automatically create opsiconfd.pem! You need to create /etc/opsi/opsiconfd.pem manually!"
@@ -449,7 +449,7 @@ else
 		getent group "$fileadmingroup" >/dev/null 2>/dev/null && break
 		$VERBOSE && echo -n "."
 		# restart samba-ad-dc every 200 seconds
-		if [ "$count" = 20 ] || [ "$count" = 400 ]; then
+		if [ "$count" = 200 ] || [ "$count" = 400 ]; then
 			if is_ucr_true nss/group/cachefile && test -e /usr/lib/univention-pam/ldap-group-to-file.py; then
 				python /usr/lib/univention-pam/ldap-group-to-file.py >/dev/null 2>/dev/null || true
 			else
@@ -472,28 +472,35 @@ else
 		fi
 
 		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
-
 		if [ -n "$MYSQL_CONFIGURED" ]; then
 			$VERBOSE && echo "mysql configured in dispatch.conf."
 
-			if [ -e "/etc/mysql.secret" ]; then
-				MYSQL_PW=$(cat "/etc/mysql.secret")
-				MYSQL_ALREADY_CONFIGURED=$(grep "$MYSQL_PW" /etc/opsi/backends/mysql.conf)
+			# Python snippet to check the configuration by...
+			# * loading config
+			# * extracting required connection information
+			# * trying to connect
+			python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)" &>/dev/null
+			MYSQL_ALREADY_CONFIGURED=$?
 
-				if [ -z "$MYSQL_ALREADY_CONFIGURED" ]; then
-					$VERBOSE && echo "Attempting MySQL configuration..."
+			if [ $MYSQL_ALREADY_CONFIGURED -ne 0 ]; then
+				$VERBOSE && echo "Unable to connect to MySQL."
+				if [ -e "/etc/mysql.secret" ]; then
+					MYSQL_PW=$(cat "/etc/mysql.secret")
+
+					$VERBOSE && echo "Attempting automatic configuration for MySQL backend..."
 					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
 					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
 					$VERBOSE && echo "Finished setting up MySQL backend."
-				else
-					$VERBOSE && echo "MySQL already configured."
-					$UPDATE_BACKENDS && opsi-setup --update-mysql
-				fi
 
-				# not keeping the password around.
-				unset MYSQL_PW
+					# not keeping the password around.
+					unset MYSQL_PW
+				else
+					$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not properly configured!"
+					$VERBOSE && echo "WARNING: No automatic configuration possible - is mysql-server installed?"
+				fi
 			else
-				$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not installed!"
+				$VERBOSE && echo "MySQL connection possible."
+				$UPDATE_BACKENDS && opsi-setup --update-mysql
 			fi
 		fi
 
