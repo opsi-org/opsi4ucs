@@ -200,7 +200,7 @@ set +e
 udm users/user list "$@" --filter "(uid=pcpatch)" | grep '^DN:' 1>/dev/null
 pcpatchUserMissing=$?
 set -e
-if [ $pcpatchUserMissing != 0 ]; then
+if [ $pcpatchUserMissing -ne 0 ]; then
 	# User pcpatch does not exist in ldap
 	$VERBOSE && echo "Adding user pcpatch"
 
@@ -449,7 +449,7 @@ else
 		getent group "$fileadmingroup" >/dev/null 2>/dev/null && break
 		$VERBOSE && echo -n "."
 		# restart samba-ad-dc every 200 seconds
-		if [ "$count" = 20 ] || [ "$count" = 400 ]; then
+		if [ "$count" = 200 ] || [ "$count" = 400 ]; then
 			if is_ucr_true nss/group/cachefile && test -e /usr/lib/univention-pam/ldap-group-to-file.py; then
 				python /usr/lib/univention-pam/ldap-group-to-file.py >/dev/null 2>/dev/null || true
 			else
