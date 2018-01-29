@@ -120,6 +120,12 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
 
+opsi4ucs (4.0.7.5-10) stable; urgency=medium
+
+  * Correct name of unvention-config-registry file.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 29 Jan 2018 17:09:25 +0100
+
 opsi4ucs (4.0.7.5-9) stable; urgency=medium
 
   * Fix: Trigger group sync for fileadmingroup every 200 seconds.
