@@ -3,12 +3,12 @@ etc/univention/templates/files
 etc/opsi/backends
 etc/opsi/backendManager
 etc/opsi/.ucs_temp
-home/opsiproducts
 usr/lib/univention-install
 usr/bin
 var/lib/opsi/depot
 var/lib/opsi/ntfs-images
 var/lib/opsi/repository
+var/lib/opsi/workbench
 var/log/opsi
 var/log/opsi/clientconnect
 var/log/opsi/bootimage

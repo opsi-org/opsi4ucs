@@ -1,3 +1,131 @@
+opsi4ucs (4.1.1.4-11) stable; urgency=medium
+
+  * Based on 4.0.7.5-10
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 29 Jan 2018 17:52:28 +0100
+
+opsi4ucs (4.1.1.4-10) stable; urgency=medium
+
+  * Based on 4.0.7.5-9.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 21 Nov 2017 14:37:22 +0100
+
+opsi4ucs (4.1.1.4-9) testing; urgency=medium
+
+  * Fix key decryption.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 15 Nov 2017 15:25:19 +0100
+
+opsi4ucs (4.1.1.4-8) testing; urgency=medium
+
+  * Suppressing output from MySQL connectivity check.
+  * MySQL connectivity check does not require MySQL to be installed locally.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 15 Nov 2017 09:03:16 +0100
+
+opsi4ucs (4.1.1.4-7) testing; urgency=medium
+
+  * Changed check if MySQL backend is already configured.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 13 Nov 2017 17:29:13 +0100
+
+opsi4ucs (4.1.1.4-6) testing; urgency=medium
+
+  * Automatic backend update for installations coming from versions
+    lower than opsi 4.1.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 13 Nov 2017 10:03:15 +0100
+
+opsi4ucs (4.1.1.4-5) experimental; urgency=medium
+
+  * Join-script: removed tftpd configuarion
+  * Join-script: removed opsi-linux-bootimage linking
+
+ -- Mathias Radtke <m.radtke@uib.de>  Wed, 08 Nov 2017 09:10:16 +0100
+
+opsi4ucs (4.1.1.4-4) testing; urgency=medium
+
+  * Join-script: automatically creating /etc/opsi/opsiconfd.pem.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 15:39:00 +0100
+
+opsi4ucs (4.1.1.4-3) testing; urgency=medium
+
+  * Join-script: making use of the "service" command.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 13:47:02 +0100
+
+opsi4ucs (4.1.1.4-2) testing; urgency=medium
+
+  * Join-script: small output change.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 13:18:04 +0100
+
+opsi4ucs (4.1.1.4-1) testing; urgency=medium
+
+  * Added missing import in opsi-setup.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 12:04:48 +0100
+
+opsi4ucs (4.1.1.3-6) testing; urgency=medium
+
+  * Join-script: Correct check if MySQL is already setup.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 11:58:42 +0100
+
+opsi4ucs (4.1.1.3-5) testing; urgency=medium
+
+  * Join-script: first check for MySQL configuration in dispatch.conf and
+    then for possibility to automatic configuration.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 10:51:25 +0100
+
+opsi4ucs (4.1.1.3-4) testing; urgency=medium
+
+  * Join-Script attempts to auto-configure MySQL during setup.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 07 Nov 2017 10:22:47 +0100
+
+opsi4ucs (4.1.1.3-3) testing; urgency=medium
+
+  * based on 4.0.7.5-8.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 06 Nov 2017 11:36:22 +0100
+
+opsi4ucs (4.1.1.3-2) testing; urgency=medium
+
+  * Locating opsi_workbench at /var/lib/opsi/workbench.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 21 Jul 2017 10:23:20 +0200
+
+opsi4ucs (4.1.1.3-1) testing; urgency=medium
+
+  * Fix problem with depot registration.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 21 Jul 2017 10:08:09 +0200
+
+opsi4ucs (4.1.1.2-1) testing; urgency=medium
+
+  * Depending on opsi 4.1 packages.
+  * Many internal refactorings to re-use functionality present in python-opsi.
+  * Using new method for updating the file backend for opsi 4.1.
+  * Server setup does take the new workbench attributes into account.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 30 Jun 2017 16:34:06 +0200
+
+opsi4ucs (4.1.1.1-2) testing; urgency=medium
+
+  * Merged changes from opsi4ucs 4.0.7.4.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 22 Jun 2017 16:49:13 +0200
+
+opsi4ucs (4.1.1.1-1) stable; urgency=medium
+
+  * Remove references to obsolete LDAP support.
+    This removes support for --update-ldap and --update-univention.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
+
 opsi4ucs (4.0.7.5-10) stable; urgency=medium
 
   * Correct name of unvention-config-registry file.
