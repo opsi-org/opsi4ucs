@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=28
+VERSION=41
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -50,15 +50,6 @@ if [ -e "/etc/init.d/univention-dhcp"  ]; then
 	DHCPSERVER=1
 else
 	DHCPSERVER=0
-fi
-
-SAMBA_INIT_SCRIPT="/etc/init.d/samba"
-eval "$(ucr shell samba4/role)"
-if [ -n "$samba4_role" ]; then
-	echo "The local UCS is configured as Samba/AD $samba4_role"
-	if [ "$UCS_VERSION" = "3.1" -o "$UCS_VERSION" = "3.2" ]; then
-		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
-	fi
 fi
 
 LDAP_PORT=$(ucr get ldap/master/port)
@@ -227,7 +218,7 @@ if [ $pcpatchUserMissing -ne 0 ]; then
 		--ignore_exists
 
 	set +e
-	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced..."
+	$VERBOSE && echo -n "Waiting for opsi fileadmingroup to be synced:"
 	count=0
 	while [ $count -le 600 ]; do
 		grep "$fileadmingroup" /var/lib/extrausers/group >/dev/null 2>/dev/null && break
@@ -235,6 +226,7 @@ if [ $pcpatchUserMissing -ne 0 ]; then
 		sleep 1
 		count=$((count+1))
 	done
+	$VERBOSE && echo "OK"
 	set -e
 fi
 
@@ -341,7 +333,7 @@ if [ $ret != 0 ]; then
 		--position="cn=$FQDN,cn=shares,$ROOT_DN" \
 		--set name=opsi_workbench \
 		--set host=$FQDN \
-		--set path=/home/opsiproducts \
+		--set path=/var/lib/opsi/workbench \
 		--set owner=$USERID \
 		--set group=$GROUPID \
 		--set directorymode=0755 \
@@ -383,13 +375,7 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-
-if [ -e /etc/init.d/samba4 ]; then
-	/etc/init.d/samba4 force-reload
-fi
-if [ -e /etc/init.d/samba ]; then
-	/etc/init.d/samba reload
-fi
+/usr/sbin/service samba reload || true
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
@@ -416,43 +402,6 @@ if [ "$SERVER_ROLE" = "domaincontroller_master" ]; then
 	fi
 fi
 
-# --- Configure tftp ------------------------------------------------------------------------------------------------------------
-update-inetd --remove tftp
-if [ ! -d "$TFTPROOT" ]; then
-	$VERBOSE && echo "Creating $TFTPROOT"
-	mkdir $TFTPROOT
-	ln -sf /tftpboot/linux/pxelinux.0 $TFTPROOT/
-	$VERBOSE && echo "Setting rights for $TFTPROOT"
-	chmod 755 $TFTPROOT
-	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
-fi
-TFTPLINE="tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd --tftpd-timeout 300 --retry-timeout 5 --verbose=5 $TFTPROOT"
-update-inetd --add "${TFTPLINE}"
-/etc/init.d/openbsd-inetd reload
-
-$VERBOSE && echo "Linking tftpboot files into $TFTPROOT"
-ln -sf /tftpboot/linux/install $TFTPROOT/
-ln -sf /tftpboot/linux/install-x64 $TFTPROOT/
-ln -sf /tftpboot/linux/menu.c32 $TFTPROOT/
-ln -sf /tftpboot/linux/chain.c32 $TFTPROOT/
-ln -sf /tftpboot/linux/miniroot.bz2 $TFTPROOT/
-ln -sf /tftpboot/linux/miniroot-x64.bz2 $TFTPROOT/
-if [ -e /tftpboot/linux/ldlinux.c32 ]; then
-       ln -sf /tftpboot/linux/ldlinux.c32 $TFTPROOT/
-fi
-if [ -e /tftpboot/linux/libcom32.c32 ]; then
-       ln -sf /tftpboot/linux/libcom32.c32 $TFTPROOT/
-fi
-if [ -e /tftpboot/linux/libutil.c32 ]; then
-       ln -sf /tftpboot/linux/libutil.c32 $TFTPROOT/
-fi
-
-if [ ! -L $TFTPROOT/pxelinux.cfg ]; then
-	find "$TFTPROOT/pxelinux.cfg" -mindepth 1 -maxdepth 1 -exec mv "{}" "/tftpboot/linux/pxelinux.cfg/" \;
-	rmdir $TFTPROOT/pxelinux.cfg
-	ln -sf /tftpboot/linux/pxelinux.cfg $TFTPROOT/
-fi
-
 # --- Configure opsi ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Configuring opsi"
 $VERBOSE && echo "Checking security options for opsi"
@@ -468,7 +417,20 @@ TEMPFILE=$(tempfile)
 
 grep -v "dport 69"  /etc/security/packetfilter.d/50_local.sh | grep  -v "dport 4447" > $TEMPFILE
 cat $TEMPFILE > /etc/security/packetfilter.d/50_local.sh
-/etc/init.d/univention-firewall restart
+/usr/sbin/service univention-firewall restart
+
+if [ -e "/etc/univention/ssl/$FQDN/cert.pem" -a -e "/etc/univention/ssl/$FQDN/private.key" ]; then
+	$VERBOSE && echo "Creating opsiconfd.pem"
+
+	cat /etc/univention/ssl/$FQDN/private.key > /etc/opsi/opsiconfd.pem
+	grep -A 50 "BEGIN CERTIFICATE" /etc/univention/ssl/$FQDN/cert.pem >> /etc/opsi/opsiconfd.pem
+	chmod 600 /etc/opsi/opsiconfd.pem
+	chown opsiconfd:root /etc/opsi/opsiconfd.pem || true
+else
+	if [ ! -e "/etc/opsi/opsiconfd.pem" ]; then
+		$VERBOSE && echo "WARNING: Unable to automatically create opsiconfd.pem! You need to create /etc/opsi/opsiconfd.pem manually!"
+	fi
+fi
 
 if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master" -a "$SERVER_ROLE" != "domaincontroller_backup" ]; then
 	ln -sf /etc/opsi/backendManager/dispatch.conf.jsonrpc /etc/opsi/backendManager/dispatch.conf
@@ -481,7 +443,7 @@ else
 	fi
 
 	set +e
-	$VERBOSE && echo -n "Check for opsi fileadmingroup "
+	$VERBOSE && echo -n "Check for opsi fileadmingroup:"
 	count=0
 	while [ $count -le 600 ]; do
 		getent group "$fileadmingroup" >/dev/null 2>/dev/null && break
@@ -497,7 +459,57 @@ else
 		sleep 1
 		count=$((count+1))
 	done
+	$VERBOSE && echo "OK"
 	set -e
+
+	if [ "$OPSI_ROLE" = "configserver" ]; then
+		set +e
+		if [ -e /tmp/update_backends.opsi4ucs ]; then
+			UPDATE_BACKENDS=true
+			rm /tmp/update_backends.opsi4ucs
+		else
+			UPDATE_BACKENDS=false
+		fi
+
+		MYSQL_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep mysql)
+		if [ -n "$MYSQL_CONFIGURED" ]; then
+			$VERBOSE && echo "mysql configured in dispatch.conf."
+
+			# Python snippet to check the configuration by...
+			# * loading config
+			# * extracting required connection information
+			# * trying to connect
+			python -c "import MySQLdb; from OPSI.Util.Task.ConfigureBackend import getBackendConfiguration; config = getBackendConfiguration('/etc/opsi/backends/mysql.conf'); connectionSettings = {'host': config['address'], 'user': config['username'], 'passwd': config['password'], 'db': config['database']}; MySQLdb.connect(**connectionSettings)" &>/dev/null
+			MYSQL_ALREADY_CONFIGURED=$?
+
+			if [ $MYSQL_ALREADY_CONFIGURED -ne 0 ]; then
+				$VERBOSE && echo "Unable to connect to MySQL."
+				if [ -e "/etc/mysql.secret" ]; then
+					MYSQL_PW=$(cat "/etc/mysql.secret")
+
+					$VERBOSE && echo "Attempting automatic configuration for MySQL backend..."
+					UNATTENDED="{\"dbAdminPass\": \"$MYSQL_PW\", \"dbAdminUser\": \"root\", \"database\": \"opsi\"}"
+					opsi-setup --configure-mysql --unattended=$UNATTENDED || echo "unattended backend configuration failed!"
+					$VERBOSE && echo "Finished setting up MySQL backend."
+
+					# not keeping the password around.
+					unset MYSQL_PW
+				else
+					$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not properly configured!"
+					$VERBOSE && echo "WARNING: No automatic configuration possible - is mysql-server installed?"
+				fi
+			else
+				$VERBOSE && echo "MySQL connection possible."
+				$UPDATE_BACKENDS && opsi-setup --update-mysql
+			fi
+		fi
+
+		FILE_BACKEND_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep file)
+		if [ -n "$FILE_BACKEND_CONFIGURED" -a $UPDATE_BACKENDS ]; then
+			opsi-setup --update-file
+		fi
+		set -e
+	fi
 
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
@@ -517,12 +529,10 @@ dpkg-reconfigure opsiconfd
 
 $VERBOSE && echo "Restarting services"
 if [ $DHCPSERVER = "1" ]; then
-	/etc/init.d/univention-dhcp restart || true
-elif [ -e "/etc/init.d/dhcp3-server" ]; then
-	/etc/init.d/dhcp3-server restart || true
+	/usr/sbin/service univention-dhcp restart || true
 fi
-$SAMBA_INIT_SCRIPT reload || true
-/etc/init.d/opsiconfd restart || true
-/etc/init.d/opsipxeconfd restart || true
+/usr/sbin/service samba reload || true
+/usr/sbin/service opsiconfd restart || true
+/usr/sbin/service opsipxeconfd restart || true
 
 joinscript_save_current_version

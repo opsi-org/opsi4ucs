@@ -4,21 +4,22 @@ Priority: optional
 Maintainer: uib GmbH <info@uib.de>
 Uploaders: Niko Wenselowski <n.wenselowski@uib.de>
 Build-Depends: debhelper (>= 7.0.50~), univention-config-dev
-X-Python-Version: >= 2.6
+X-Python-Version: >= 2.7
 Standards-Version: 3.9.4
 
 Package: opsi4ucs
 Section: opsi
 Architecture: all
 Depends: debconf,
+	dpkg,
 	univention-join (>= 5.0.20-1),
 	shell-univention-lib (>= 2.0.17-1),
-	python(>= 2.6.6-3~),
-	python-opsi (>=4.0.6.35),
-	opsiconfd (>=4.0),
-	opsipxeconfd (>=4.0),
-	opsi-utils (>=4.0.7.10),
-	opsi-linux-bootimage (>=20140118),
+	python(>= 2.7),
+	python-opsi (>= 4.1.1.11),
+	opsiconfd (>= 4.1),
+	opsipxeconfd (>= 4.1),
+	opsi-utils (>= 4.1),
+	opsi-linux-bootimage (>= 20170620),
 	opsi-configed,
 	univention-samba4 | univention-samba, univention-s4-connector | univention-samba,
 	sudo,
