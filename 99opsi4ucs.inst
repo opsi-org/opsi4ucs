@@ -375,7 +375,16 @@ fi
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
 
-systemctl reload smbd.service || echo "Failed to reload smbd.service"
+if [ "$UCS_VERSION" = "4.1" ]; then
+	if [ -e /etc/init.d/samba4 ]; then
+		/etc/init.d/samba4 force-reload || echo "samba4 force-reload failed"
+	fi
+	if [ -e /etc/init.d/samba ]; then
+		/etc/init.d/samba reload  || echo "samba reload failed"
+	fi
+else
+	systemctl reload smbd.service || echo "Failed to reload smbd.service"
+fi
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
@@ -507,7 +516,12 @@ if [ $DHCPSERVER = "1" ]; then
 elif [ -e "/etc/init.d/dhcp3-server" ]; then
 	/etc/init.d/dhcp3-server restart || true
 fi
-systemctl reload smbd.service || true
+if [ "$UCS_VERSION" = "4.1" ]; then
+	/etc/init.d/samba reload || true
+else
+	systemctl reload smbd.service || true
+fi
+
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
 
