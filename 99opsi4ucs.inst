@@ -1,10 +1,10 @@
 #! /bin/bash -e
 
-# Copyright (C) 2014-2017 uib GmbH
+# Copyright (C) 2014-2018 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=28
+VERSION=29
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -50,15 +50,6 @@ if [ -e "/etc/init.d/univention-dhcp"  ]; then
 	DHCPSERVER=1
 else
 	DHCPSERVER=0
-fi
-
-SAMBA_INIT_SCRIPT="/etc/init.d/samba"
-eval "$(ucr shell samba4/role)"
-if [ -n "$samba4_role" ]; then
-	echo "The local UCS is configured as Samba/AD $samba4_role"
-	if [ "$UCS_VERSION" = "3.1" -o "$UCS_VERSION" = "3.2" ]; then
-		SAMBA_INIT_SCRIPT="/etc/init.d/samba4"
-	fi
 fi
 
 LDAP_PORT=$(ucr get ldap/master/port)
@@ -384,11 +375,15 @@ fi
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
 
-if [ -e /etc/init.d/samba4 ]; then
-	/etc/init.d/samba4 force-reload
-fi
-if [ -e /etc/init.d/samba ]; then
-	/etc/init.d/samba reload
+if [ "$UCS_VERSION" = "4.1" ]; then
+	if [ -e /etc/init.d/samba4 ]; then
+		/etc/init.d/samba4 force-reload || echo "samba4 force-reload failed"
+	fi
+	if [ -e /etc/init.d/samba ]; then
+		/etc/init.d/samba reload  || echo "samba reload failed"
+	fi
+else
+	systemctl reload smbd.service || echo "Failed to reload smbd.service"
 fi
 
 $VERBOSE && echo "Waiting for samba shares"
@@ -521,7 +516,12 @@ if [ $DHCPSERVER = "1" ]; then
 elif [ -e "/etc/init.d/dhcp3-server" ]; then
 	/etc/init.d/dhcp3-server restart || true
 fi
-$SAMBA_INIT_SCRIPT reload || true
+if [ "$UCS_VERSION" = "4.1" ]; then
+	/etc/init.d/samba reload || true
+else
+	systemctl reload smbd.service || true
+fi
+
 /etc/init.d/opsiconfd restart || true
 /etc/init.d/opsipxeconfd restart || true
 
