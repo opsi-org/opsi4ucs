@@ -1,10 +1,10 @@
 #! /bin/bash -e
 
-# Copyright (C) 2014-2017 uib GmbH
+# Copyright (C) 2014-2018 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=41
+VERSION=42
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -375,7 +375,8 @@ fi
 
 # Fix for Executable Bit problem but only for opsi-depot Share
 # Changing ntacl-backend settings to native (default)
-/usr/sbin/service samba reload || true
+
+systemctl reload smbd.service || echo "Failed to reload smbd.service"
 
 $VERBOSE && echo "Waiting for samba shares"
 sleep 5
@@ -531,7 +532,7 @@ $VERBOSE && echo "Restarting services"
 if [ $DHCPSERVER = "1" ]; then
 	/usr/sbin/service univention-dhcp restart || true
 fi
-/usr/sbin/service samba reload || true
+systemctl reload smbd.service || true
 /usr/sbin/service opsiconfd restart || true
 /usr/sbin/service opsipxeconfd restart || true
 
