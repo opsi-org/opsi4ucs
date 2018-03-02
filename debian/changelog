@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-12) stable; urgency=medium
+
+  * Based on 4.0.7.5-11.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 02 Mar 2018 16:49:53 +0100
+
 opsi4ucs (4.1.1.4-11) stable; urgency=medium
 
   * Based on 4.0.7.5-10
