@@ -126,6 +126,13 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
 
+opsi4ucs (4.0.7.5-11) testing; urgency=medium
+
+  * Display a message if reloading samba fails.
+  * Use systemctl for samba reloads on UCS 4.2.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 02 Mar 2018 13:43:40 +0100
+
 opsi4ucs (4.0.7.5-10) stable; urgency=medium
 
   * Correct name of unvention-config-registry file.
