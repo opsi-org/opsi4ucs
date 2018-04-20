@@ -516,6 +516,18 @@ else
 	opsi-setup --set-rights
 fi
 
+if [ -e "/tmp/opsi.packages.install" ]; then
+	echo "Installing opsi products - this may take a while..."
+	opsi-package-updater -v install || echo "Installing opsi products failed. Please fix the problem and then run \"opsi-package-updater -v install\" manually."
+	rm -f /tmp/opsi.packages.install
+else
+	if [ -e "/tmp/opsi.packages.update" ]; then
+		echo "Updating opsi products - this may take a while..."
+		opsi-package-updater -v update || echo "Updating opsi products failed. Please fix the problem and then run \"opsi-package-updater -v update\" manually."
+		rm -f /tmp/opsi.packages.update
+	fi
+fi
+
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding links to the UCS overview page"
 ucr set ucs/web/overview/entries/admin/opsi-configed/description/de='Management-Interface für Client-Management mit opsi (mittels Java Webstart)'
