@@ -46,6 +46,4 @@ case "$1" in
 	;;
 esac
 
-test -x /usr/sbin/univention-config-registry && univention-config-registry register opsi4ucs || true
-
 exit 0
