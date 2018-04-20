@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-13) stable; urgency=medium
+
+  * For (un)registering opsi4ucs we rely on debian/rules.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 20 Apr 2018 11:25:56 +0200
+
 opsi4ucs (4.1.1.4-12) stable; urgency=medium
 
   * Based on 4.0.7.5-11.
