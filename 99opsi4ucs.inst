@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=42
+VERSION=43
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -506,14 +506,26 @@ else
 		fi
 
 		FILE_BACKEND_CONFIGURED=$(egrep -v "^#" /etc/opsi/backendManager/dispatch.conf | grep file)
-		if [ -n "$FILE_BACKEND_CONFIGURED" -a $UPDATE_BACKENDS ]; then
-			opsi-setup --update-file
+		if [ -n "$FILE_BACKEND_CONFIGURED" ]; then
+			$UPDATE_BACKENDS && opsi-setup --update-file
 		fi
 		set -e
 	fi
 
 	opsi-setup --init-current-config
 	opsi-setup --set-rights
+fi
+
+if [ -e "/tmp/opsi.packages.install" ]; then
+	echo "Installing opsi products - this may take a while..."
+	opsi-package-updater -v install || echo "Installing opsi products failed. Please fix the problem and then run \"opsi-package-updater -v install\" manually."
+	rm -f /tmp/opsi.packages.install
+else
+	if [ -e "/tmp/opsi.packages.update" ]; then
+		echo "Updating opsi products - this may take a while..."
+		opsi-package-updater -v update || echo "Updating opsi products failed. Please fix the problem and then run \"opsi-package-updater -v update\" manually."
+		rm -f /tmp/opsi.packages.update
+	fi
 fi
 
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
