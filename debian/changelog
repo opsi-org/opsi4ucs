@@ -1,3 +1,10 @@
+opsi4ucs (4.1.1.4-14) stable; urgency=medium
+
+  * More consistent backend update approach.
+  * Added the possibility to install / update packages during the join script.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 20 Apr 2018 16:32:42 +0200
+
 opsi4ucs (4.1.1.4-13) stable; urgency=medium
 
   * For (un)registering opsi4ucs we rely on debian/rules.
