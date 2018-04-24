@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-15) stable; urgency=medium
+
+  * Removed UCS 3.x style overview pages.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Apr 2018 15:24:27 +0200
+
 opsi4ucs (4.1.1.4-14) stable; urgency=medium
 
   * More consistent backend update approach.
