@@ -1,6 +1,9 @@
-opsi4ucs (4.1.1.4-15ubuntu1) UNRELEASED; urgency=medium
+opsi4ucs (4.1.1.5-1) stable; urgency=medium
 
   * opsi-setup: Restart service using the 'service' command.
+  * Join-Script: Added possibility to configure opsi-package-updater to
+    run against the configserver if the script is running on a depot and
+    not in the role of either master or backup.
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 03 May 2018 15:05:59 +0200
 
