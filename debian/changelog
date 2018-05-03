@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.4-15ubuntu1) UNRELEASED; urgency=medium
+
+  * opsi-setup: Restart service using the 'service' command.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 03 May 2018 15:05:59 +0200
+
 opsi4ucs (4.1.1.4-15) stable; urgency=medium
 
   * Removed UCS 3.x style overview pages.
