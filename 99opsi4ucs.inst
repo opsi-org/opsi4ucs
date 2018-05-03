@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=43
+VERSION=44
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -438,6 +438,27 @@ if [ "$OPSI_ROLE" = "depotserver" -a "$SERVER_ROLE" != "domaincontroller_master"
 	$VERBOSE && echo "Registering Server as OpsiDepotserver on $config_server"
 	credentials="$@"
 	opsi-setup --register-depot -l5 --binddata "--configserver $config_server $credentials"
+
+	if [ -e "/tmp/opsi.configure.package.updater" ]; then
+		# We shall configure opsi-package-updater to retrieve packages from
+		# the configserver.
+
+		if [ "$config_server" = ".$DOMAIN" ]; then
+			$VERBOSE && echo "No existing OpsiConfigserver found - no automatic configuration of opsi-package-updater."
+		elif [ "$config_server" != ".$DOMAIN" -a "$config_server" != "$FQDN" -a -n "$config_server" -a -e "/etc/opsi/package-updater.repos.d/opsi-server.repo" ]; then
+			# We found a configserver.
+			# We want to configure the opsi-package-updater to work with it.
+			$VERBOSE && echo -n "Configuring opsi-package-updater to run against the config server:"
+			sed --in-place "s/^active = true/active = false/gi" /etc/opsi/package-updater.repos.d/*.repo
+			$VERBOSE && echo -n "."
+			sed --in-place '/\[repository_opsi_server\]/{n;s/active = false/active = true/}' /etc/opsi/package-updater.repos.d/opsi-server.repo
+			$VERBOSE && echo -n "."
+			sed --in-place "/\[repository_opsi_server\]/{n;n;s/opsiDepotId =/opsiDepotId = $config_server/}" /etc/opsi/package-updater.repos.d/opsi-server.repo
+			$VERBOSE && echo ".OK"
+		fi
+
+		rm -f "/tmp/opsi.configure.package.updater"
+	fi
 else
 	if [ "$OPSI_ROLE" = "depotserver" ]; then
 		$VERBOSE && echo "Automatic Registration of Server as opsi-Depotserver could not be done, because serverole: $SERVER_ROLE was detected, please execute opsi-setup --register-depot after installation."
