@@ -1,3 +1,11 @@
+opsi4ucs (4.1.1.5-2) stable; urgency=medium
+
+  * If automatic mysql configuration fails give better advice in join script.
+  * Added an fallback for opsiconfd.pem creation if somehow the foldername
+    of the original certificate does not match the FQDN.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 29 Jun 2018 11:33:25 +0200
+
 opsi4ucs (4.1.1.5-1) stable; urgency=medium
 
   * opsi-setup: Restart service using the 'service' command.
