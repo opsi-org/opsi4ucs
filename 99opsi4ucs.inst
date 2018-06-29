@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=44
+VERSION=45
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -428,8 +428,18 @@ if [ -e "/etc/univention/ssl/$FQDN/cert.pem" -a -e "/etc/univention/ssl/$FQDN/pr
 	chmod 600 /etc/opsi/opsiconfd.pem
 	chown opsiconfd:root /etc/opsi/opsiconfd.pem || true
 else
-	if [ ! -e "/etc/opsi/opsiconfd.pem" ]; then
-		$VERBOSE && echo "WARNING: Unable to automatically create opsiconfd.pem! You need to create /etc/opsi/opsiconfd.pem manually!"
+	if [ -e "/etc/univention/ssl/$HOSTNAME/cert.pem" -a -e "/etc/univention/ssl/$HOSTNAME/private.key" ]; then
+		# This is a fallback if the foldername is != FQDN
+		$VERBOSE && echo "Creating opsiconfd.pem"
+
+		cat /etc/univention/ssl/$HOSTNAME/private.key > /etc/opsi/opsiconfd.pem
+		grep -A 50 "BEGIN CERTIFICATE" /etc/univention/ssl/$HOSTNAME/cert.pem >> /etc/opsi/opsiconfd.pem
+		chmod 600 /etc/opsi/opsiconfd.pem
+		chown opsiconfd:root /etc/opsi/opsiconfd.pem || true
+	else
+		if [ ! -e "/etc/opsi/opsiconfd.pem" ]; then
+			$VERBOSE && echo "WARNING: Unable to automatically create opsiconfd.pem! You need to create /etc/opsi/opsiconfd.pem manually!"
+		fi
 	fi
 fi
 
@@ -518,7 +528,7 @@ else
 					unset MYSQL_PW
 				else
 					$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not properly configured!"
-					$VERBOSE && echo "WARNING: No automatic configuration possible - is mysql-server installed?"
+					$VERBOSE && echo "WARNING: No automatic configuration possible - is univention-mariadb or univention-mysql installed?"
 				fi
 			else
 				$VERBOSE && echo "MySQL connection possible."
