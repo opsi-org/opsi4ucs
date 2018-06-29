@@ -518,7 +518,7 @@ else
 					unset MYSQL_PW
 				else
 					$VERBOSE && echo "WARNING: mysql configured in dispatch.conf but not properly configured!"
-					$VERBOSE && echo "WARNING: No automatic configuration possible - is mysql-server installed?"
+					$VERBOSE && echo "WARNING: No automatic configuration possible - is univention-mariadb or univention-mysql installed?"
 				fi
 			else
 				$VERBOSE && echo "MySQL connection possible."
