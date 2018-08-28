@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.5-3) stable; urgency=medium
+
+  * Based on opsi4ucs 4.0.7.5-12.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 28 Aug 2018 13:24:18 +0200
+
 opsi4ucs (4.1.1.5-2) stable; urgency=medium
 
   * If automatic mysql configuration fails give better advice in join script.
