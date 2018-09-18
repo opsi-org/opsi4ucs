@@ -133,7 +133,7 @@ $VERBOSE && echo "     Windomain        : $WINDOMAIN"
 
 ## --- Deleting existing opsi extended-attribute ------------------------------------------------------------------------
 udm settings/extended_attribute remove "$@" \
-	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" 2>/dev/null || true
+	--dn="cn=opsiHostId,cn=custom attributes,cn=univention,$ROOT_DN" --ignore_not_exists
 
 # --- Add users and groups ------------------------------------------------------------------------------------------------------
 $VERBOSE && echo "Adding system users and groups..."
