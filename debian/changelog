@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.5-4) stable; urgency=medium
+
+  * Based on opsi4ucs 4.0.7.5-13.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Thu, 20 Sep 2018 16:27:51 +0200
+
 opsi4ucs (4.1.1.5-3) stable; urgency=medium
 
   * Based on opsi4ucs 4.0.7.5-12.
@@ -173,6 +179,14 @@ opsi4ucs (4.1.1.1-1) stable; urgency=medium
     This removes support for --update-ldap and --update-univention.
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 24 Jan 2017 18:57:38 +0100
+
+opsi4ucs (4.0.7.5-13) stable; urgency=medium
+
+  * Join script: udm call for removing old opsi extended attribute will
+    ignore missing objects.
+    Thanks to Michael Grandjean from Univention GmbH for the patch.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 18 Sep 2018 13:43:46 +0200
 
 opsi4ucs (4.0.7.5-12) testing; urgency=medium
 
