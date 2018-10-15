@@ -8,9 +8,7 @@ VERSION=45
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
-set +e
 joinscript_init
-set -e
 
 # Required for reading network information
 . /usr/share/univention-lib/base.sh
