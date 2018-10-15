@@ -580,3 +580,5 @@ systemctl reload smbd.service || true
 /usr/sbin/service opsipxeconfd restart || true
 
 joinscript_save_current_version
+
+exit 0
