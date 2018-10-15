@@ -1,4 +1,4 @@
-#! /bin/bash -e
+#! /bin/bash
 
 # Copyright (C) 2006-2018 uib GmbH
 # http://www.uib.de
@@ -25,7 +25,7 @@ case "$1" in
 		call_joinscript 99opsi4ucs.inst
 
 		if [ -d "/etc/opsi/.ucs_temp" -a -d "/var/www/" ]; then
-			mkdir -p /var/www/icon/50x50 || true
+			mkdir -p /var/www/icon/50x50
 
 			if [ -e "/etc/opsi/.ucs_temp/opsi-configed.png" ]; then
 				cp /etc/opsi/.ucs_temp/opsi-configed.png /var/www/icon/50x50/

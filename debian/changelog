@@ -1,3 +1,11 @@
+opsi4ucs (4.1.1.5-5) stable; urgency=medium
+
+  * postinst: Accept non-zero exit codes.
+    call_joinscript may return 1 if the join script in question has already
+    been executed before.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 15 Oct 2018 14:16:13 +0200
+
 opsi4ucs (4.1.1.5-4) stable; urgency=medium
 
   * Based on opsi4ucs 4.0.7.5-13.
