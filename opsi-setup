@@ -484,9 +484,9 @@ def registerDepot(username=None, password=None, configserver=None):
 					deleteClient = ui.yesno(
 						title=_(u'ID already in use'),
 						text=_(u'''We already have an client with the ID %s.
-	We can not register a new depot with the same ID.
-	Should the client be deleted to free the ID?
-	This will remove the client and it's settings from opsi.''') % depot.id,
+We can not register a new depot with the same ID.
+Should the client be deleted to free the ID?
+This will remove the client and it's settings from opsi.''') % depot.id,
 						okLabel=_(u'Delete client'),
 						cancelLabel=_(u'Cancel')
 					)
