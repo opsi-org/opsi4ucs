@@ -86,6 +86,10 @@ ipAddress = None
 backendConfig = {}
 
 
+class CancelledByUserError(Exception):
+	pass
+
+
 def getDistribution():
 	distribution = ''
 	try:
@@ -472,9 +476,27 @@ def registerDepot(username=None, password=None, configserver=None):
 				break
 
 			depots = jsonrpcBackend.host_getObjects(id=getSysConfig()['fqdn'])
-			if depots:
-				# Already exists
+			try:
 				depot = depots[0]
+
+				if depot.getType() == 'OpsiClient':
+					deleteClient = ui.yesno(
+						title=_(u'ID already in use'),
+						text=_(u'''We already have an client with the ID %s.
+	We can not register a new depot with the same ID.
+	Should the client be deleted to free the ID?
+	This will remove the client and it's settings from opsi.''') % depot.id,
+						okLabel=_(u'Delete client'),
+						cancelLabel=_(u'Cancel')
+					)
+
+					if not deleteClient:
+						raise CancelledByUserError(_(u'Cancelled'))
+
+					jsonrpcBackend.host_delete(id=depot.id)
+
+					raise ValueError("We want defaults.")
+
 				if not depot.depotWebdavUrl:
 					depot.depotWebdavUrl = u''
 				if not depot.masterDepotId:
@@ -495,7 +517,7 @@ def registerDepot(username=None, password=None, configserver=None):
 					depotAddress = getServerAddress(depot.depotRemoteUrl)
 					remoteWorkbenchPath = u'smb://{}/opsi_workbench'.format(depotAddress)
 					depot.workbenchRemoteUrl = remoteWorkbenchPath
-			else:
+			except (IndexError, ValueError):
 				serverConfig = getServerConfig(getSysConfig()['fqdn'], getSysConfig())
 
 				for key in ('description', 'notes', 'hardwareAddress', 'ipAddress', 'inventoryNumber'):
