@@ -86,6 +86,10 @@ ipAddress = None
 backendConfig = {}
 
 
+class CancelledByUserError(Exception):
+	pass
+
+
 def getDistribution():
 	distribution = ''
 	try:
@@ -391,7 +395,8 @@ def registerDepot(username=None, password=None, configserver=None):
 			logger.error(u"Failed to connect to config server '%s' as user '%s': %s" % (config['address'], adminUser, e))
 		logger.notice(u"Successfully connected to config server '%s' as user '%s'" % (config['address'], adminUser))
 
-		depots = jsonrpcBackend.host_getObjects(id=getLocalFqdn())
+		fqdn = getLocalFqdn()
+		depots = jsonrpcBackend.host_getObjects(id=fqdn)
 		if depots:
 			# Already exists
 			depot = depots[0]
@@ -406,7 +411,7 @@ def registerDepot(username=None, password=None, configserver=None):
 			if not depot.networkAddress:
 				depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
 			if not depot.depotWebdavUrl:
-				depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
+				depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % fqdn
 			if not depot.masterDepotId:
 				depot.masterDepotId = None
 
@@ -418,7 +423,7 @@ def registerDepot(username=None, password=None, configserver=None):
 				remoteWorkbenchPath = u'smb://{}/opsi_workbench'.format(depotAddress)
 				depot.workbenchRemoteUrl = remoteWorkbenchPath
 		else:
-			serverConfig = getServerConfig(getSysConfig()['fqdn'], getSysConfig())
+			serverConfig = getServerConfig(fqdn, getSysConfig())
 
 			for key in ('description', 'notes', 'hardwareAddress', 'ipAddress', 'inventoryNumber'):
 				if not serverConfig[key]:
@@ -471,10 +476,28 @@ def registerDepot(username=None, password=None, configserver=None):
 				messageBox.addText(u"Successfully connected to config server '%s' as user '%s'\n" % (config['address'], adminUser))
 				break
 
-			depots = jsonrpcBackend.host_getObjects(id=getSysConfig()['fqdn'])
-			if depots:
-				# Already exists
+			depots = jsonrpcBackend.host_getObjects(id=fqdn)
+			try:
 				depot = depots[0]
+
+				if depot.getType() == 'OpsiClient':
+					deleteClient = ui.yesno(
+						title=u'ID already in use',
+						text=u'''We already have an client with the ID %s.
+We can not register a new depot with the same ID.
+Should the client be deleted to free the ID?
+This will remove the client and it's settings from opsi.''' % depot.id,
+						okLabel=u'Delete client',
+						cancelLabel=u'Cancel'
+					)
+
+					if not deleteClient:
+						raise CancelledByUserError(_(u'Cancelled'))
+
+					jsonrpcBackend.host_delete(id=depot.id)
+
+					raise ValueError("We want defaults.")
+
 				if not depot.depotWebdavUrl:
 					depot.depotWebdavUrl = u''
 				if not depot.masterDepotId:
@@ -486,7 +509,7 @@ def registerDepot(username=None, password=None, configserver=None):
 				if not depot.networkAddress:
 					depot.ipAddress = u'%s/%s' % (getSysConfig()['subnet'], getSysConfig()['netmask'])
 				if not depot.depotWebdavUrl:
-					depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % getSysConfig()['fqdn']
+					depot.depotWebdavUrl = u'webdavs://%s:4447/depot' % fqdn
 
 				if not depot.workbenchLocalUrl:
 					depot.workbenchLocalUrl = u'file:///var/lib/opsi/workbench'
@@ -495,8 +518,8 @@ def registerDepot(username=None, password=None, configserver=None):
 					depotAddress = getServerAddress(depot.depotRemoteUrl)
 					remoteWorkbenchPath = u'smb://{}/opsi_workbench'.format(depotAddress)
 					depot.workbenchRemoteUrl = remoteWorkbenchPath
-			else:
-				serverConfig = getServerConfig(getSysConfig()['fqdn'], getSysConfig())
+			except (IndexError, ValueError):
+				serverConfig = getServerConfig(fqdn, getSysConfig())
 
 				for key in ('description', 'notes', 'hardwareAddress', 'ipAddress', 'inventoryNumber'):
 					if not serverConfig[key]:
@@ -954,14 +977,12 @@ def main():
 		usage()
 		raise
 
+	global backendConfig
+	global ipAddress
 	task = None
 	updateFrom = None
 	autoConfigureSamba = False
 	autoConfigureDhcpd = False
-	global ipAddress
-	ipAddress = None
-	global backendConfig
-	backendConfig = {}
 	username = None
 	password = None
 	configserver = None
