@@ -976,14 +976,12 @@ def main():
 		usage()
 		raise
 
+	global backendConfig
+	global ipAddress
 	task = None
 	updateFrom = None
 	autoConfigureSamba = False
 	autoConfigureDhcpd = False
-	global ipAddress
-	ipAddress = None
-	global backendConfig
-	backendConfig = {}
 	username = None
 	password = None
 	configserver = None
