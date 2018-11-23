@@ -1,3 +1,18 @@
+opsi4ucs (4.1.1.6.1-1) stable; urgency=medium
+
+  * Make the message nicer to read.
+  * Remove unsupported translation functions.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 23 Nov 2018 18:14:10 +0100
+
+opsi4ucs (4.1.1.6-1) stable; urgency=medium
+
+  * Registering a depot will now provide the user with the option to delete an
+    existing client if the ID of the server to register and the client at the
+    destination server are the same.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 23 Nov 2018 18:02:14 +0100
+
 opsi4ucs (4.1.1.5-5) stable; urgency=medium
 
   * postinst: Accept non-zero exit codes.
