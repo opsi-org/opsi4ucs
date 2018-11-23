@@ -1,9 +1,9 @@
 #!/bin/sh
 
 # = = = = = = = = = = = = = = = = = = = = = = =
-# =       Copyright (C) 2011 uib GmbH         =
+# =     Copyright (C) 2011-2018 uib GmbH      =
 # =           http://www.uib.de               =
 # =          All rights reserved.             =
 # = = = = = = = = = = = = = = = = = = = = = = =
-  
+
 /usr/bin/opsi-setup --set-rights $1
