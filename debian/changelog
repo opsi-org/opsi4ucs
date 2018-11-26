@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.7-1) stable; urgency=medium
+
+  * Remove more translation leftovers.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 26 Nov 2018 15:31:34 +0100
+
 opsi4ucs (4.1.1.6.1-1) stable; urgency=medium
 
   * Make the message nicer to read.
