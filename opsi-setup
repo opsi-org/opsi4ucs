@@ -81,9 +81,9 @@ logger = Logger()
 logger.setConsoleLevel(LOG_NOTICE)
 logger.setConsoleColor(True)
 
-sysConfig = {}
-ipAddress = None
 backendConfig = {}
+ipAddress = None
+sysConfig = {}
 
 
 class CancelledByUserError(Exception):
