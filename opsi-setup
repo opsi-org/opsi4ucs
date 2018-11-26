@@ -492,7 +492,7 @@ This will remove the client and it's settings from opsi.''' % depot.id,
 					)
 
 					if not deleteClient:
-						raise CancelledByUserError(_(u'Cancelled'))
+						raise CancelledByUserError(u'Cancelled')
 
 					jsonrpcBackend.host_delete(id=depot.id)
 
