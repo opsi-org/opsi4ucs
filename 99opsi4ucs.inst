@@ -1,10 +1,10 @@
 #! /bin/bash -e
 
-# Copyright (C) 2014-2018 uib GmbH
+# Copyright (C) 2014-2019 uib GmbH
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=45
+VERSION=46
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -560,14 +560,23 @@ else
 fi
 
 # --- Commit changes ------------------------------------------------------------------------------------------------------------
+$VERBOSE && echo "Removing old opsi links on the UCS overview page"
+ucr unset ucs/web/overview/entries/admin/opsi-configed/description/de
+ucr unset ucs/web/overview/entries/admin/opsi-configed/description
+ucr unset ucs/web/overview/entries/admin/opsi-configed/icon
+ucr unset ucs/web/overview/entries/admin/opsi-configed/label/de
+ucr unset ucs/web/overview/entries/admin/opsi-configed/label
+ucr unset ucs/web/overview/entries/admin/opsi-configed/link
+ucr unset ucs/web/overview/entries/admin/opsi-configed/priority
+
 $VERBOSE && echo "Adding links to the UCS overview page"
-ucr set ucs/web/overview/entries/admin/opsi-configed/description/de='Management-Interface für Client-Management mit opsi (mittels Java Webstart)'
-ucr set ucs/web/overview/entries/admin/opsi-configed/description='Management Interface for Client-Management with opsi (with Java Webstart)'
-ucr set ucs/web/overview/entries/admin/opsi-configed/icon="/icon/50x50/opsi-configed.png"
-ucr set ucs/web/overview/entries/admin/opsi-configed/label/de='opsi configed'
-ucr set ucs/web/overview/entries/admin/opsi-configed/label='opsi configed'
-ucr set ucs/web/overview/entries/admin/opsi-configed/link="https://${FQDN}:4447/configed.jnlp"
-ucr set ucs/web/overview/entries/admin/opsi-configed/priority=50
+ucr set ucs/web/overview/entries/admin/opsi-server/description/de='opsi-Server Übersichts-Seite'
+ucr set ucs/web/overview/entries/admin/opsi-server/description='opsi server overview page'
+ucr set ucs/web/overview/entries/admin/opsi-server/icon="/icon/50x50/opsi-configed.png"
+ucr set ucs/web/overview/entries/admin/opsi-server/label/de='opsi Server'
+ucr set ucs/web/overview/entries/admin/opsi-server/label='opsi server'
+ucr set ucs/web/overview/entries/admin/opsi-server/link="https://${FQDN}:4447/"
+ucr set ucs/web/overview/entries/admin/opsi-server/priority=50
 
 dpkg-reconfigure opsiconfd
 
