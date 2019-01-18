@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Copyright (C) 2018-2019 uib GmbH
+# http://www.uib.de
+# All rights reserved.
+
 #DEBHELPER#
 
 exit 0
