@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.9-1) testing; urgency=medium
+
+  * Using the code for edit-config-default from python-opsi.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 18 Jan 2019 16:58:20 +0100
+
 opsi4ucs (4.1.1.8-1) stable; urgency=medium
 
   * Java Webstart is deprecated. Pointing the link on the UCS overview page
