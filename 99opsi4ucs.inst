@@ -4,7 +4,7 @@
 # http://www.uib.de
 # All rights reserved.
 
-VERSION=46
+VERSION=47
 VERBOSE=true
 
 . /usr/share/univention-join/joinscripthelper.lib
@@ -17,7 +17,6 @@ joinscript_init
 # Required for check for synchronised opsifileadmin group
 . /usr/share/univention-lib/ucr.sh
 
-TFTPROOT="/var/lib/univention-client-boot"
 SERVER_ROLE=$(ucr get server/role)
 OPSI_ROLE="configserver"
 ROOT_DN=$(ucr get ldap/base)
@@ -115,7 +114,6 @@ fi
 $VERBOSE && echo -e "\nSystem information"
 $VERBOSE && echo "     UCS version      : $UCS_VERSION"
 $VERBOSE && echo "     UCS patchlevel   : $UCS_PATCHLEVEL"
-$VERBOSE && echo "     TFTP root        : $TFTPROOT"
 $VERBOSE && echo "     UCS role         : $SERVER_ROLE"
 $VERBOSE && echo "     Opsi server role : $OPSI_ROLE"
 $VERBOSE && echo "     Root dn          : $ROOT_DN"
