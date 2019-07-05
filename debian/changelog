@@ -1,3 +1,9 @@
+opsi4ucs (4.1.1.9-2) stable; urgency=medium
+
+  * Join script: removed unused reference to UCC tftp directory.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Fri, 05 Jul 2019 14:42:16 +0200
+
 opsi4ucs (4.1.1.9-1) testing; urgency=medium
 
   * Using the code for edit-config-default from python-opsi.
