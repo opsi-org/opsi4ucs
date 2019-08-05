@@ -65,6 +65,7 @@ from OPSI.Util.Task.ConfigureBackend.DHCPD import configureDHCPD
 from OPSI.Util.Task.ConfigureBackend.MySQL import (
 	DatabaseConnectionFailedException,
 	configureMySQLBackend as configureMySQLBackendWithoutGUI)
+from OPSI.Util.Task.ConfigureBootimage import patchServiceUrlInDefaultConfigs
 from OPSI.Util.Task.InitializeBackend import (
 	_getServerConfig as getServerConfig, initializeBackends)
 from OPSI.Util.Task.Rights import setPasswdRights, setRights
@@ -979,6 +980,8 @@ def main():
 	elif (task == 'init-current-config'):
 		initializeBackends(ipAddress)
 		configureClientUser()
+		with BackendManager() as backend:
+			patchServiceUrlInDefaultConfigs(backend)
 
 	elif task == 'configure-mysql':
 		configureMySQLBackend(unattended)
@@ -994,6 +997,8 @@ def main():
 	elif (task == 'register-depot'):
 		registerDepot(username, password, configserver)
 		configureClientUser()
+		with BackendManager() as backend:
+			patchServiceUrlInDefaultConfigs(backend)
 
 	elif (task == 'edit-config-defaults'):
 		editConfigDefaults()
